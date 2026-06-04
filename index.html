@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FAB 장비도입 대시보드</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0D1117;--ink2:#161B22;--ink3:#21262D;
+  --border:#30363D;--border2:#21262D;
+  --text:#E6EDF3;--text2:#8B949E;--text3:#484F58;
+  --amber:#F0B429;--amber-dim:#3D2E00;
+  --blue:#58A6FF;--blue-dim:#0D2A4D;
+  --green:#3FB950;--green-dim:#0A2E12;
+  --red:#F85149;--red-dim:#3D0A07;
+  --purple:#BC8CFF;--purple-dim:#2D1F5E;
+  --teal:#39D0D8;--teal-dim:#003D42;
+}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;font-size:13px}
+#hdr{position:sticky;top:0;z-index:100;background:rgba(13,17,23,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;gap:16px}
+.hdr-logo{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:var(--amber);display:flex;align-items:center;gap:8px}
+.hdr-logo::before{content:'◈';font-size:16px}
+.hdr-divider{width:1px;height:20px;background:var(--border)}
+.hdr-sub{font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.sync-badge{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);font-family:'IBM Plex Mono',monospace;padding:4px 12px;border:1px solid var(--border);border-radius:99px;cursor:pointer;transition:all .2s;user-select:none}
+.sync-badge:hover{border-color:var(--amber);color:var(--amber)}
+.sync-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.loading .sync-dot{background:var(--amber);animation:blink .8s infinite}
+.error .sync-dot{background:var(--red)}
+.ok .sync-dot{background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+#wrap{max-width:1320px;margin:0 auto;padding:28px 28px 80px}
+.sec-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:8px}
+.sec-title .num{color:var(--amber)}
+#summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:28px}
+.sum-card{background:var(--ink2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.c-total::before{background:var(--amber)}.c-dom::before{background:var(--green)}.c-for::before{background:var(--blue)}.c-tl::before{background:var(--purple)}
+.sum-lbl{font-size:10px;color:var(--text2);margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+.sum-val{font-size:30px;font-weight:600;font-family:'IBM Plex Mono',monospace;line-height:1}
+.c-total .sum-val{color:var(--amber)}.c-dom .sum-val{color:var(--green)}.c-for .sum-val{color:var(--blue)}.c-tl .sum-val{color:var(--purple)}
+#filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.flt-btn{padding:4px 13px;border:1px solid var(--border);border-radius:99px;background:transparent;color:var(--text2);font-size:11px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;transition:all .15s}
+.flt-btn:hover{border-color:var(--text2);color:var(--text)}
+.flt-btn.active{background:var(--amber);border-color:var(--amber);color:#000;font-weight:600}
+.flt-sep{color:var(--border);font-size:16px}
+.flt-search{margin-left:auto;background:var(--ink2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--text);font-size:11px;font-family:'IBM Plex Sans KR',sans-serif;outline:none;width:180px;transition:border-color .15s}
+.flt-search:focus{border-color:var(--blue)}
+.flt-search::placeholder{color:var(--text3)}
+#cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:48px}
+.eq-card{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:16px;transition:border-color .2s,transform .15s;position:relative;overflow:hidden}
+.eq-card:hover{border-color:var(--text3);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.eq-card::after{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;border-radius:10px 0 0 10px}
+.eq-card.domestic::after{background:var(--green)}.eq-card.foreign::after{background:var(--blue)}
+.card-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.card-name{font-size:14px;font-weight:600;color:var(--text);flex:1;line-height:1.4}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;white-space:nowrap;flex-shrink:0}
+.badge.domestic{background:var(--green-dim);color:var(--green);border:1px solid rgba(63,185,80,.25)}
+.badge.foreign{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(88,166,255,.25)}
+.badge.bid-open{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(240,180,41,.25)}
+.badge.bid-limited{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(188,140,255,.25)}
+.badge.bid-direct{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,208,216,.25)}
+.badge.bid-etc{background:var(--ink3);color:var(--text2);border:1px solid var(--border)}
+.card-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px;background:var(--ink);border-radius:6px;margin-bottom:10px}
+.meta-lbl{font-size:9px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.meta-val{font-size:12px;color:var(--text);font-weight:500}
+.card-note{margin-top:8px;font-size:10px;color:var(--text2);line-height:1.6;padding:8px 10px;background:var(--ink);border-radius:6px;border-left:2px solid var(--border)}
+.tl-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.leg{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2)}
+.leg-dot{width:16px;height:8px;border-radius:2px}
+#timeline-scroll{overflow-x:auto;padding-bottom:8px;border-radius:8px;border:1px solid var(--border)}
+#timeline-scroll::-webkit-scrollbar{height:5px}
+#timeline-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.tl-table{border-collapse:collapse;min-width:900px;width:100%}
+.tl-table th{background:var(--ink2);border:1px solid var(--border);padding:7px 10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--text2);font-weight:500;white-space:nowrap;text-align:center}
+.tl-table th.name-th{text-align:left;min-width:170px;position:sticky;left:0;z-index:5;background:var(--ink2);border-right:1px solid var(--border)}
+.tl-table td{border:1px solid var(--border2);padding:0;height:38px;position:relative;background:var(--ink)}
+.tl-table td.name-td{background:var(--ink2);border-right:1px solid var(--border);position:sticky;left:0;z-index:4;padding:0 12px;white-space:nowrap}
+.tl-table tr:hover td{background:rgba(255,255,255,.02)}
+.tl-table tr:hover td.name-td{background:var(--ink3)}
+.tl-name{font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px}
+.phase-cell{position:absolute;top:5px;bottom:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;overflow:hidden;white-space:nowrap;padding:0 4px}
+.ph-spec{background:rgba(88,166,255,.2);color:#58A6FF;border:1px solid rgba(88,166,255,.4)}
+.ph-bid{background:rgba(188,140,255,.2);color:#BC8CFF;border:1px solid rgba(188,140,255,.4)}
+.ph-eval{background:rgba(63,185,80,.2);color:#3FB950;border:1px solid rgba(63,185,80,.4)}
+.ph-ctr{background:rgba(240,180,41,.2);color:#F0B429;border:1px solid rgba(240,180,41,.4)}
+.ph-mfg{background:rgba(248,81,73,.2);color:#F85149;border:1px solid rgba(248,81,73,.4)}
+.ph-ins{background:rgba(57,208,216,.2);color:#39D0D8;border:1px solid rgba(57,208,216,.4)}
+#loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 20px;gap:16px;color:var(--text2)}
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#error-box{display:none;background:var(--red-dim);border:1px solid rgba(248,81,73,.3);border-radius:8px;padding:16px 20px;color:var(--red);font-size:13px;margin-bottom:24px;line-height:1.9}
+#error-box code{font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.8}
+.empty{grid-column:1/-1;text-align:center;padding:48px;color:var(--text3)}
+.tl-empty{text-align:center;padding:36px;color:var(--text3);font-size:12px;line-height:2.2}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <div class="hdr-logo">FAB 장비도입 관리시스템</div>
+  <div class="hdr-divider"></div>
+  <div class="hdr-sub">EQUIPMENT PROCUREMENT DASHBOARD</div>
+  <div class="hdr-right">
+    <div class="sync-badge loading" id="sync-badge" onclick="loadData()" title="클릭하면 즉시 새로고침">
+      <div class="sync-dot"></div>
+      <span id="sync-txt">불러오는 중...</span>
+    </div>
+  </div>
+</div>
+<div id="wrap">
+  <div id="error-box"></div>
+  <div id="loading"><div class="spinner"></div><span>구글시트에서 데이터를 불러오는 중...</span></div>
+  <div id="content" style="display:none">
+    <div id="summary"></div>
+    <div id="filter-bar"></div>
+    <div class="sec-title"><span class="num">01</span>&nbsp;장비별 현황</div>
+    <div id="cards-grid"></div>
+    <div class="sec-title"><span class="num">02</span>&nbsp;타임라인</div>
+    <div class="tl-legend" id="tl-legend"></div>
+    <div id="timeline-scroll"><div id="timeline-inner"></div></div>
+  </div>
+</div>
+<script>
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx2a6GY1zzbbZLBseaoaPLQgW6EmXzq_zE7BAiQxweuHma7rwNB0mzX0fppo3B6YaSz/exec';
+const REFRESH_MS=60000;
+const PHASES=[
+  {id:'spec',label:'규격공고',cls:'ph-spec'},
+  {id:'bid', label:'입찰',   cls:'ph-bid'},
+  {id:'eval',label:'기술평가',cls:'ph-eval'},
+  {id:'ctr', label:'계약',   cls:'ph-ctr'},
+  {id:'mfg', label:'제작',   cls:'ph-mfg'},
+  {id:'ins', label:'설치',   cls:'ph-ins'},
+];
+let allItems=[],filteredItems=[],activeFlt='all',searchTxt='';
+
+async function loadData(){
+  setSyncState('loading','불러오는 중...');
+  try{
+    const res=await fetch(SCRIPT_URL);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const rows=json.data||json;
+    if(!Array.isArray(rows)||rows.length<2)throw new Error('데이터가 없거나 형식이 맞지 않습니다');
+    parseRows(rows);
+    const t=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    setSyncState('ok',t+' 업데이트됨');
+    document.getElementById('error-box').style.display='none';
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+  }catch(e){
+    console.error(e);
+    setSyncState('error','연결 실패 — 클릭하여 재시도');
+    const eb=document.getElementById('error-box');
+    eb.style.display='block';
+    eb.innerHTML='⚠️ 데이터를 불러올 수 없습니다.<br>오류: <code>'+esc(e.message)+'</code><br>Apps Script 배포 설정에서 액세스 권한이 <b>"모든 사용자"</b>로 되어 있는지 확인해주세요.';
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+  }
+}
+
+function setSyncState(s,t){
+  document.getElementById('sync-badge').className='sync-badge '+s;
+  document.getElementById('sync-txt').textContent=t;
+}
+
+function parseRows(rows){
+  // 헤더 행 탐색 (장비명 포함된 행)
+  let hi=0;
+  for(let i=0;i<Math.min(rows.length,5);i++){
+    if(rows[i].join('').includes('장비명')){hi=i;break;}
+  }
+  const headers=rows[hi].map(h=>String(h).toLowerCase().replace(/[\s\(\)]/g,''));
+  const col=(...kws)=>{for(const kw of kws){const i=headers.findIndex(h=>h.includes(kw));if(i>=0)return i;}return -1;};
+
+  const iName   =col('장비명','name');
+  const iType   =col('구분');
+  const iBid    =col('도입방법','입찰방법','bid');
+  const iManager=col('담당자','담당');
+  const iStatus =col('진행상태','상태');
+  const iPrice  =col('도입금액','금액');
+  const iStart  =col('시작년월','시작');
+  const iSpec   =col('사전규격','규격');
+  const iBidWk  =col('구매공고','공고');
+  const iEval   =col('기술평가','평가');
+  const iCtr    =col('기술협상','협상','계약');
+  const iMfg    =col('장비제작','제작');
+  const iIns    =col('장비설치','설치');
+  const iTotal  =col('총소요기간','총기간');
+
+  const get=(r,i)=>i>=0?String(r[i]||'').trim():'';
+  const num=(r,i)=>{const v=parseFloat(get(r,i));return isNaN(v)?0:Math.round(v);};
+
+  allItems=rows.slice(hi+1).filter(r=>get(r,iName)&&get(r,iName)!=='장비명').map((r,idx)=>{
+    const typeRaw=get(r,iType);
+    const type=(typeRaw.includes('외')||typeRaw.toLowerCase().includes('for'))?'foreign':'domestic';
+    const bidRaw=get(r,iBid);
+    let bidCls='bid-etc';
+    if(bidRaw.includes('공개')||bidRaw.includes('일반')||bidRaw.includes('규격가격'))bidCls='bid-open';
+    else if(bidRaw.includes('제한')||bidRaw.includes('지명'))bidCls='bid-limited';
+    else if(bidRaw.includes('수의')||bidRaw.includes('직접')||bidRaw.includes('협상')||bidRaw.includes('형상'))bidCls='bid-direct';
+
+    const phases={spec:num(r,iSpec),bid:num(r,iBidWk),eval:num(r,iEval),ctr:num(r,iCtr),mfg:num(r,iMfg),ins:num(r,iIns)};
+    const phTotal=num(r,iTotal)||Object.values(phases).reduce((a,b)=>a+b,0);
+
+    // 시작년월 → 현재 기준 오프셋(주)
+    let startWk=0;
+    const startRaw=get(r,iStart);
+    if(startRaw){
+      const d=new Date(startRaw);
+      if(!isNaN(d)){
+        const now=new Date();
+        const diffM=(d.getFullYear()-now.getFullYear())*12+(d.getMonth()-now.getMonth());
+        startWk=Math.max(0,diffM*4);
+      }
+    }
+
+    // 금액 포맷
+    const priceNum=num(r,iPrice);
+    const price=priceNum>0?(priceNum>=100000000?(priceNum/100000000).toFixed(1)+'억원':(priceNum/10000).toFixed(0)+'만원'):'';
+
+    return{id:idx,name:get(r,iName),type,typeLbl:type==='foreign'?'외자':'내자',
+      bid:bidRaw||'-',bidCls,manager:get(r,iManager)||'-',status:get(r,iStatus)||'-',
+      price,startRaw,startWk,phases,phTotal,totalWk:startWk+phTotal};
+  });
+  render();
+}
+
+function applyFilter(){
+  filteredItems=allItems.filter(eq=>{
+    const mFlt=activeFlt==='all'||activeFlt===eq.type||activeFlt===eq.manager;
+    const q=searchTxt.toLowerCase();
+    const mSearch=!q||eq.name.toLowerCase().includes(q)||eq.manager.toLowerCase().includes(q)||eq.bid.toLowerCase().includes(q);
+    return mFlt&&mSearch;
+  });
+}
+
+function render(){applyFilter();renderSummary();renderFilters();renderCards();renderTimeline();}
+
+function renderSummary(){
+  const dom=allItems.filter(e=>e.type==='domestic').length;
+  const forr=allItems.filter(e=>e.type==='foreign').length;
+  const tl=allItems.filter(e=>e.phTotal>0).length;
+  document.getElementById('summary').innerHTML=`
+    <div class="sum-card c-total"><div class="sum-lbl">TOTAL</div><div class="sum-val">${allItems.length}</div></div>
+    <div class="sum-card c-dom"><div class="sum-lbl">내자</div><div class="sum-val">${dom}</div></div>
+    <div class="sum-card c-for"><div class="sum-lbl">외자</div><div class="sum-val">${forr}</div></div>
+    <div class="sum-card c-tl"><div class="sum-lbl">타임라인</div><div class="sum-val">${tl}</div></div>`;
+}
+
+function renderFilters(){
+  const managers=[...new Set(allItems.map(e=>e.manager).filter(m=>m&&m!=='-'))];
+  let html=`
+    <button class="flt-btn${activeFlt==='all'?' active':''}" onclick="setFlt('all')">전체</button>
+    <button class="flt-btn${activeFlt==='domestic'?' active':''}" onclick="setFlt('domestic')">내자</button>
+    <button class="flt-btn${activeFlt==='foreign'?' active':''}" onclick="setFlt('foreign')">외자</button>`;
+  if(managers.length){
+    html+=`<span class="flt-sep">|</span>`;
+    managers.forEach(m=>{html+=`<button class="flt-btn${activeFlt===m?' active':''}" onclick="setFlt('${m.replace(/'/g,"\\'")}'">${esc(m)}</button>`;});
+  }
+  html+=`<input class="flt-search" placeholder="🔍 장비명 / 담당자 검색..." oninput="setSearch(this.value)" value="${esc(searchTxt)}">`;
+  document.getElementById('filter-bar').innerHTML=html;
+}
+
+function setFlt(v){activeFlt=v;render();}
+function setSearch(v){searchTxt=v;applyFilter();renderCards();renderTimeline();}
+
+function renderCards(){
+  if(!filteredItems.length){document.getElementById('cards-grid').innerHTML='<div class="empty">표시할 장비가 없습니다</div>';return;}
+  document.getElementById('cards-grid').innerHTML=filteredItems.map(eq=>`
+    <div class="eq-card ${eq.type}">
+      <div class="card-top"><div class="card-name">${esc(eq.name)}</div><span class="badge ${eq.type}">${eq.typeLbl}</span></div>
+      <div class="card-meta">
+        <div><div class="meta-lbl">입찰방법</div><div class="meta-val"><span class="badge ${eq.bidCls}">${esc(eq.bid)}</span></div></div>
+        <div><div class="meta-lbl">담당자</div><div class="meta-val">${esc(eq.manager)}</div></div>
+        ${eq.status!=='-'?`<div><div class="meta-lbl">진행상태</div><div class="meta-val">${esc(eq.status)}</div></div>`:''}
+        ${eq.price?`<div><div class="meta-lbl">도입금액</div><div class="meta-val">${esc(eq.price)}</div></div>`:''}
+        ${eq.startRaw?`<div><div class="meta-lbl">시작년월</div><div class="meta-val">${String(eq.startRaw).slice(0,7)}</div></div>`:''}
+        ${eq.phTotal>0?`<div><div class="meta-lbl">총 기간</div><div class="meta-val">${eq.phTotal}주</div></div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderTimeline(){
+  const items=filteredItems.filter(eq=>eq.phTotal>0);
+  if(!items.length){
+    document.getElementById('tl-legend').innerHTML='';
+    document.getElementById('timeline-inner').innerHTML='<div class="tl-empty">타임라인 데이터가 없습니다<br><small>시트에 <b>규격공고 / 입찰기간 / 기술평가 / 계약기간 / 제작기간 / 설치기간</b> 컬럼(주 단위)을 추가해주세요</small></div>';
+    return;
+  }
+  const maxWk=Math.max(...items.map(eq=>eq.startWk+eq.phTotal));
+  const totalWks=Math.max(maxWk+4,24);
+  const MONTHS=Math.ceil(totalWks/4);
+  const WPX=22;
+  document.getElementById('tl-legend').innerHTML=PHASES.map(p=>`<div class="leg"><div class="leg-dot ${p.cls}"></div><span>${p.label}</span></div>`).join('');
+  let mHdr=`<th class="name-th">장비명</th>`;
+  for(let m=0;m<MONTHS;m++)mHdr+=`<th colspan="4" style="min-width:${WPX*4}px">M${m+1}</th>`;
+  let wHdr=`<th class="name-th" style="font-size:8px;padding:3px 10px;color:var(--text3)">장비 / 월</th>`;
+  for(let w=0;w<MONTHS*4;w++)wHdr+=`<th style="min-width:${WPX}px;font-size:8px;color:var(--text3);padding:2px 0">W${(w%4)+1}</th>`;
+  const bodyRows=items.map(eq=>{
+    const cells=Array.from({length:MONTHS*4},()=>({html:''}));
+    let off=eq.startWk;
+    PHASES.forEach(p=>{
+      const dur=eq.phases[p.id]||0;
+      if(!dur)return;
+      for(let w=off;w<off+dur&&w<MONTHS*4;w++){
+        const isFirst=w===off,isLast=w===off+dur-1;
+        const showLbl=dur>=3&&w===Math.floor((off*2+dur)/2);
+        let r='';
+        if(isFirst&&isLast)r='border-radius:3px';
+        else if(isFirst)r='border-radius:3px 0 0 3px';
+        else if(isLast)r='border-radius:0 3px 3px 0';
+        cells[w].html=`<div class="phase-cell ${p.cls}" style="left:1px;right:1px;${r}">${showLbl?p.label:''}</div>`;
+      }
+      off+=dur;
+    });
+    const tds=cells.map(c=>`<td style="min-width:${WPX}px;width:${WPX}px">${c.html}</td>`).join('');
+    return`<tr><td class="name-td"><div class="tl-name"><span class="badge ${eq.type}" style="padding:1px 5px;font-size:9px">${eq.typeLbl}</span>${esc(eq.name)}</div></td>${tds}</tr>`;
+  }).join('');
+  document.getElementById('timeline-inner').innerHTML=`<table class="tl-table"><thead><tr>${mHdr}</tr><tr>${wHdr}</tr></thead><tbody>${bodyRows}</tbody></table>`;
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+loadData();
+setInterval(loadData,REFRESH_MS);
+</script>
+</body>
+</html>
