@@ -11,7 +11,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --ink:#0D1117;--ink2:#161B22;--ink3:#21262D;
-  --border:#30363D;--text:#E6EDF3;--text2:#8B949E;--text3:#484F58;
+  --border:#30363D;--border2:#2D333B;--text:#E6EDF3;--text2:#8B949E;--text3:#484F58;
   --amber:#F0B429;--blue:#58A6FF;--green:#3FB950;--purple:#BC8CFF;--teal:#39D0D8;--red:#F85149;
 }
 body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
@@ -87,6 +87,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eqm-cell-num .u{font-size:9px;font-weight:500;color:var(--text2);margin-left:1px}
 .eqm-ph{color:var(--text3);font-size:13px;padding:14px 4px}
 .work-preview{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.hdr-badge{font-size:10px;font-weight:700;color:var(--blue);background:rgba(88,166,255,.14);border:1px solid rgba(88,166,255,.3);padding:2px 8px;border-radius:6px;white-space:nowrap}
 .work-prev-item{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .work-prev-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--amber)}
 /* 홈 업무 미리보기 카드 (가로형: 구분 | 제목 | 담당자) */
@@ -97,6 +98,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wp-card .new-badge{flex-shrink:0}
 .wp-more{font-size:11px;color:var(--text3);text-align:center;padding-top:2px}
 .wp-ph{color:var(--text3);font-size:12px;padding:10px 4px;text-align:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.preview-loading{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text3);font-size:12px;padding:18px 4px}
 /* 업무 구분 필터 + 검색 */
 .wflt-row{display:flex;justify-content:flex-start;align-items:center;gap:10px;width:100%;max-width:960px;margin-bottom:12px;flex-wrap:wrap}
 .wflt-cats{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -190,7 +194,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .cur-title-row .task-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:1}
 .cur-leader{flex:1 1 0;min-width:8px;overflow:hidden;white-space:nowrap;color:var(--text3);font-size:11px;letter-spacing:2px;opacity:.55;user-select:none;-webkit-user-select:none}
 .task-no-ref{font-size:11px;color:var(--text3);font-family:"IBM Plex Mono",monospace;flex-shrink:0}
-.cur-c-att{width:44px;flex-shrink:0;display:flex;justify-content:center;align-self:flex-start;margin-top:1px}
+.cur-c-att{width:44px;flex-shrink:0;display:flex;justify-content:center;align-self:center}
 .cur-att{color:var(--blue);text-decoration:none;font-size:15px;line-height:1}
 .cur-att:hover{filter:brightness(1.3)}
 .cur-dept{font-size:12px;color:var(--text2);font-weight:500;white-space:nowrap;flex-shrink:0}
@@ -583,12 +587,13 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .nav-flyout{position:absolute;top:100%;right:0;padding-top:8px;width:max-content;min-width:0;display:none;flex-direction:column;align-items:flex-end;z-index:60}
 .nav-dd:hover .nav-flyout{display:flex}
 .nav-flyout-inner{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:2px;box-shadow:0 10px 28px rgba(0,0,0,.4)}
-.nav-flyout a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;text-decoration:none;color:var(--text2);font-size:13px;font-weight:500;white-space:nowrap;transition:background .12s,color .12s}
+.nav-flyout a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:7px;text-decoration:none;color:var(--text2);font-size:13px;font-weight:500;white-space:nowrap;transition:background .12s,color .12s}
 .nav-flyout a:hover{background:var(--ink3);color:var(--text)}
-.nav-flyout .fl-ico{width:22px;text-align:center;font-size:15px}
+.nav-flyout .fl-ico{width:33px;display:inline-flex;align-items:center;justify-content:center;font-size:23px;line-height:1}
 .nav-flyout .fl-sub{display:none}
 .page-title{font-size:18px;font-weight:600}
-.ttl-load{font-size:12px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.ttl-load{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.load-spin-sm{width:11px;height:11px;border-width:2px}
 .page-body{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:32px;flex:1;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px;line-height:2;text-align:center}
 </style>
 </head>
@@ -708,7 +713,7 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
       </div>
 
       <div class="card c0" onclick="goPage('업무현황')" role="button" tabindex="0" id="card-업무현황" style="flex-direction:column;gap:10px;align-items:stretch">
-        <div style="display:flex;align-items:center;gap:8px"><div class="icon" style="width:28px;height:28px;font-size:15px;border-radius:7px">📊</div><div class="card-name" style="text-align:left">업무현황</div></div>
+        <div style="display:flex;align-items:center;gap:8px"><div class="icon" style="width:28px;height:28px;font-size:15px;border-radius:7px">📊</div><div class="card-name" style="text-align:left">업무현황</div><span id="home-work-count" class="hdr-badge"></span></div>
         <div class="work-preview" id="work-preview"></div>
       </div>
 
@@ -855,7 +860,7 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
         <span id="eq-sync" style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace"></span>
         <input id="eq-search" type="text" placeholder="🔍 장비명, 담당자 등 검색..." oninput="eqDoSearch(this.value)"
-          style="width:320px;max-width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--ink2);color:var(--text);font-size:13px;font-family:inherit;outline:none">
+          style="width:320px;max-width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--ink2);color:var(--text);font-size:13px;font-family:inherit;outline:none;margin-bottom:9px">
       </div>
     </div>
     <div class="eq-flt-row" style="justify-content:space-between">
@@ -1037,6 +1042,7 @@ const CAT_COLOR = {
 };
 const SHEET_NAME_WORK = '센터 업무 현황';
 let WORK_DATA = [];
+let workReady = false;   // 로드 완료 여부 (미리보기 로딩 표시용)
 let workLoaded = false;
 let workOpenId = null;
 let workCat = '전체';     // 업무구분 필터
@@ -1090,6 +1096,7 @@ async function loadWorkData() {
         num:g(r,ci.num), cat:g(r,ci.cat), task:g(r,ci.task), dept:g(r,ci.dept),
         mat:g(r,ci.mat), start:g(r,ci.start), time:g(r,ci.time), loc:g(r,ci.loc),
         mgr:g(r,ci.mgr), end:g(r,ci.end),
+        link:g(r,11),                   // L열: 관련 링크 (URL)
         share: g(r,ci.share)==='1',     // J열: 1 → 현재 업무
         remind: g(r,ci.remind)==='1'    // K열: 1 → 지난 업무 최상단 고정
       }));
@@ -1099,6 +1106,7 @@ async function loadWorkData() {
     WORK_DATA = [];
     setLoad('업무현황', '불러오기 실패');
   }
+  workReady = true;
   renderWorkFilters();
   renderWork();
   renderWorkPreview();
@@ -1216,12 +1224,15 @@ function workDoSearch(v){ workQuery = (v||'').trim().toLowerCase(); renderWork()
 // 홈 화면 업무현황 미리보기 — 진행중 업무를 카드로 (구분 / 제목 / 담당자)
 function renderWorkPreview() {
   const el = document.getElementById('work-preview');
+  const badgeEl = document.getElementById('home-work-count');
   if(!el) return;
-  if(!Array.isArray(WORK_DATA)) { el.innerHTML = ''; return; }
+  if(!workReady){ if(badgeEl) badgeEl.textContent=''; el.innerHTML = '<div class="preview-loading"><span class="load-spin"></span>불러오는 중...</div>'; return; }
+  if(!Array.isArray(WORK_DATA)) { if(badgeEl) badgeEl.textContent=''; el.innerHTML = ''; return; }
   const norm = s => String(s||'').toLowerCase().replace(/[\s,/]/g,'');
   const ORDER = ['설계적정성검토','국가장비심의위원회','장심위','장비','인사','예산','행정','대응','교육,세미나','MoU'];
   const rank = c => { const i = ORDER.findIndex(o=>norm(o)===norm(c)); return i<0 ? 999 : i; };
   const cur = WORK_DATA.filter(t=>t.share).sort((a,b)=>rank(a.cat)-rank(b.cat));
+  if(badgeEl) badgeEl.textContent = `진행중 ${cur.length}`;
   if(!cur.length){ el.innerHTML = '<div class="wp-ph">진행중 업무가 없습니다</div>'; return; }
   // 발의일자(시작일자)가 최근 7일 이내면 NEW (등록 기준 7일간)
   const parseStart = s => { s=String(s||'').trim(); if(!s) return null;
@@ -1233,16 +1244,16 @@ function renderWorkPreview() {
     const diff=(todayMid - d)/86400000; return diff>=0 && diff<=7; };
   const MAX = 3;
   const shown = cur.slice(0, MAX);
-  const card = t => {
+  const row = t => {
     const title = esc(String(t.task||'').split(/\r?\n/)[0] || '');
     const newBadge = isNew(t.start) ? '<span class="new-badge">NEW</span>' : '';
-    return `<div class="wp-card">
+    return `<li>
       ${t.cat ? `<span class="task-cat" style="${workCatStyle(t.cat)}">${esc(t.cat)}</span>` : ''}
-      <span class="wp-title">${title}</span>${newBadge}
-      ${t.mgr ? `<span class="wp-mgr">${esc(t.mgr)}</span>` : ''}
-    </div>`;
+      <span class="card-notice-txt">${title}${newBadge}</span>
+      ${t.mgr ? `<span class="notice-date">${esc(t.mgr)}</span>` : ''}
+    </li>`;
   };
-  el.innerHTML = shown.map(card).join('') +
+  el.innerHTML = '<ul class="card-notice-list">' + shown.map(row).join('') + '</ul>' +
     (cur.length > MAX ? `<div class="wp-more">외 ${cur.length - MAX}건</div>` : '');
 }
 
@@ -1272,9 +1283,9 @@ function currentHTML(t) {
     if(t.loc)  parts.push('장소: ' + t.loc);
     subs.push('- ' + parts.join(' | '));
   }
-  // 관련자료(E열)에 URL 있으면 첨부 링크(새 창)
-  const urlMatch = String(t.mat||'').match(/https?:\/\/[^\s]+/);
-  const attach = urlMatch ? `<a class="cur-att" href="${esc(urlMatch[0])}" target="_blank" rel="noopener noreferrer" title="첨부 열기"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 19"/></svg></a>` : '';
+  // L열 링크가 URL이면 표 우측에 외부 링크 아이콘(새 창)
+  const linkUrl = String(t.link||'').match(/https?:\/\/[^\s]+/);
+  const attach = linkUrl ? `<a class="cur-att" href="${esc(linkUrl[0])}" target="_blank" rel="noopener noreferrer" title="링크 열기"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : '';
   return `<li class="task-item-wrap">
     <div class="cur-row">
       <span class="cur-c-cat">${t.cat ? `<span class="task-cat" style="${catStyle}">${esc(t.cat)}</span>` : ''}</span>
@@ -1629,6 +1640,7 @@ let eqFltState = '전체';  // 상태
 let eqSearch = '';        // 검색어
 let eqOpenIdx = null;
 let eqLoaded = false;
+let eqReady = false;   // 로드 완료 여부 (미리보기 로딩 표시용)
 
 async function loadEqData() {
   const syncEl = document.getElementById('eq-sync');
@@ -1727,12 +1739,14 @@ async function loadEqData() {
 
     if(syncEl) syncEl.textContent = '';
     setLoad('장비현황', nowStamp());
+    eqReady = true;
     eqRender();
   } catch(e) {
     console.error(e);
     if(syncEl) syncEl.textContent = '';
     setLoad('장비현황', '연결 실패');
     EQ_DATA = [];
+    eqReady = true;
     eqRender();
   }
 }
@@ -1799,8 +1813,7 @@ function eqCounts() {
 function renderEqPreview() {
   const el = document.getElementById('eq-preview');
   if(!el) return;
-  const ready = Array.isArray(window.EQ_RAW);
-  if(!ready){ el.innerHTML = ''; return; }
+  if(!eqReady){ el.innerHTML = '<div class="preview-loading"><span class="load-spin"></span>불러오는 중...</div>'; return; }
   const c = eqCounts();
   const cell = (label,val,labelColor,bg,border) =>
     `<div class="eqm-cell" style="background:${bg};border-color:${border}">
@@ -2234,7 +2247,12 @@ function backToNoticeList(pushState=true) {
 
 function setLoad(page, msg){
   const el = document.getElementById('load-'+page);
-  if(el) el.textContent = msg || '';
+  if(!el) return;
+  if(msg && msg.indexOf('불러오는')===0){
+    el.innerHTML = '<span class="load-spin load-spin-sm"></span>' + msg;
+  } else {
+    el.textContent = msg || '';
+  }
 }
 function nowStamp(){
   return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 업데이트';
@@ -2313,8 +2331,9 @@ window.addEventListener('popstate', function(e) {
   try{ history.replaceState({view:'home'}, '', '#'); }catch(e){}
 })();
 
-// 홈 진입 시 장비 데이터 미리 로드 (미리보기 KPI 표시용)
+// 홈 진입 시 장비/업무 데이터 미리 로드 (미리보기 표시용) — 우선 로딩 스피너 표시
 try{ renderEqPreview(); }catch(e){}
+try{ renderWorkPreview(); }catch(e){}
 if(!eqLoaded){ eqLoaded=true; loadEqData(); }
 if(!workLoaded){ workLoaded=true; loadWorkData(); }
 try{ initBadges(); setSampleBadges(); }catch(e){}
