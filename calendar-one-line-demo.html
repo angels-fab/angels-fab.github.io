@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>업무일정 월간 캘린더 한 줄 시안</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@0..1&display=swap" rel="stylesheet">
+  <style>
+    :root{color-scheme:dark;--bg:#090d14;--side:#0c111b;--surface:#111824;--surface2:#172131;--line:#293448;--text:#eef3fa;--muted:#8c9aaf;--blue:#4f8df7;--green:#35b67f;--purple:#9c6ade;--amber:#d3a23f;--red:#d86868;--teal:#2eb3ae}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Pretendard,"Noto Sans KR",system-ui,sans-serif}button,input{font:inherit}button{cursor:pointer}.material-symbols-rounded{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 20;font-size:18px;line-height:1}
+    .top{height:58px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;background:#0a0f18}.brand{font-weight:850;letter-spacing:.04em}.brand span{color:#7dadfa}.admin{margin-left:auto;color:var(--muted);font-size:12px}
+    .shell{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:calc(100vh - 58px)}.side{padding:22px 14px;border-right:1px solid var(--line);background:var(--side)}.label{padding:0 11px 7px;color:#65748a;font-size:10px;font-weight:800;letter-spacing:.12em}.nav{display:flex;align-items:center;gap:10px;width:100%;border:0;border-radius:9px;padding:11px 12px;margin:2px 0;background:transparent;color:#9dacbf;text-align:left;font-size:13px;font-weight:650}.nav.active{background:#18345e;color:#dceaff}.nav>.material-symbols-rounded{font-size:19px}.nav-label{display:inline-flex;align-items:flex-start;gap:3px;min-width:0;white-space:nowrap}.sup-badge{height:15px;min-width:15px;display:inline-flex;align-items:center;justify-content:center;gap:1px;padding:0 3px;border-radius:8px;transform:translateY(-5px);font-size:8px;font-weight:850;line-height:1}.sup-badge.new{background:#cf4f5c;color:#fff}.sup-badge.memo{border:1px solid #c8993b;background:rgba(200,153,59,.12);color:#efbf5b}.sup-badge .material-symbols-rounded{font-size:9px}
+    main{padding:30px clamp(25px,4vw,54px) 60px;min-width:0}.page{max-width:1180px;margin:auto}.head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}.title-wrap{display:flex;gap:12px}.title-icon{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:#162237;color:#75a9f7}.title-icon .material-symbols-rounded{font-size:23px}h1{font-size:25px;margin:0;letter-spacing:-.04em}.sub{margin:4px 0 0;color:var(--muted);font-size:12.5px}.layout-switch{display:flex;padding:3px;border:1px solid var(--line);border-radius:10px;background:#111925}.layout-switch button{border:0;border-radius:7px;padding:7px 10px;background:transparent;color:#8391a5;font-size:11.5px;font-weight:750}.layout-switch button.on{background:#315f9f;color:#fff}
+    .calendar-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px}.cal-btn{height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#131c29;color:#bdc8d7;font-size:12px;font-weight:700}.period{min-width:132px;text-align:center;font-size:16px;font-weight:850}.view-tabs{display:flex;margin-left:auto;padding:3px;border:1px solid var(--line);border-radius:9px;background:#111925}.view-tabs button{border:0;border-radius:6px;padding:6px 10px;background:transparent;color:#7f8ca0;font-size:11px}.view-tabs button.on{background:#243d64;color:#dfeaff}
+    .filters{display:flex;align-items:center;gap:7px;margin-bottom:12px;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:#101722}.search{width:190px;height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#0b111b;color:#dce5f2;font-size:11.5px}.filter{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:99px;padding:6px 9px;background:#151e2b;color:#aab7c8;font-size:10.5px}.filter i{width:7px;height:7px;border-radius:50%}.filter.people{margin-left:auto}
+    .calendar{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0d131d}.week-head{display:grid;grid-template-columns:repeat(5,1fr);background:#151d29;border-bottom:1px solid var(--line)}.week-head div{padding:10px;text-align:center;color:#8795aa;font-size:11px;font-weight:800;border-right:1px solid var(--line)}.week-head div:last-child{border-right:0}.weeks{display:flex;flex-direction:column}.week-row{--lanes:0;position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-bottom:1px solid var(--line)}.week-row:last-child{border-bottom:0}.day{min-width:0;min-height:calc(128px + var(--lanes)*33px);padding:7px;border-right:1px solid var(--line);background:#0d131d}.day:last-of-type{border-right:0}.day.muted{background:#0a0f17}.day.today{background:rgba(49,95,159,.08)}.date{display:flex;align-items:center;justify-content:flex-end;height:20px;margin-bottom:4px;color:#8b98aa;font-size:11px}.today .date span{display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#3978d4;color:white;font-weight:800}.events{display:flex;flex-direction:column;gap:4px;margin-top:calc(var(--lanes)*33px)}.multi-lanes{position:absolute;z-index:2;top:32px;left:0;right:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-rows:29px;row-gap:4px;padding:0 7px;pointer-events:none}.multi-lanes .event-chip{pointer-events:auto;margin-right:1px}
+    .event-chip{position:relative;width:100%;height:29px;display:flex;align-items:center;gap:5px;overflow:hidden;border:1px solid color-mix(in srgb,var(--cat) 45%,transparent);border-radius:7px;padding:3px 5px;background:color-mix(in srgb,var(--cat) 13%,#101722);color:#e8eef7;text-align:left;outline:none;transition:filter .12s,box-shadow .12s}.event-chip:hover{filter:brightness(1.12)}.event-chip:focus-visible{box-shadow:0 0 0 2px color-mix(in srgb,var(--cat) 70%,white)}.event-chip .cat-icon{flex:none;color:var(--cat);font-size:16px}.event-time{flex:none;color:#aebacd;font-size:10.5px;font-weight:800;font-variant-numeric:tabular-nums}.event-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;font-weight:650}.participants{flex:none;display:flex;align-items:center;padding-left:1px}.cat-icon+.participants{margin-left:-1px}.avatar{width:20px;height:20px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.3);border-radius:50%;background:var(--person);color:#fff;font-size:8.5px;font-weight:850;letter-spacing:-.04em}.avatar+.avatar{margin-left:-5px}.avatar.more{background:#526075;color:#eef3fa}.more-events{padding:2px 6px;color:#7790b4;font-size:10px;font-weight:750}
+    body.legacy .day{min-height:calc(169px + var(--lanes)*52px)}body.legacy .events{margin-top:calc(var(--lanes)*52px)}body.legacy .multi-lanes{grid-auto-rows:48px;row-gap:4px}body.legacy .event-chip{height:48px;align-items:center}body.legacy .event-title{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:10.5px;line-height:1.3}body.legacy .avatar{width:28px;height:28px;font-size:11px}
+    .popover{position:fixed;z-index:30;width:310px;padding:14px;border:1px solid #3a485d;border-radius:12px;background:#151e2c;box-shadow:0 18px 44px rgba(0,0,0,.42);opacity:0;transform:translateY(5px);pointer-events:none;transition:.14s}.popover.show{opacity:1;transform:translateY(0);pointer-events:auto}.pop-top{display:flex;align-items:center;gap:7px;margin-bottom:9px}.pop-cat{padding:4px 7px;border-radius:99px;background:color-mix(in srgb,var(--cat) 20%,transparent);color:var(--cat);font-size:10px;font-weight:850}.pop-time{color:#a9b7ca;font-size:10.5px;font-weight:750}.pop-title{margin:0 0 12px;font-size:14px;line-height:1.45;letter-spacing:-.02em}.pop-row{display:grid;grid-template-columns:48px 1fr;gap:7px;margin-top:7px;font-size:11.5px;line-height:1.5}.pop-row dt{color:#74839a;font-weight:750}.pop-row dd{margin:0;color:#cbd5e3}.pop-tip{margin-top:11px;padding-top:9px;border-top:1px solid #2c394d;color:#68778d;font-size:10px}
+    .guide{display:flex;align-items:center;gap:18px;margin-top:11px;color:#75849a;font-size:10.5px}.guide b{color:#aab7c8}.guide span{display:flex;align-items:center;gap:6px}
+    @media(max-width:950px){.shell{grid-template-columns:165px 1fr}.side{padding-inline:9px}main{padding:24px 16px}.event-time{display:none}.filter:nth-of-type(n+5){display:none}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="brand"><span>ANGELS</span> FAB</div><div class="admin">관리자 · 조성범</div></header>
+  <div class="shell">
+    <aside class="side">
+      <div class="group"><div class="label">업무</div><button class="nav"><span class="material-symbols-rounded">campaign</span><span class="nav-label">공지사항 <span class="sup-badge new" aria-label="새글 2건">N 2</span></span></button><button class="nav active"><span class="material-symbols-rounded">calendar_month</span><span class="nav-label">업무일정</span></button><button class="nav"><span class="material-symbols-rounded">assessment</span><span class="nav-label">업무현황 <span class="sup-badge memo" aria-label="메모 1건"><span class="material-symbols-rounded">sticky_note_2</span>1</span></span></button><button class="nav"><span class="material-symbols-rounded">desktop_windows</span><span class="nav-label">장비관리</span></button></div>
+      <div class="group"><div class="label">정보</div><button class="nav"><span class="material-symbols-rounded">co_present</span><span class="nav-label">학술·교육·전시 <span class="sup-badge memo" aria-label="메모 2건"><span class="material-symbols-rounded">sticky_note_2</span>2</span></span></button><button class="nav"><span class="material-symbols-rounded">lightbulb</span><span class="nav-label">포털개선요청 <span class="sup-badge new" aria-label="새글 4건">N 4</span><span class="sup-badge memo" aria-label="메모 3건"><span class="material-symbols-rounded">sticky_note_2</span>3</span></span></button></div>
+    </aside>
+    <main><section class="page">
+      <div class="head"><div class="title-wrap"><div class="title-icon"><span class="material-symbols-rounded">event_note</span></div><div><h1>업무 일정</h1><p class="sub">센터 일정과 담당자를 월간·주간으로 확인합니다.</p></div></div><div class="layout-switch" aria-label="일정 칩 비교"><button class="on" data-layout="compact">제안 1줄</button><button data-layout="legacy">기존 2줄</button></div></div>
+      <div class="calendar-nav"><button class="cal-btn">오늘</button><button class="cal-btn" aria-label="이전 달"><span class="material-symbols-rounded">chevron_left</span></button><div class="period">2026년 6월</div><button class="cal-btn" aria-label="다음 달"><span class="material-symbols-rounded">chevron_right</span></button><div class="view-tabs"><button class="on">월간</button><button>주간</button></div></div>
+      <div class="filters"><input class="search" placeholder="일정·해당자 검색"><button class="filter"><i style="background:#4f8df7"></i>회의</button><button class="filter"><i style="background:#35b67f"></i>업무</button><button class="filter"><i style="background:#d3a23f"></i>교육</button><button class="filter"><i style="background:#9c6ade"></i>출장</button><button class="filter people"><i style="background:#4f8df7"></i>신현진</button><button class="filter"><i style="background:#35b67f"></i>조성범</button></div>
+      <div class="calendar">
+        <div class="week-head"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div></div>
+        <div id="weeks" class="weeks"></div>
+      </div>
+      <div class="guide"><b>제안 핵심</b><span>종일·멀티데이도 한 줄</span><span>해당자는 일정 우측에 고정</span><span>호버 시 목적·장소를 분리해 확인</span></div>
+    </section></main>
+  </div>
+  <aside id="popover" class="popover" role="dialog" aria-label="일정 상세"></aside>
+  <script>
+    const colors={meeting:'#4f8df7',work:'#35b67f',edu:'#d3a23f',recruit:'#d86868',trip:'#9c6ade',etc:'#2eb3ae'};
+    const icons={meeting:'groups',work:'work',edu:'school',recruit:'person_add',trip:'flight',etc:'more_horiz'};
+    const people={'신현진':'#4f8df7','박주봉':'#9c6ade','박세리':'#d3a23f','조성범':'#35b67f','센터':'#2eb3ae'};
+    const events={
+      1:[{cat:'meeting',time:'09:30',raw:'[회의] 중회의실-주간 업무 협의 및 장비 도입 진행사항 전체 점검@신현진, 박주봉, 조성범'},{cat:'work',time:'14:00',raw:'[업무] 사무실-국비 사업계획서 제출자료 최종 검토@박세리'}],
+      2:[{cat:'edu',time:'10:00',title:'반도체 공정실습 교육 운영 준비회의',members:['박주봉','박세리'],place:'교육실'},{cat:'meeting',time:'15:30',title:'설계적정성 검토위원회 대응자료 확인',members:['신현진','조성범'],place:'대회의실'}],
+      3:[{cat:'trip',time:'',title:'대전 장비 제작사 현장 검수 및 기술협의',members:['박주봉','조성범'],place:'대전'},{cat:'work',time:'13:00',title:'장비 구매공고 사전규격 의견 검토',members:['신현진'],place:'사무실'},{cat:'etc',time:'',title:'센터 공통 행정자료 제출 마감',members:['센터'],place:'온라인'}],
+      4:[{cat:'recruit',time:'11:00',title:'신규 연구원 채용 면접 및 평가회의',members:['신현진','박세리','조성범'],place:'소회의실'}],
+      5:[{cat:'meeting',time:'09:00',title:'월간 성과점검 회의',members:['신현진','박주봉','박세리','조성범'],place:'대회의실'},{cat:'edu',time:'14:00',title:'안전교육 및 클린룸 출입 절차 안내',members:['센터'],place:'교육실'}],
+      8:[{cat:'work',time:'10:30',title:'구축 로드맵 공정률 업데이트 및 지연요인 확인',members:['조성범','박주봉'],place:'사무실'}],
+      9:[{cat:'meeting',time:'14:00',title:'설비 유틸리티 사양 협의',members:['신현진','조성범'],place:'현장사무실'},{cat:'work',time:'16:00',title:'주간보고 취합',members:['센터'],place:'온라인'}],
+      10:[],
+      11:[{cat:'edu',time:'09:30',title:'신규 장비 사용자 교육',members:['박세리','조성범'],place:'장비실'}],
+      12:[{cat:'work',time:'13:30',title:'지방비 집행내역 검토 및 증빙자료 정리',members:['신현진','박세리'],place:'사무실'}],
+      15:[{cat:'meeting',time:'10:00',title:'센터 운영위원회',members:['신현진','박주봉','박세리','조성범'],place:'대회의실'}],
+      16:[{cat:'work',time:'14:00',title:'장비 설치공간 레이아웃 변경사항 반영',members:['박주봉'],place:'클린룸'}],
+      17:[{cat:'edu',time:'',title:'반도체 패키징 기술 세미나',members:['센터'],place:'세미나실'}],
+      18:[{cat:'meeting',time:'15:00',title:'구매계약 일정 협의',members:['신현진','박세리'],place:'소회의실'}],
+      19:[{cat:'etc',time:'',title:'정기 소방점검',members:['센터'],place:'FAB 전체'}],
+      22:[{cat:'work',time:'09:00',title:'월말 업무실적 작성',members:['신현진','박주봉','박세리','조성범'],place:'사무실'}],
+      23:[],
+      24:[{cat:'meeting',time:'11:00',title:'홈 대시보드 개선사항 검토',members:['조성범','신현진'],place:'중회의실'}],
+      25:[{cat:'work',time:'14:30',title:'장비 검수 체크리스트 최종 확정',members:['박세리'],place:'장비실'}],
+      26:[{cat:'meeting',time:'16:00',title:'차주 일정 공유',members:['센터'],place:'온라인'}],
+      29:[{cat:'work',time:'10:00',title:'상반기 예산 집행률 점검',members:['신현진','박세리'],place:'사무실'}],
+      30:[{cat:'meeting',time:'14:00',title:'6월 월간성과 마감회의',members:['신현진','박주봉','박세리','조성범'],place:'대회의실'}]
+    };
+    const multiEvents=[
+      {start:1,end:4,cat:'work',time:'',raw:'[업무] FAB 전체-클린룸 장비 반입 및 설치 작업@박주봉, 조성범'},
+      {start:8,end:12,cat:'trip',time:'',raw:'[출장] 국내(부산 BEXCO)-반도체 장비 학술대회 및 업체 협의@박주봉, 박세리, 조성범'},
+      {start:22,end:26,cat:'trip',time:'',raw:'[출장] 국외(싱가포르)-SEMICON Southeast Asia 참관 및 기관 협의@신현진, 조성범'}
+    ];
+    const weeks=document.querySelector('#weeks');
+    const initials=name=>name.length>2?name.slice(1):name;
+    function parseEvent(ev){
+      if(!ev.raw)return {...ev,purpose:ev.title,display:ev.title};
+      const members=(ev.raw.split('@')[1]||'').split(',').map(v=>v.trim()).filter(Boolean);
+      let content=ev.raw.replace(/^\s*\[[^\]]*\]\s*/,'').split('@')[0].trim();
+      let place='',purpose=content;
+      const trip=content.match(/^\s*(국내|국외|해외)\s*\(([^)]*)\)\s*[-–—]\s*(.+)$/);
+      const general=content.match(/^(.+?)\s*[-–—]\s*(.+)$/);
+      if(trip){place=trip[2].trim();purpose=trip[3].trim();content=`${trip[1]}(${place})-${purpose}`}
+      else if(general){place=general[1].trim();purpose=general[2].trim()}
+      return {...ev,members,place,purpose,display:content};
+    }
+    function chip(input,multi=false){const ev=parseEvent(input);const visible=ev.members.slice(0,1);const rest=ev.members.length-visible.length;return `<button class="event-chip${multi?' multi-day':''}" style="--cat:${colors[ev.cat]}" data-event='${JSON.stringify(ev)}'><span class="material-symbols-rounded cat-icon">${icons[ev.cat]}</span>${ev.time?`<span class="event-time">${ev.time}</span>`:''}<span class="event-title">${ev.display}</span><span class="participants">${visible.map(n=>`<span class="avatar" style="--person:${people[n]}">${initials(n)}</span>`).join('')}${rest?`<span class="avatar more">+${rest}</span>`:''}</span></button>`}
+    const calendarWeeks=[[1,2,3,4,5],[8,9,10,11,12],[15,16,17,18,19],[22,23,24,25,26],[29,30,31,32,33]];
+    for(let w=0;w<calendarWeeks.length;w++){
+      const dates=calendarWeeks[w],first=dates[0],last=dates[4];
+      const spans=multiEvents.filter(ev=>ev.start<=last&&ev.end>=first);
+      const days=dates.map(d=>{const dayEvents=events[d]||[];const muted=d>30;const label=muted?d-30:d;return `<section class="day ${d===29?'today':''} ${muted?'muted':''}"><div class="date">${d===29?`<span>${label}</span>`:label}</div><div class="events">${dayEvents.slice(0,3).map(ev=>chip(ev)).join('')}${dayEvents.length>3?`<div class="more-events">+${dayEvents.length-3}건</div>`:''}</div></section>`}).join('');
+      const lanes=spans.map((ev,i)=>{const start=dates.findIndex(d=>d>=ev.start)+1;const end=dates.findLastIndex(d=>d<=ev.end)+1;return `<div style="grid-column:${start}/${end+1};grid-row:${i+1}">${chip(ev,true)}</div>`}).join('');
+      weeks.insertAdjacentHTML('beforeend',`<div class="week-row" style="--lanes:${spans.length}">${days}<div class="multi-lanes">${lanes}</div></div>`)
+    }
+    const pop=document.querySelector('#popover');let locked=false;let activeChip=null;
+    function showPop(chip,lock=false){const ev=JSON.parse(chip.dataset.event);activeChip=chip;locked=lock||locked;pop.style.setProperty('--cat',colors[ev.cat]);pop.innerHTML=`<div class="pop-top"><span class="pop-cat">${ev.cat==='meeting'?'회의':ev.cat==='work'?'업무':ev.cat==='edu'?'교육':ev.cat==='trip'?'출장':ev.cat==='recruit'?'채용':'기타'}</span>${ev.time?`<span class="pop-time">${ev.time}</span>`:''}</div><h3 class="pop-title">${ev.purpose}</h3><dl><div class="pop-row"><dt>장소</dt><dd>${ev.place||'미지정'}</dd></div><div class="pop-row"><dt>해당자</dt><dd>${ev.members.join(' · ')}</dd></div></dl><div class="pop-tip">마우스를 벗어나거나 다시 클릭하면 닫힙니다.</div>`;const r=chip.getBoundingClientRect();const left=Math.min(window.innerWidth-325,Math.max(12,r.left));const top=r.bottom+8+240>window.innerHeight?r.top-190:r.bottom+8;pop.style.left=`${left}px`;pop.style.top=`${Math.max(10,top)}px`;pop.classList.add('show')}
+    function hidePop(){if(locked)return;pop.classList.remove('show');activeChip=null}
+    document.querySelectorAll('.event-chip').forEach(c=>{c.addEventListener('mouseenter',()=>showPop(c));c.addEventListener('mouseleave',hidePop);c.addEventListener('focus',()=>showPop(c));c.addEventListener('blur',hidePop);c.addEventListener('click',e=>{e.stopPropagation();if(locked&&activeChip===c){locked=false;pop.classList.remove('show');activeChip=null}else{locked=true;showPop(c,true)}})});
+    document.addEventListener('click',()=>{locked=false;pop.classList.remove('show')});document.addEventListener('keydown',e=>{if(e.key==='Escape'){locked=false;pop.classList.remove('show')}});
+    document.querySelectorAll('.layout-switch button').forEach(b=>b.addEventListener('click',()=>{document.body.classList.toggle('legacy',b.dataset.layout==='legacy');document.querySelectorAll('.layout-switch button').forEach(x=>x.classList.toggle('on',x===b));locked=false;pop.classList.remove('show')}));
+  </script>
+</body>
+</html>

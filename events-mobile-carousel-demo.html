@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>학술·교육·전시 모바일 캐러셀 시안</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090d15;
+      --surface: #111827;
+      --surface-2: #172033;
+      --line: rgba(148, 163, 184, .18);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --blue: #4f8df7;
+      --green: #17b77a;
+      --amber: #e9ad32;
+      --gray: #778397;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; min-height: 100%; background: #05070c; }
+
+    body {
+      font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+    }
+
+    button, a { font: inherit; }
+
+    button { -webkit-tap-highlight-color: transparent; }
+
+    .phone {
+      width: min(100%, 430px);
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 100% 0, rgba(45, 105, 210, .12), transparent 30%),
+        var(--bg);
+      border-inline: 1px solid rgba(255,255,255,.05);
+    }
+
+    .header {
+      padding: max(22px, env(safe-area-inset-top)) 20px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .eyebrow { color: #7db0ff; font-size: 12px; font-weight: 750; letter-spacing: .06em; }
+
+    h1 { margin: 5px 0 4px; font-size: 25px; letter-spacing: -.04em; }
+
+    .subtitle { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .new-event {
+      border: 1px solid rgba(94, 155, 255, .42);
+      border-radius: 11px;
+      padding: 9px 12px;
+      background: rgba(79, 141, 247, .14);
+      color: #a9cbff;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .new-event .demo-plus { margin-right: 4px; font-size: 18px; line-height: 0; }
+
+    .tabs-wrap { padding: 8px 16px 16px; }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(22, 31, 49, .88);
+    }
+
+    .tab {
+      min-height: 44px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 750;
+      transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+    }
+
+    .tab strong {
+      display: inline-grid;
+      place-items: center;
+      min-width: 20px;
+      height: 20px;
+      margin-left: 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      font-size: 11px;
+    }
+
+    .tab[data-status="live"] { color: #54d8a3; background: rgba(23,183,122,.07); }
+    .tab[data-status="upcoming"] { color: #f0bf57; background: rgba(233,173,50,.07); }
+    .tab[data-status="ended"] { color: #9da8b8; background: rgba(119,131,151,.07); }
+
+    .tab[data-status="live"].active {
+      color: #fff;
+      background: #168b60;
+      box-shadow: 0 5px 18px rgba(23,183,122,.28);
+    }
+
+    .tab[data-status="upcoming"].active {
+      color: #211702;
+      background: #e9ad32;
+      box-shadow: 0 5px 18px rgba(233,173,50,.26);
+    }
+
+    .tab[data-status="ended"].active {
+      color: #fff;
+      background: #647084;
+      box-shadow: 0 5px 18px rgba(100,112,132,.25);
+    }
+
+    .tab.active strong { background: rgba(255,255,255,.2); }
+    .tab[data-status="upcoming"].active strong { background: rgba(32,22,2,.13); }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px 11px;
+    }
+
+    .section-head h2 { margin: 0; font-size: 15px; letter-spacing: -.02em; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 11.5px; }
+
+    .rail {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 86%;
+      gap: 12px;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: 16px;
+      padding: 0 16px 12px;
+      scrollbar-width: none;
+      touch-action: pan-x pan-y;
+    }
+
+    .rail::-webkit-scrollbar { display: none; }
+
+    .event-card {
+      position: relative;
+      aspect-ratio: 800 / 1122;
+      overflow: hidden;
+      scroll-snap-align: center;
+      border: 1px solid rgba(148,163,184,.26);
+      border-radius: 20px;
+      background: #0d1422;
+      box-shadow: 0 16px 38px rgba(0,0,0,.34);
+      cursor: pointer;
+      isolation: isolate;
+      outline: none;
+    }
+
+    .event-card:focus-visible { box-shadow: 0 0 0 3px #7db0ff, 0 16px 38px rgba(0,0,0,.34); }
+
+    .poster {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      user-select: none;
+      -webkit-user-drag: none;
+      transition: transform .28s ease;
+    }
+
+    .base-gradient {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(to top, rgba(6,9,16,.98) 0%, rgba(6,9,16,.82) 22%, rgba(6,9,16,.18) 57%, transparent 74%);
+    }
+
+    .detail-scrim {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      opacity: 0;
+      background: linear-gradient(to bottom, rgba(5,8,14,.62), rgba(5,8,14,.78) 43%, rgba(5,8,14,.92));
+      transition: opacity .24s ease;
+      pointer-events: none;
+    }
+
+    .chips {
+      position: absolute;
+      z-index: 5;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 31px;
+      padding: 0 11px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 850;
+      backdrop-filter: blur(7px);
+    }
+
+    .chip.cat.academic { background: #3f86f7; }
+    .chip.cat.education { background: #13b77b; }
+    .chip.cat.exhibition { background: #a14fec; }
+    .chip.status { gap: 7px; background: rgba(5, 11, 23, .76); }
+
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
+    .dot.live { background: var(--green); box-shadow: 0 0 0 5px rgba(23,183,122,.13); }
+    .dot.ended { background: var(--gray); }
+
+    .summary {
+      position: absolute;
+      z-index: 4;
+      left: 17px;
+      right: 17px;
+      bottom: 17px;
+      transition: opacity .18s ease, transform .22s ease;
+    }
+
+    .summary h3 { margin: 0 0 9px; font-size: 18px; line-height: 1.38; letter-spacing: -.035em; text-shadow: 0 2px 10px #000; }
+
+    .date {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      color: #eef4ff;
+      font-size: 12.5px;
+      font-weight: 700;
+      backdrop-filter: blur(7px);
+    }
+
+    .detail {
+      position: absolute;
+      z-index: 4;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      min-height: 67%;
+      padding: 24px 18px 18px;
+      background: linear-gradient(to bottom, rgba(10,15,25,.88), rgba(8,12,20,.98) 23%);
+      border-top: 1px solid rgba(255,255,255,.13);
+      transform: translateY(101%);
+      opacity: .35;
+      transition: transform .27s cubic-bezier(.2,.72,.2,1), opacity .2s ease;
+    }
+
+    .detail::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      width: 38px;
+      height: 4px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,.3);
+    }
+
+    .detail h3 { margin: 3px 0 14px; font-size: 18px; line-height: 1.35; letter-spacing: -.035em; }
+
+    .meta { display: grid; grid-template-columns: 47px 1fr; gap: 8px; margin: 8px 0; font-size: 12.5px; line-height: 1.45; }
+    .meta dt { color: #7f91a9; font-weight: 750; }
+    .meta dd { margin: 0; color: #e8eef8; }
+
+    .points {
+      margin: 13px 0 15px;
+      padding: 12px 13px;
+      border-radius: 11px;
+      background: rgba(75, 102, 145, .13);
+      color: #bdc9da;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .site-button {
+      width: 100%;
+      min-height: 43px;
+      border: 0;
+      border-radius: 11px;
+      background: #377fe9;
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .close-detail {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 6;
+      min-width: 48px;
+      min-height: 32px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      background: rgba(6,10,18,.64);
+      color: #dbe8fb;
+      font-size: 11px;
+      font-weight: 750;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+
+    .event-card.open .poster { transform: scale(1.025); }
+    .event-card.open .base-gradient { opacity: 0; }
+    .event-card.open .detail-scrim { opacity: 1; }
+    .event-card.open .summary { opacity: 0; transform: translateY(12px); pointer-events: none; }
+    .event-card.open .detail { transform: translateY(0); opacity: 1; }
+    .event-card.open .close-detail { opacity: 1; pointer-events: auto; }
+
+    .rail.restore-state .poster,
+    .rail.restore-state .detail-scrim,
+    .rail.restore-state .summary,
+    .rail.restore-state .detail,
+    .rail.restore-state .close-detail { transition: none !important; }
+
+    .pager {
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      color: #c3d0e3;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 750;
+    }
+
+    .pager::before, .pager::after { content: ""; width: 32px; height: 1px; background: rgba(148,163,184,.22); }
+
+    .hint { margin: 3px 0 26px; text-align: center; color: #64748b; font-size: 11px; }
+
+    .empty {
+      margin: 0 16px;
+      min-height: 280px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed rgba(148,163,184,.23);
+      border-radius: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      transform: translate(-50%, 16px);
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #e7eef9;
+      color: #101827;
+      font-size: 12px;
+      font-weight: 750;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="phone">
+    <header class="header">
+      <div>
+        <div class="eyebrow">FAB INFORMATION</div>
+        <h1>학술·교육·전시</h1>
+        <p class="subtitle">관심 있는 행사를 넘겨서 확인하세요</p>
+      </div>
+      <button class="new-event" type="button"><span class="demo-plus" aria-hidden="true">＋</span>새 행사</button>
+    </header>
+
+    <div class="tabs-wrap">
+      <div class="tabs" role="tablist" aria-label="행사 상태">
+        <button class="tab" type="button" role="tab" data-status="live">진행중 <strong>1</strong></button>
+        <button class="tab active" type="button" role="tab" data-status="upcoming">예정 <strong>7</strong></button>
+        <button class="tab" type="button" role="tab" data-status="ended">종료 <strong>2</strong></button>
+      </div>
+    </div>
+
+    <section aria-live="polite">
+      <div class="section-head">
+        <h2 id="section-title">예정된 행사</h2>
+        <p id="section-caption">카드를 누르면 상세정보가 열립니다</p>
+      </div>
+      <div id="carousel" class="rail" aria-label="예정 행사 목록"></div>
+      <div id="pager" class="pager" aria-live="polite">1 / 7</div>
+      <p class="hint">포스터를 좌우로 밀어보세요</p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status">시안용 버튼입니다</div>
+
+  <script>
+    const events = {
+      live: [
+        { id:'ispsa', cat:'학술', catClass:'academic', status:'진행중', date:'2026.06.28 - 07.02', title:'ISPSA 2026 - 제22회 반도체 물리·응용 국제심포지엄', poster:'events/ispsa2026.jpg', venue:'제주 해비치 호텔 & 리조트', organizer:'한국물리학회(KPS)', point:'Plenary 강연 · 국제 심포지엄 · 반도체 물리 및 응용' }
+      ],
+      upcoming: [
+        { id:'fab1', cat:'교육', catClass:'education', status:'D-8', date:'2026.07.06 - 07.08', title:'반도체공정실습 1 (7월)', poster:'events/ktech-fab-202607.jpg', venue:'한국기술교육대학교 제2캠퍼스', organizer:'한국기술교육대학교', point:'반도체 공정 기술 · 진공기술 · 장비 실습' },
+        { id:'fab2', cat:'교육', catClass:'education', status:'D-11', date:'2026.07.09', title:'반도체공정실습 2 (7월)', poster:'events/ktech-fab-202607.jpg', venue:'한국기술교육대학교 제2캠퍼스', organizer:'한국기술교육대학교', point:'반도체 공정 이론 및 실습 교육' },
+        { id:'ises', cat:'학술', catClass:'academic', status:'D-16', date:'2026.07.14 - 07.17', title:'2026 반도체공학회 하계종합학술대회', poster:'events/ises-summer2026.jpg', venue:'아난티 앳 부산 코브', organizer:'반도체공학회', point:'반도체 소자 · 공정 · 패키징 · AI 반도체' },
+        { id:'semi', cat:'학술', catClass:'academic', status:'D-17', date:'2026.07.15', title:'Advanced Packaging Summit 2026', poster:'events/semi-advpkg2026.jpg', venue:'수원컨벤션센터', organizer:'SEMI', point:'AI·HPC · Chiplet · Hybrid Bonding' },
+        { id:'asps', cat:'전시', catClass:'exhibition', status:'D-59', date:'2026.08.26 - 08.28', title:'ASPS 2026 - 차세대 반도체 패키징 산업전', poster:'events/asps2026.jpg', venue:'수원컨벤션센터', organizer:'경기도 · 수원시', point:'패키징 장비 · 소재 · 부품 · 테스트' },
+        { id:'kpca', cat:'전시', catClass:'exhibition', status:'D-73', date:'2026.09.09 - 09.11', title:'KPCA Show 2026 - 국제 반도체 기판 및 첨단 패키징 산업전', poster:'events/kpca2026.jpg', venue:'인천 송도컨벤시아', organizer:'한국PCB반도체패키징산업협회', point:'기판 · 패키징 · 표면처리 · 신뢰성 검사' },
+        { id:'sedex', cat:'전시', catClass:'exhibition', status:'D-108', date:'2026.10.14 - 10.16', title:'SEDEX 2026 - 제28회 반도체대전', poster:'events/sedex2026.jpg', venue:'서울 코엑스', organizer:'한국반도체산업협회', point:'반도체 장비 · 부품 · 소재 · 설비 · 센서' }
+      ],
+      ended: [
+        { id:'ended1', cat:'전시', catClass:'exhibition', status:'종료', date:'2026.05.20 - 05.22', title:'첨단 패키징 산업전 지난 행사', poster:'events/asps2026.jpg', venue:'수원컨벤션센터', organizer:'행사 운영사', point:'종료된 행사의 상세정보 표시 예시' },
+        { id:'ended2', cat:'학술', catClass:'academic', status:'종료', date:'2026.04.08 - 04.10', title:'반도체 기술 심포지엄 지난 행사', poster:'events/ispsa2026.jpg', venue:'제주 컨벤션센터', organizer:'행사 운영사', point:'종료 탭 캐러셀 동작 확인용 예시' }
+      ]
+    };
+
+    const labels = {
+      live: ['진행 중인 행사', '진행중 행사 목록'],
+      upcoming: ['예정된 행사', '예정 행사 목록'],
+      ended: ['종료된 행사', '종료 행사 목록']
+    };
+
+    const carousel = document.querySelector('#carousel');
+    const pager = document.querySelector('#pager');
+    const sectionTitle = document.querySelector('#section-title');
+    const tabs = [...document.querySelectorAll('.tab')];
+    const toast = document.querySelector('#toast');
+    let activeStatus = 'upcoming';
+    let activeIndex = 0;
+    const savedPositions = { live: 0, upcoming: 0, ended: 0 };
+    const openCardIds = { live: new Set(), upcoming: new Set(), ended: new Set() };
+    let observer;
+    let drag = { x: 0, y: 0, moved: false };
+
+    function cardTemplate(event, status) {
+      const dotClass = status === 'live' ? 'live' : status === 'ended' ? 'ended' : '';
+      return `
+        <article class="event-card" tabindex="0" role="button" aria-expanded="false" aria-label="${event.title} 상세 보기" data-id="${event.id}">
+          <img class="poster" src="${event.poster}" alt="${event.title}" draggable="false" />
+          <div class="base-gradient"></div>
+          <div class="detail-scrim"></div>
+          <div class="chips">
+            <span class="chip cat ${event.catClass}">${event.cat}</span>
+            <span class="chip status"><span class="dot ${dotClass}"></span>${event.status}</span>
+          </div>
+          <button class="close-detail" type="button">접기</button>
+          <div class="summary">
+            <h3>${event.title}</h3>
+            <span class="date">${event.date}</span>
+          </div>
+          <div class="detail" aria-hidden="true">
+            <h3>${event.title}</h3>
+            <dl>
+              <div class="meta"><dt>일시</dt><dd>${event.date}</dd></div>
+              <div class="meta"><dt>장소</dt><dd>${event.venue}</dd></div>
+              <div class="meta"><dt>주최</dt><dd>${event.organizer}</dd></div>
+            </dl>
+            <div class="points">${event.point}</div>
+            <button class="site-button" type="button">행사 사이트 바로가기</button>
+          </div>
+        </article>`;
+    }
+
+    function setCardOpen(card, next, animate = true) {
+      if (!animate) carousel.classList.add('restore-state');
+      card.classList.toggle('open', next);
+      card.setAttribute('aria-expanded', String(next));
+      card.querySelector('.detail').setAttribute('aria-hidden', String(!next));
+      if (next) openCardIds[activeStatus].add(card.dataset.id);
+      else openCardIds[activeStatus].delete(card.dataset.id);
+      if (!animate) requestAnimationFrame(() => carousel.classList.remove('restore-state'));
+    }
+
+    function bindCards() {
+      const cards = [...carousel.querySelectorAll('.event-card')];
+      cards.forEach(card => {
+        card.addEventListener('pointerdown', event => { drag = { x: event.clientX, y: event.clientY, moved: false }; });
+        card.addEventListener('pointermove', event => {
+          if (Math.abs(event.clientX - drag.x) > 9 || Math.abs(event.clientY - drag.y) > 9) drag.moved = true;
+        });
+        card.addEventListener('click', event => {
+          if (drag.moved || event.target.closest('.site-button') || event.target.closest('.close-detail')) return;
+          setCardOpen(card, !card.classList.contains('open'));
+        });
+        card.addEventListener('keydown', event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setCardOpen(card, !card.classList.contains('open'));
+          }
+        });
+        card.querySelector('.close-detail').addEventListener('click', event => { event.stopPropagation(); setCardOpen(card, false); });
+        card.querySelector('.site-button').addEventListener('click', event => {
+          event.stopPropagation();
+          toast.classList.add('show');
+          clearTimeout(window.toastTimer);
+          window.toastTimer = setTimeout(() => toast.classList.remove('show'), 1500);
+        });
+      });
+
+      observer?.disconnect();
+      observer = new IntersectionObserver(entries => {
+        const visible = entries.filter(entry => entry.isIntersecting).sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        const nextIndex = cards.indexOf(visible.target);
+        if (nextIndex !== activeIndex) {
+          activeIndex = nextIndex;
+          savedPositions[activeStatus] = nextIndex;
+          updatePager(cards.length);
+        }
+      }, { root: carousel, threshold: [.55, .7, .85] });
+      cards.forEach(card => observer.observe(card));
+    }
+
+    function updatePager(total) {
+      pager.textContent = total ? `${activeIndex + 1} / ${total}` : '0 / 0';
+    }
+
+    function render(status) {
+      activeStatus = status;
+      activeIndex = savedPositions[status] || 0;
+      const list = events[status];
+      sectionTitle.textContent = labels[status][0];
+      carousel.setAttribute('aria-label', labels[status][1]);
+      tabs.forEach(tab => {
+        const selected = tab.dataset.status === status;
+        tab.classList.toggle('active', selected);
+        tab.setAttribute('aria-selected', String(selected));
+      });
+      if (!list.length) {
+        carousel.outerHTML = '<div id="carousel" class="empty">해당하는 행사가 없습니다</div>';
+        pager.textContent = '0 / 0';
+        return;
+      }
+      carousel.className = 'rail';
+      carousel.innerHTML = list.map(event => cardTemplate(event, status)).join('');
+      const cards = [...carousel.querySelectorAll('.event-card')];
+      const rememberedCard = cards[activeIndex];
+      carousel.scrollLeft = rememberedCard ? Math.max(0, rememberedCard.offsetLeft - 16) : 0;
+      updatePager(list.length);
+      bindCards();
+      const rememberedOpenIds = openCardIds[status];
+      if (rememberedOpenIds.size) {
+        carousel.classList.add('restore-state');
+        cards.forEach(card => {
+          if (rememberedOpenIds.has(card.dataset.id)) setCardOpen(card, true, false);
+        });
+        requestAnimationFrame(() => carousel.classList.remove('restore-state'));
+      }
+    }
+
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+      savedPositions[activeStatus] = activeIndex;
+      render(tab.dataset.status);
+    }));
+    document.querySelector('.new-event').addEventListener('click', () => {
+      toast.textContent = '관리자용 새 행사 버튼 영역입니다';
+      toast.classList.add('show');
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => { toast.classList.remove('show'); toast.textContent = '시안용 버튼입니다'; }, 1500);
+    });
+
+    render(activeStatus);
+  </script>
+</body>
+</html>
