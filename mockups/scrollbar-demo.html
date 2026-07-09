@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>드로어 스크롤바 두께 시안</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0d12; color: #e6e9ef;
+    font-family: 'Pretendard', system-ui, 'Malgun Gothic', sans-serif; padding: 20px; }
+  h1 { font-size: 16px; font-weight: 500; margin: 0 0 4px; }
+  .sub { font-size: 12.5px; color: #8890a0; margin: 0 0 18px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .card { width: 150px; background: #15181f; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; overflow: hidden; }
+  .card h2 { font-size: 12px; font-weight: 500; margin: 0; padding: 8px 10px 6px; color: #cfd4dd; }
+  .card .spec { font-size: 10.5px; color: #7e8797; padding: 0 10px 8px; }
+  /* 실제 스크롤 영역 — 항상 스크롤바 보이게 */
+  .scroll { height: 200px; overflow-y: scroll; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 5px; }
+  .tile { height: 46px; flex: none; border-radius: 5px; position: relative;
+    background: linear-gradient(135deg, hsl(var(--h) 42% 33%), hsl(var(--h) 48% 15%)); }
+  .tile span { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9px; padding: 2px 5px;
+    background: rgba(0,0,0,.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* A. 기본(현재) — 스타일 없음 = OS 기본 두꺼운 스크롤바 */
+
+  /* B. 10px */
+  .sb-b { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.28) transparent; }
+  .sb-b::-webkit-scrollbar { width: 10px; }
+  .sb-b::-webkit-scrollbar-track { background: transparent; }
+  .sb-b::-webkit-scrollbar-thumb { background: rgba(255,255,255,.26); border-radius: 6px; }
+
+  /* C. 8px */
+  .sb-c { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.26) transparent; }
+  .sb-c::-webkit-scrollbar { width: 8px; }
+  .sb-c::-webkit-scrollbar-track { background: transparent; }
+  .sb-c::-webkit-scrollbar-thumb { background: rgba(255,255,255,.24); border-radius: 4px; }
+
+  /* D. 6px (아주 얇게) */
+  .sb-d { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.3) transparent; }
+  .sb-d::-webkit-scrollbar { width: 6px; }
+  .sb-d::-webkit-scrollbar-track { background: transparent; }
+  .sb-d::-webkit-scrollbar-thumb { background: rgba(255,255,255,.3); border-radius: 3px; }
+
+  /* E. 6px + 평소 거의 숨김, hover 시 진해짐 */
+  .sb-e::-webkit-scrollbar { width: 6px; }
+  .sb-e::-webkit-scrollbar-track { background: transparent; }
+  .sb-e::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; transition: background .15s; }
+  .sb-e:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,.34); }
+
+  /* F. 8px + 파란 thumb(포인트색) */
+  .sb-f::-webkit-scrollbar { width: 8px; }
+  .sb-f::-webkit-scrollbar-track { background: rgba(255,255,255,.04); border-radius: 4px; }
+  .sb-f::-webkit-scrollbar-thumb { background: rgba(84,145,218,.6); border-radius: 4px; }
+  .sb-f:hover::-webkit-scrollbar-thumb { background: rgba(84,145,218,.85); }
+
+  /* G. 완전 숨김 — 막대 없음(스크롤은 됨) */
+  .sb-hide { scrollbar-width: none; -ms-overflow-style: none; }
+  .sb-hide::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+  /* H = G(숨김) + 하단 페이드 힌트 */
+  .card.has-fade { position: relative; }
+  .fadehint { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; pointer-events: none;
+    background: linear-gradient(0deg, #15181f 15%, rgba(21,24,31,0)); }
+
+  .note { margin-top: 20px; font-size: 12px; color: #8890a0; line-height: 1.7; max-width: 640px; }
+  .note b { color: #cfd4dd; font-weight: 500; }
+</style>
+</head>
+<body>
+  <h1>드로어 스크롤바 두께 시안</h1>
+  <p class="sub">각 칸은 실제로 스크롤됩니다 — 마우스를 올리고 굴려보세요. 다크 톤 기준.</p>
+  <div class="row" id="row"></div>
+  <p class="note">
+    <b>A</b>가 지금 상태(윈도우 크롬 기본 ~15px). <b>B~D</b>는 얇기 단계(10 / 8 / 6px),
+    <b>E</b>는 평소엔 거의 안 보이다 마우스 올리면 진해지는 방식(제일 깔끔), <b>F</b>는 얇게 + 포인트색(파랑) thumb.<br>
+    ※ 실제 앱은 다크 전용이라 이 배경과 동일합니다. 맥/모바일은 원래 얇은 오버레이 스크롤바라 차이가 더 작습니다.
+  </p>
+<script>
+  var HUES = [210, 255, 195, 230, 140, 120, 165, 275, 95, 205, 250, 130];
+  var LABS = ['챔버 내부','웨이퍼','파티클 맵','프로파일','챔버','웨이퍼','균일도','외관','SEM','로드락','게이지','EDS'];
+  var CARDS = [
+    { cls: '',      title: 'A. 기본(현재)', spec: 'OS 기본 · 약 15px' },
+    { cls: 'sb-b',  title: 'B. 얇게 10px',  spec: '10px · 회색 thumb' },
+    { cls: 'sb-c',  title: 'C. 얇게 8px',   spec: '8px · 회색 thumb' },
+    { cls: 'sb-d',  title: 'D. 아주 얇게 6px', spec: '6px · 회색 thumb' },
+    { cls: 'sb-e',  title: 'E. 6px 자동숨김', spec: '평소 숨김 → hover 진해짐' },
+    { cls: 'sb-f',  title: 'F. 8px 포인트색', spec: '8px · 파란 thumb' },
+    { cls: 'sb-hide', title: 'G. 완전 숨김', spec: '막대 없음 (스크롤은 됨)' },
+    { cls: 'sb-hide', title: 'H. 숨김 + 페이드', spec: '막대 없음 + 하단 "더 있음" 힌트', fade: true },
+  ];
+  var row = document.getElementById('row');
+  CARDS.forEach(function (c) {
+    var card = document.createElement('div'); card.className = 'card' + (c.fade ? ' has-fade' : '');
+    var h = document.createElement('h2'); h.textContent = c.title; card.appendChild(h);
+    var s = document.createElement('div'); s.className = 'spec'; s.textContent = c.spec; card.appendChild(s);
+    var sc = document.createElement('div'); sc.className = 'scroll ' + c.cls;
+    for (var i = 0; i < HUES.length; i++) {
+      var t = document.createElement('div'); t.className = 'tile'; t.style.setProperty('--h', HUES[i]);
+      var lab = document.createElement('span'); lab.textContent = (i % 2 + 1) + '차 · ' + LABS[i]; t.appendChild(lab);
+      sc.appendChild(t);
+    }
+    card.appendChild(sc);
+    if (c.fade) { var f = document.createElement('div'); f.className = 'fadehint'; card.appendChild(f); }
+    row.appendChild(card);
+  });
+</script>
+</body>
+</html>

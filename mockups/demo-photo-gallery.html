@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>데모결과 사진 뷰어 시안 (B·C)</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Pretendard', system-ui, -apple-system, 'Malgun Gothic', sans-serif;
+    background: #0b0d12; color: #e6e9ef;
+    display: flex; flex-direction: column;
+  }
+  /* 상단 전환바 */
+  header {
+    flex: none; display: flex; align-items: center; gap: 14px;
+    padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,.08); background: #101319;
+  }
+  header .t { font-size: 14px; font-weight: 500; }
+  header .t small { color: #8890a0; font-weight: 400; margin-left: 6px; }
+  .seg { display: flex; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; overflow: hidden; font-size: 12px; margin-left: auto; }
+  .seg button { background: transparent; color: #aeb4c0; border: 0; padding: 6px 16px; cursor: pointer; font-family: inherit; }
+  .seg button.on { background: #3b6ea5; color: #fff; }
+  main { flex: 1; min-height: 0; position: relative; }
+  .view { position: absolute; inset: 0; display: flex; }
+  .view.hidden { display: none; }
+
+  /* ===== 공통 사진 타일(가짜 사진 = 색 그라데이션) ===== */
+  .tile { --h: 210; background: linear-gradient(135deg, hsl(var(--h) 42% 34%), hsl(var(--h) 48% 15%)); }
+  .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px; font-size: 12px;
+    background: linear-gradient(0deg, rgba(0,0,0,.6), transparent); }
+  .cap b { font-weight: 500; }
+  .camico { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; opacity: .5; }
+  .th {
+    border: 0; padding: 0; border-radius: 7px; cursor: pointer; position: relative; overflow: hidden;
+    outline: 2px solid transparent; outline-offset: -2px; flex: none;
+  }
+  .th.on { outline-color: #6ba8f0; }
+  .th .thlab { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9.5px; padding: 2px 5px;
+    background: rgba(0,0,0,.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .colh { font-size: 11.5px; font-weight: 500; color: #fff; padding: 4px 7px; border-radius: 6px; text-align: center;
+    position: sticky; top: 0; z-index: 1; }
+
+  /* ===== B안 — 갤러리 오버레이 ===== */
+  #viewB { padding: 16px; }
+  #viewB .panel { flex: 1; background: #15181f; border: 1px solid rgba(255,255,255,.09); border-radius: 12px;
+    display: flex; flex-direction: column; overflow: hidden; }
+  #viewB .top { flex: none; display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.08); }
+  #viewB .eqt { font-size: 14px; font-weight: 500; flex: 1; }
+  #viewB .mini { display: flex; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; overflow: hidden; font-size: 12px; }
+  #viewB .mini button { background: transparent; color: #aeb4c0; border: 0; padding: 5px 14px; cursor: pointer; font-family: inherit; }
+  #viewB .mini button.on { background: #3b6ea5; color: #fff; }
+  #viewB .xb { background: transparent; border: 0; color: #8890a0; font-size: 20px; cursor: pointer; line-height: 1; }
+  #viewB .body { flex: 1; min-height: 0; display: flex; }
+  #viewB .detail { flex: 1; min-width: 0; display: flex; }
+  #viewB .pane { flex: 1; min-width: 0; position: relative; margin: 12px; border-radius: 10px; }
+  #viewB .detail .pane.r { display: none; }
+  #viewB .detail.cmp .pane { margin-right: 6px; }
+  #viewB .detail.cmp .pane.r { display: block; margin-left: 6px; margin-right: 12px; }
+  #viewB .slot { position: absolute; top: 10px; left: 10px; font-size: 11px; background: rgba(0,0,0,.5);
+    border-radius: 6px; padding: 3px 9px; display: none; }
+  #viewB .detail.cmp .slot { display: block; }
+  #viewB .sheet { flex: none; width: 300px; border-left: 1px solid rgba(255,255,255,.08);
+    display: flex; flex-direction: column; min-height: 0; }
+  #viewB .shead { flex: none; font-size: 11px; color: #8890a0; padding: 10px 12px 6px; }
+  #viewB .cols { flex: 1; min-height: 0; display: flex; gap: 10px; padding: 0 12px 12px; }
+  #viewB .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; padding-right: 2px; }
+  #viewB .col .th { height: 66px; }
+  #viewB .hint { flex: none; font-size: 11px; color: #8890a0; padding: 9px 14px; border-top: 1px solid rgba(255,255,255,.08); }
+  #viewB .hint b { color: #aeb4c0; font-weight: 500; }
+
+  /* ===== C안 — 하단 드로어 ===== */
+  #viewC { padding: 16px; }
+  #viewC .app { flex: 1; background: #12141a; border: 1px solid rgba(255,255,255,.08); border-radius: 14px;
+    padding: 14px; display: flex; flex-direction: column; overflow: hidden; }
+  #viewC .eq { font-size: 13px; font-weight: 500; margin-bottom: 10px; flex: none; }
+  #viewC .tblscroll { flex: 1; min-height: 0; overflow: auto; }
+  #viewC table { border-collapse: separate; border-spacing: 0; font-size: 12px; table-layout: fixed; width: 336px; }
+  #viewC td, #viewC th { border: 1px solid rgba(255,255,255,.12); padding: 5px 8px; text-align: center; color: #c9cdd6; white-space: nowrap; }
+  #viewC .lbl { text-align: left; color: #8b91a0; width: 104px; }
+  #viewC .band { padding: 0; }
+  #viewC .band > div { padding: 5px 0; font-weight: 500; color: #fff; border-radius: 6px 6px 0 0; }
+  #viewC .best { color: #7fd39a; font-weight: 700; background: rgba(77,161,103,.13); }
+  #viewC .drawer { flex: none; margin: 12px -14px -14px; background: #171b23; border-top: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px 16px 0 0; box-shadow: 0 -10px 26px rgba(0,0,0,.4); display: flex; flex-direction: column;
+    overflow: hidden; max-height: 62%; }
+  #viewC .dhead { flex: none; position: relative; display: flex; align-items: center; gap: 10px; padding: 11px 15px 9px; cursor: pointer; }
+  #viewC .grip { position: absolute; left: 50%; top: 5px; transform: translateX(-50%); width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.28); }
+  #viewC .dtt { font-size: 13px; font-weight: 500; flex: 1; }
+  #viewC .chev { color: #9aa1ad; transition: transform .2s; width: 18px; height: 18px; }
+  #viewC .drawer.min .chev { transform: rotate(180deg); }
+  #viewC .dbody { flex: 1; min-height: 0; display: flex; gap: 12px; padding: 2px 15px 15px; }
+  #viewC .drawer.min .dbody { display: none; }
+  #viewC .preview { flex: 1; min-width: 0; border-radius: 10px; position: relative; min-height: 170px; }
+  #viewC .dsheet { flex: none; width: 300px; display: flex; gap: 10px; min-height: 0; }
+  #viewC .dsheet .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; padding-right: 2px; }
+  #viewC .dsheet .th { height: 60px; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="t">데모결과 사진 뷰어 시안 <small>가짜 사진 = 색 타일 · 실제 브라우저에서 스크롤·클릭 동작</small></div>
+    <div class="seg">
+      <button class="on" data-view="B">B · 갤러리 오버레이</button>
+      <button data-view="C">C · 하단 드로어</button>
+    </div>
+  </header>
+  <main>
+    <!-- ===================== B안 ===================== -->
+    <section class="view" id="viewB">
+      <div class="panel">
+        <div class="top">
+          <span class="eqt">건식식각 · 사진 비교</span>
+          <div class="mini"><button class="on" data-mode="one">훑기</button><button data-mode="cmp">2장 비교</button></div>
+          <button class="xb" aria-label="닫기">✕</button>
+        </div>
+        <div class="body">
+          <div class="detail" id="detailB">
+            <div class="pane l tile" style="--h:210"><span class="slot">A사</span><div class="cap"><b>A사 · 1차</b> · 챔버 내부</div></div>
+            <div class="pane r tile" style="--h:140"><span class="slot">B사</span><div class="cap"><b>B사 · 1차</b> · 챔버</div></div>
+          </div>
+          <div class="sheet">
+            <div class="shead">훑어보기 — 제조사별 (세로 스크롤)</div>
+            <div class="cols" id="colsB"></div>
+          </div>
+        </div>
+        <div class="hint">썸네일 클릭 = 크게 보기 · <b>2장 비교</b> 켜면 A사 → 왼쪽, B사 → 오른쪽에 나란히</div>
+      </div>
+    </section>
+
+    <!-- ===================== C안 ===================== -->
+    <section class="view hidden" id="viewC">
+      <div class="app">
+        <div class="eq">건식식각</div>
+        <div class="tblscroll">
+          <table>
+            <tr><td class="lbl" style="border:none;background:transparent"></td>
+              <td class="band"><div style="background:#3b6ea5">A사 · X-100</div></td>
+              <td class="band"><div style="background:#3a7d4e">B사 · Y-200</div></td></tr>
+            <tr><td class="lbl">식각률[nm/min]</td><td>128</td><td class="best">150</td></tr>
+            <tr><td class="lbl">균일도[%]</td><td class="best">±1.2</td><td>±1.5</td></tr>
+            <tr><td class="lbl">파티클[ea]</td><td>3</td><td class="best">1</td></tr>
+            <tr><td class="lbl">식각선택비</td><td class="best">32</td><td>28</td></tr>
+            <tr><td class="lbl">가격[억]</td><td class="best">4.2</td><td>4.8</td></tr>
+          </table>
+        </div>
+        <div class="drawer" id="drawerC">
+          <div class="dhead" id="dheadC">
+            <span class="grip"></span>
+            <span class="dtt" id="dttC">사진 — 건식식각 · 14장</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div class="dbody">
+            <div class="preview tile" id="pvC" style="--h:210"><div class="cap"><b>A사 · 1차</b> · 챔버 내부</div></div>
+            <div class="dsheet" id="dsheetC"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+(function () {
+  // 공통 사진 데이터 — 스크롤 확인용으로 넉넉히
+  var PHOTOS = {
+    'A사': [
+      { r: '1차', lab: '챔버 내부', h: 210 }, { r: '1차', lab: '웨이퍼 로딩', h: 255 },
+      { r: '1차', lab: '파티클 맵', h: 195 }, { r: '1차', lab: '가스 라인 셋업', h: 235 },
+      { r: '1차', lab: '로드락', h: 270 }, { r: '2차', lab: '식각 프로파일', h: 220 },
+      { r: '2차', lab: '장비 외관', h: 285 }, { r: '2차', lab: '결과 그래프', h: 205 },
+    ],
+    'B사': [
+      { r: '1차', lab: '챔버', h: 140 }, { r: '1차', lab: '웨이퍼', h: 118 },
+      { r: '1차', lab: '게이지 패널', h: 160 }, { r: '2차', lab: 'SEM 단면', h: 95 },
+      { r: '2차', lab: '균일도 맵', h: 172 }, { r: '2차', lab: 'EDS 분석', h: 105 },
+    ],
+  };
+  var MK_COLOR = { 'A사': '#3b6ea5', 'B사': '#3a7d4e' };
+
+  function makeThumb(mk, p) {
+    var b = document.createElement('button');
+    b.className = 'th tile';
+    b.style.setProperty('--h', p.h);
+    b.dataset.mk = mk; b.dataset.r = p.r; b.dataset.lab = p.lab; b.dataset.h = p.h;
+    var s = document.createElement('span'); s.className = 'thlab'; s.textContent = p.lab;
+    b.appendChild(s);
+    return b;
+  }
+  function makeColumn(mk) {
+    var col = document.createElement('div'); col.className = 'col';
+    var h = document.createElement('div'); h.className = 'colh'; h.textContent = mk;
+    h.style.background = MK_COLOR[mk]; col.appendChild(h);
+    PHOTOS[mk].forEach(function (p) { col.appendChild(makeThumb(mk, p)); });
+    return col;
+  }
+  function fillPane(pane, el) {
+    pane.style.setProperty('--h', el.dataset.h);
+    pane.querySelector('.cap').innerHTML = '<b>' + el.dataset.mk + ' · ' + el.dataset.r + '</b> · ' + el.dataset.lab;
+  }
+
+  /* ---------- 상단 뷰 전환 ---------- */
+  document.querySelectorAll('header .seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('header .seg button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      document.getElementById('viewB').classList.toggle('hidden', b.dataset.view !== 'B');
+      document.getElementById('viewC').classList.toggle('hidden', b.dataset.view !== 'C');
+    });
+  });
+
+  /* ---------- B안 ---------- */
+  var colsB = document.getElementById('colsB');
+  colsB.appendChild(makeColumn('A사'));
+  colsB.appendChild(makeColumn('B사'));
+  var detailB = document.getElementById('detailB');
+  var paneL = detailB.querySelector('.pane.l'), paneR = detailB.querySelector('.pane.r');
+  var modeB = 'one';
+  colsB.querySelectorAll('.th').forEach(function (th) {
+    th.addEventListener('click', function () {
+      if (modeB === 'one') {
+        colsB.querySelectorAll('.th').forEach(function (t) { t.classList.remove('on'); });
+        th.classList.add('on'); fillPane(paneL, th);
+      } else {
+        var isA = th.dataset.mk === 'A사';
+        colsB.querySelectorAll('.th[data-mk="' + th.dataset.mk + '"]').forEach(function (t) { t.classList.remove('on'); });
+        th.classList.add('on'); fillPane(isA ? paneL : paneR, th);
+      }
+    });
+  });
+  document.querySelectorAll('#viewB .mini button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      modeB = b.dataset.mode;
+      document.querySelectorAll('#viewB .mini button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      detailB.classList.toggle('cmp', modeB === 'cmp');
+    });
+  });
+
+  /* ---------- C안 ---------- */
+  var dsheetC = document.getElementById('dsheetC');
+  dsheetC.appendChild(makeColumn('A사'));
+  dsheetC.appendChild(makeColumn('B사'));
+  var pvC = document.getElementById('pvC');
+  dsheetC.querySelectorAll('.th').forEach(function (th, i) {
+    if (i === 0) th.classList.add('on');
+    th.addEventListener('click', function () {
+      dsheetC.querySelectorAll('.th').forEach(function (t) { t.classList.remove('on'); });
+      th.classList.add('on'); fillPane(pvC, th);
+    });
+  });
+  var drawerC = document.getElementById('drawerC'), dttC = document.getElementById('dttC');
+  document.getElementById('dheadC').addEventListener('click', function () {
+    var min = drawerC.classList.toggle('min');
+    dttC.textContent = (min ? '사진 보기 — 건식식각 · 14장' : '사진 — 건식식각 · 14장');
+  });
+})();
+</script>
+</body>
+</html>
