@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>계정·개인화 로드맵 — 단계별 현황</title>
+<style>
+:root{
+  --ink:#0F1117;--ink2:#161B22;--ink3:#1D2635;
+  --border:#293244;--border2:#232C3A;--text:#FFFFFF;--text2:#AAB4C3;--text3:#7D8899;
+  --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--red:#E05B54;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;
+  background:var(--ink);color:var(--text);min-height:100vh;
+  -webkit-font-smoothing:antialiased;padding:36px 24px 60px;
+}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.sub{color:var(--text3);font-size:13px;margin-top:6px}
+.sub b{color:var(--text2);font-weight:600}
+
+/* ── 트랙 행 ───────────────────────── */
+.tracks{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+@media(max-width:820px){.tracks{grid-template-columns:repeat(2,1fr)}}
+.track{
+  position:relative;background:var(--ink2);border:1px solid var(--border2);border-radius:14px;
+  padding:16px 16px 14px;cursor:pointer;text-align:left;color:var(--text);
+  transition:border-color .18s,transform .15s,box-shadow .18s;user-select:none;
+}
+.track:hover{border-color:var(--border);transform:translateY(-2px)}
+.track.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue),0 8px 24px rgba(84,145,218,.10)}
+.track .letter{
+  width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;background:var(--ink3);color:var(--text2);border:1px solid var(--border);
+}
+.track.sel .letter{background:rgba(84,145,218,.16);color:var(--blue);border-color:rgba(84,145,218,.4)}
+.track h2{font-size:15px;font-weight:600;margin-top:10px;letter-spacing:-.2px}
+.track .tdesc{font-size:12px;color:var(--text3);margin-top:3px;line-height:1.5;min-height:36px}
+.trow{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.dots{display:flex;gap:5px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink3);border:1px solid var(--border)}
+.dot.done{background:var(--green);border-color:var(--green)}
+.dot.cur{background:var(--blue);border-color:var(--blue);box-shadow:0 0 6px rgba(84,145,218,.6)}
+.dot.hold{background:rgba(214,162,62,.65);border-color:var(--amber)}
+.here{
+  position:absolute;top:-11px;right:12px;font-size:11px;font-weight:700;color:#fff;
+  background:var(--blue);padding:3px 10px;border-radius:99px;letter-spacing:-.2px;
+  box-shadow:0 2px 8px rgba(84,145,218,.4);
+}
+.chev{color:var(--text3);transition:transform .2s;display:flex}
+.track.sel .chev{transform:rotate(90deg);color:var(--blue)}
+
+/* 상태 필 */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
+.pill svg{flex-shrink:0}
+.pill.done{color:var(--green);background:rgba(77,161,103,.12);border-color:rgba(77,161,103,.3)}
+.pill.cur{color:var(--blue);background:rgba(84,145,218,.13);border-color:rgba(84,145,218,.35)}
+.pill.hold{color:var(--amber);background:rgba(214,162,62,.12);border-color:rgba(214,162,62,.3)}
+.pill.wait{color:var(--text3);background:var(--ink3);border-color:var(--border)}
+.pill.mix{color:var(--amber);background:rgba(214,162,62,.10);border-color:rgba(214,162,62,.25)}
+
+/* ── 스테이지 스트립 ─────────────────── */
+.stagewrap{overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease,margin .3s ease;margin-top:0}
+.stagewrap.open{max-height:400px;opacity:1;margin-top:14px}
+.stages{display:grid;gap:10px}
+.stages.n2{grid-template-columns:repeat(2,1fr)}
+.stages.n3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:820px){.stages.n2,.stages.n3{grid-template-columns:1fr}}
+.stage{
+  position:relative;background:var(--ink);border:1px solid var(--border2);border-radius:11px;
+  padding:13px 14px;cursor:pointer;text-align:left;color:var(--text);
+  transition:border-color .15s,background .15s;user-select:none;
+}
+.stage:hover{border-color:var(--border);background:var(--ink3)}
+.stage.sel{border-color:var(--blue);background:rgba(84,145,218,.07)}
+.stage .sname{font-size:13.5px;font-weight:600;letter-spacing:-.2px;display:flex;align-items:center;gap:7px}
+.stage .ssub{font-size:12px;color:var(--text3);margin-top:5px;line-height:1.5}
+.stage .spill{margin-top:9px}
+.stage .minihere{
+  position:absolute;top:-9px;right:10px;font-size:10px;font-weight:700;color:#fff;
+  background:var(--blue);padding:2px 8px;border-radius:99px;
+}
+
+/* ── 상세 패널 ────────────────────── */
+.detail{
+  margin-top:14px;background:var(--ink2);border:1px solid var(--border2);border-radius:14px;
+  padding:20px 22px;opacity:0;transform:translateY(6px);transition:opacity .25s ease,transform .25s ease;
+}
+.detail.show{opacity:1;transform:translateY(0)}
+.dhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dhead .crumb{font-size:12px;color:var(--text3);font-weight:600}
+.dhead .crumb b{color:var(--text2)}
+.detail h3{font-size:17px;font-weight:700;margin-top:8px;letter-spacing:-.3px}
+.detail .dbody{font-size:13.5px;color:var(--text2);line-height:1.75;margin-top:10px}
+.detail .dbody b{color:var(--text);font-weight:600}
+.points{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.point{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--text2);line-height:1.6}
+.point .pd{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:8px}
+.point b{color:var(--text);font-weight:600}
+.dnote{
+  margin-top:14px;font-size:12.5px;color:var(--text3);line-height:1.6;
+  background:var(--ink);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;
+}
+.dnote b{color:var(--amber);font-weight:600}
+
+.legend{display:flex;gap:14px;margin-top:22px;flex-wrap:wrap}
+.lg{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text3)}
+.lg .sw{width:9px;height:9px;border-radius:50%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>계정 · 개인화 로드맵</h1>
+  <p class="sub">A→B→C→D 메인 트랙 · 갱신 <b>2026-07-11</b> · 트랙을 누르면 세부 단계, 단계를 누르면 아래에 상세 내용</p>
+
+  <div class="tracks" id="tracks"></div>
+  <div class="stagewrap" id="stagewrap"><div class="stages" id="stages"></div></div>
+  <div class="detail" id="detail"></div>
+
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--green)"></span>완료</span>
+    <span class="lg"><span class="sw" style="background:var(--blue)"></span>진행 · 다음 착수</span>
+    <span class="lg"><span class="sw" style="background:var(--amber)"></span>보류</span>
+    <span class="lg"><span class="sw" style="background:var(--ink3);border:1px solid var(--border)"></span>대기 · 미착수</span>
+  </div>
+</div>
+
+<script>
+const IC = {
+  done:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  cur:'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>',
+  hold:'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  wait:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="7"/></svg>',
+  chev:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>'
+};
+const PL = {done:'완료', cur:'진행 중', next:'다음 착수', hold:'보류', wait:'대기', mix:'일부 완료 · 일부 보류', no:'미착수'};
+function pill(st, label){
+  const cls = st==='next' ? 'cur' : (st==='no' ? 'wait' : st);
+  const ic  = st==='next' || st==='cur' ? IC.cur : (st==='mix' ? IC.hold : IC[st==='no'?'wait':st] || IC.wait);
+  return '<span class="pill '+cls+'">'+ic+(label||PL[st])+'</span>';
+}
+
+const DATA = [
+  {
+    id:'A', name:'계정 기본', status:'done',
+    tdesc:'비밀번호 · 가입 신청 · 승인',
+    dots:['done','done','done'],
+    stages:[
+      { id:'a1', name:'비밀번호 변경', status:'done', sub:'설정에서 본인 비밀번호 직접 변경',
+        body:'설정 화면에서 로그인한 본인의 <b>비밀번호를 직접 변경</b>할 수 있게 함. 이전에는 관리자가 만들어준 초기 비밀번호를 그대로 쓸 수밖에 없었음.',
+        points:['설정 페이지에 비밀번호 변경 섹션','현재 비밀번호 확인 후 새 비밀번호 저장'] },
+      { id:'a2', name:'가입 신청 → 관리자 승인', status:'done', sub:'사번으로 신청하면 관리자가 승인',
+        body:'새 팀원이 <b>사번으로 가입 신청</b>하면, 관리자 설정 화면의 "가입 승인 대기" 목록에 떠서 <b>일반(팀원)/관리자로 승인</b>하는 흐름. 승인 전에는 로그인해도 아무것도 못 보는 대기 상태.',
+        points:['가입 신청 화면(사번 + 비밀번호)','설정 → 가입 승인 대기 목록에서 승인/거절','승인 즉시 해당 권한으로 로그인 가능'] },
+      { id:'a3', name:'가입 오류(이메일 블로커) 해결', status:'done', sub:'확인 메일 차단 문제 해결',
+        body:'가입이 <b>"email address invalid"로 막히던 원인</b> = 시스템이 확인 메일을 보내려는데 사번 계정은 받을 메일함이 없어서였음. <b>메일 확인 절차를 끔</b>으로써 해결 — 이제 사번 가입이 바로 통과됨.',
+        points:['원인: 확인 메일 발송 시도 → 수신 불가','조치: 메일 확인(Confirm email) OFF','결과: 사번 가입 정상 통과'] },
+    ]
+  },
+  {
+    id:'B', name:'권한 4단계', status:'mix',
+    tdesc:'게스트 · 유관자 · 팀원 · 관리자',
+    dots:['done','hold','hold'],
+    stages:[
+      { id:'b1', name:'Phase 1 — 4단계 골격', status:'done', sub:'역할 구분 + 메뉴/화면 가드',
+        body:'역할을 <b>게스트 &lt; 유관자 &lt; 팀원 &lt; 관리자</b> 4단계로 나누고, 각 역할이 볼 수 있는 메뉴와 화면을 구분함. 관리자는 팀원의 상위 집합(팀원 권한 + 관리).',
+        points:['<b>게스트</b>: 홈 로드맵 · 행사 · 바로가기','<b>유관자</b>: 로그인 + 행사 · 바로가기','<b>팀원</b>: 팀 콘텐츠 전체 열람 (+ 장비 열람 개방됨)','<b>관리자</b>: + 사용자 승인/관리'] },
+      { id:'b2', name:'Phase 2 — 팀원 글쓰기 · 유관자 제한열람', status:'hold', sub:'"필요해질 때 하자"로 보류',
+        body:'두 가지가 남아 있음. ① <b>팀원 글쓰기</b> — 지금 팀원은 보기만 되고 공지 작성·업무 등록·일정 추가는 관리자만 됨. ② <b>유관자 장비 제한열람</b> — 유관자(교원·학생)에게 장비 목록을 보여주되 가격·제조사는 가린 버전으로.',
+        points:['팀원이 실제로 글 쓸 일이 생기면 ① 착수','유관자를 실제로 초대할 때 ② 착수'],
+        note:'예외: <b>데모결과 탭은 이미 팀원 쓰기가 열려 있음</b>(지표값·코멘트·사진).' },
+      { id:'b3', name:'Phase 3 — 사용자 관리 + 이력장부', status:'mix', sub:'관리 화면 완료 · 이력 기록만 보류',
+        body:'<b>사용자 관리 화면은 완료</b> — 설정에서 회원 목록을 보고 권한 변경(Select)·강퇴 가능(본인 계정 잠금 방지, 관리자 승격은 팀원에게만). <b>계정 이력장부만 보류</b> — 누가 언제 가입/승인/강퇴됐는지의 과거 기록.',
+        points:['완료: 회원 목록 · 권한 변경 · 강퇴','보류: 가입/승인/거절/권한변경/강퇴 이력 기록'],
+        note:'이력장부는 <b>"추적할 일이 생기면 하자"</b>로 보류.' },
+    ]
+  },
+  {
+    id:'C', name:'개인화 1차', status:'cur', here:true,
+    tdesc:'각자 보던 화면 · 배지 · 순서',
+    dots:['done','cur','wait'],
+    stages:[
+      { id:'c1', name:'Stage 1 — 화면 기억', status:'done', sub:'뷰 · 탭을 계정별 서버 저장',
+        body:'"<b>각자 보던 화면을 기억해주는 기초 공사.</b>" 전에는 업무일정을 주간으로 보다가 나갔다 오면 모두 월간으로 돌아왔지만, 지금은 <b>누가 로그인했느냐에 따라</b> 마지막 보던 화면을 기억함 — 캘린더 뷰(월/주/목록), 업무현황 탭.',
+        points:['<b>서버 저장</b>이라 사무실 PC에서 설정한 게 집 · 폰에서도 그대로','이 "개인별 설정 저장소"가 Stage 2 · 3에서 계속 재사용됨'] },
+      { id:'c2', name:'Stage 2 — 내 기준 새 글 배지', status:'next', here:true, sub:'안 본 글만 카운트 + 필터 기억',
+        body:'① <b>내 기준 새 글 배지</b>(메인): 지금은 "새 글" 배지가 모두에게 똑같이 보임 → <b>내가 마지막으로 확인한 시점 기준</b>으로 바꿔서 "내가 안 본 글"만 세어주고, 페이지에 들어가면 읽음 처리. ② <b>필터 기억</b>(곁들이): 업무현황의 구분·담당자 필터를 걸어두면 나갔다 와도 그대로.',
+        points:['메뉴별 마지막 확인시각을 개인 설정에 저장','배지 = 그 이후 올라온 글 수만 카운트','페이지 진입 시 자동 읽음 처리','예: 항상 "담당자: 나"만 보는 사람은 매번 다시 클릭할 필요 없음'],
+        note:'<b>다음 착수 항목</b> — 사용자가 시작 신호를 주면 진행하기로 대기 중.' },
+      { id:'c3', name:'Stage 3 — 카드 순서 개인별', status:'wait', sub:'업무 카드 순서를 사람마다 다르게',
+        body:'지금은 A가 업무 카드 순서를 바꾸면 <b>모두에게 그 순서로 보임</b>(팀 공유) → 이걸 <b>각자 자기 순서</b>로 보게 전환. 단, 카드의 상태 이동(진행중→완료)과 삭제는 계속 팀 전체 공유.',
+        points:['순서 정보를 팀 공유 저장 → 개인 설정 저장으로 이동','상태 이동 · 삭제 = 계속 팀 공유 (사용자 확정 사항)'] },
+    ]
+  },
+  {
+    id:'D', name:'개인화 2차', status:'no',
+    tdesc:'홈 배치 · 관심 업무 핀',
+    dots:['wait','wait'],
+    stages:[
+      { id:'d1', name:'홈 화면 배치 개인화', status:'wait', sub:'홈 섹션 순서 · 숨김을 내 마음대로',
+        body:'홈 대시보드의 섹션(로드맵 · 장비현황 · 미리보기 등)을 <b>사람마다 순서를 바꾸거나 숨길 수 있게</b> 하는 것. C 개인화 1차가 끝난 뒤 착수.',
+        points:['섹션 순서 변경 + 숨김/표시 토글','개인 설정 저장소(Stage 1 기초 공사) 재사용'] },
+      { id:'d2', name:'관심 업무 핀', status:'wait', sub:'내가 지켜보는 업무를 고정',
+        body:'내가 관심 있는 업무를 <b>핀으로 고정</b>해서 빨리 찾아볼 수 있게 하는 것. 어디에 고정해 보여줄지(홈 · 업무현황 상단 등)는 착수할 때 결정.',
+        points:['업무 카드에 핀 토글','핀 목록은 개인별 저장'],
+        note:'결정 대기 1건: <b>업무카드 정렬 = 팀 공유 vs 개인별</b> — 착수 전에 확정 필요.' },
+    ]
+  },
+];
+
+const $tracks = document.getElementById('tracks');
+const $swrap  = document.getElementById('stagewrap');
+const $stages = document.getElementById('stages');
+const $detail = document.getElementById('detail');
+let selTrack = 'C', selStage = 'c2';
+
+function trackPill(t){
+  if(t.status==='done') return pill('done');
+  if(t.status==='cur')  return pill('cur','진행 중');
+  if(t.status==='mix')  return pill('mix','뼈대 완료 · 살은 보류');
+  return pill('no','미착수');
+}
+
+function renderTracks(){
+  $tracks.innerHTML = DATA.map(t => `
+    <button class="track${t.id===selTrack?' sel':''}" data-t="${t.id}">
+      ${t.here?'<span class="here">지금 여기</span>':''}
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="letter">${t.id}</span>
+        ${trackPill(t)}
+      </div>
+      <h2>${t.name}</h2>
+      <p class="tdesc">${t.tdesc}</p>
+      <div class="trow">
+        <span class="dots">${t.dots.map(d=>`<span class="dot ${d==='wait'?'':d}"></span>`).join('')}</span>
+        <span class="chev">${IC.chev}</span>
+      </div>
+    </button>`).join('');
+}
+
+function renderStages(){
+  const t = DATA.find(x=>x.id===selTrack);
+  $stages.className = 'stages n'+t.stages.length;
+  $stages.innerHTML = t.stages.map(s => `
+    <button class="stage${s.id===selStage?' sel':''}" data-s="${s.id}">
+      ${s.here?'<span class="minihere">지금 여기</span>':''}
+      <div class="sname">${s.name}</div>
+      <p class="ssub">${s.sub}</p>
+      <div class="spill">${pill(s.status)}</div>
+    </button>`).join('');
+  $swrap.classList.add('open');
+}
+
+function renderDetail(){
+  const t = DATA.find(x=>x.id===selTrack);
+  const s = t.stages.find(x=>x.id===selStage);
+  if(!s){ $detail.classList.remove('show'); $detail.innerHTML=''; return; }
+  $detail.classList.remove('show');
+  $detail.innerHTML = `
+    <div class="dhead">
+      <span class="crumb">트랙 <b>${t.id} · ${t.name}</b></span>
+      ${pill(s.status)}
+    </div>
+    <h3>${s.name}</h3>
+    <p class="dbody">${s.body}</p>
+    <div class="points">${(s.points||[]).map(p=>`<div class="point"><span class="pd"></span><span>${p}</span></div>`).join('')}</div>
+    ${s.note?`<div class="dnote">${s.note}</div>`:''}`;
+  void $detail.offsetWidth; /* 강제 reflow — rAF는 백그라운드 탭에서 안 돌아 show가 안 붙는 문제 회피 */
+  $detail.classList.add('show');
+}
+
+$tracks.addEventListener('click', e=>{
+  const b = e.target.closest('.track'); if(!b) return;
+  const id = b.dataset.t;
+  if(id===selTrack) return;
+  selTrack = id;
+  const t = DATA.find(x=>x.id===id);
+  selStage = (t.stages.find(s=>s.here)||t.stages[0]).id;
+  renderTracks(); renderStages(); renderDetail();
+});
+$stages.addEventListener('click', e=>{
+  const b = e.target.closest('.stage'); if(!b) return;
+  if(b.dataset.s===selStage) return;
+  selStage = b.dataset.s;
+  renderStages(); renderDetail();
+});
+
+renderTracks(); renderStages(); renderDetail();
+</script>
+</body>
+</html>
