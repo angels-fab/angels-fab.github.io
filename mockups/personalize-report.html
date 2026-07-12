@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>계정·개인화 A~D 완료 보고</title>
+<style>
+:root{
+  --ink:#0F1117;--ink2:#161B22;--ink3:#1D2635;
+  --border:#293244;--border2:#232C3A;--text:#FFFFFF;--text2:#AAB4C3;--text3:#7D8899;
+  --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--red:#E05B54;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;
+  background:var(--ink);color:var(--text);min-height:100vh;padding:36px 24px 70px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-size:23px;font-weight:700;letter-spacing:-.3px}
+.sub{color:var(--text3);font-size:13px;margin-top:6px}
+
+/* 완주 배너 */
+.banner{
+  display:flex;align-items:center;gap:14px;margin-top:22px;
+  background:rgba(77,161,103,.10);border:1px solid rgba(77,161,103,.4);border-radius:14px;padding:16px 20px;
+}
+.banner .ck{
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;background:var(--green);
+  display:flex;align-items:center;justify-content:center;
+}
+.banner b{color:var(--green)}
+.banner p{font-size:13.5px;color:var(--text2);line-height:1.6;margin-top:2px}
+
+/* 진행 스트립 */
+.strip{display:flex;gap:8px;margin-top:18px}
+.strip .seg{
+  flex:1;display:flex;align-items:center;gap:8px;justify-content:center;
+  background:var(--ink2);border:1px solid var(--border2);border-radius:10px;padding:9px 6px;
+  font-size:12.5px;font-weight:700;color:var(--text2);
+}
+.strip .seg .d{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.strip .seg.part .d{background:var(--amber)}
+@media(max-width:640px){.strip{flex-wrap:wrap}.strip .seg{flex:1 1 40%}}
+
+/* 트랙 섹션 */
+.track{margin-top:30px;background:var(--ink2);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
+.thead{display:flex;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid var(--border2)}
+.thead .letter{
+  width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:800;background:var(--ink3);border:1px solid var(--border);color:var(--text2);
+}
+.thead h2{font-size:16.5px;font-weight:700;letter-spacing:-.2px;flex:1;min-width:0}
+.thead h2 small{display:block;font-size:12px;font-weight:500;color:var(--text3);margin-top:2px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:99px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.pill.done{color:var(--green);background:rgba(77,161,103,.12);border-color:rgba(77,161,103,.35)}
+.pill.part{color:var(--amber);background:rgba(214,162,62,.12);border-color:rgba(214,162,62,.35)}
+.tbody{padding:8px 20px 16px}
+
+/* 작업 항목 */
+.item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border2)}
+.item:last-child{border-bottom:none}
+.item .ic{
+  width:26px;height:26px;border-radius:8px;flex-shrink:0;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(77,161,103,.14);
+}
+.item.hold .ic{background:rgba(214,162,62,.13)}
+.item .tt{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.item .tt .when{font-size:11.5px;font-weight:600;color:var(--text3);margin-left:7px}
+.item .ds{font-size:13px;color:var(--text2);line-height:1.65;margin-top:3px}
+.item .ds b{color:var(--text);font-weight:600}
+.mine{
+  display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue);
+  background:rgba(84,145,218,.13);border:1px solid rgba(84,145,218,.3);
+  border-radius:6px;padding:1px 7px;margin-left:7px;vertical-align:2px;white-space:nowrap;
+}
+
+/* 품질 푸터 */
+.qual{margin-top:26px;background:var(--ink2);border:1px solid var(--border2);border-radius:14px;padding:16px 20px}
+.qual h3{font-size:13.5px;font-weight:700;color:var(--text2);margin-bottom:10px}
+.qual ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+.qual li{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--text3);line-height:1.6}
+.qual li .dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:7px}
+.qual b{color:var(--text2)}
+.foot{margin-top:18px;font-size:11.5px;color:var(--text3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>계정 · 개인화 완료 보고</h1>
+  <p class="sub">메인 트랙 A→B→C→D · 2026-06 말 ~ 2026-07-12 · 모든 변경은 자동 배포로 라이브 반영됨</p>
+
+  <div class="banner">
+    <span class="ck">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </span>
+    <div>
+      <b>A~D 메인 트랙 완주 (2026-07-12)</b>
+      <p>계정 체계를 만들고(A), 권한을 나누고(B), 포털이 <b>사람마다 다르게 동작</b>하도록(C·D) 바꿨습니다.
+      개인화 항목은 전부 내 계정에만 적용 — 팀 공유 데이터에는 영향이 없습니다.</p>
+    </div>
+  </div>
+
+  <div class="strip">
+    <span class="seg"><span class="d"></span>A 계정 기본</span>
+    <span class="seg part"><span class="d"></span>B 권한 4단계</span>
+    <span class="seg"><span class="d"></span>C 개인화 1차</span>
+    <span class="seg"><span class="d"></span>D 개인화 2차</span>
+  </div>
+
+  <!-- A -->
+  <section class="track">
+    <div class="thead">
+      <span class="letter">A</span>
+      <h2>계정 기본<small>각자 계정으로 안전하게 드나드는 기반</small></h2>
+      <span class="pill done">완료 · 7/7</span>
+    </div>
+    <div class="tbody">
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">비밀번호 변경</div>
+        <div class="ds">설정에서 <b>본인 비밀번호를 직접 변경</b>. 이전엔 초기 비밀번호를 그대로 쓸 수밖에 없었음.</div></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">가입 신청 → 관리자 승인</div>
+        <div class="ds">새 팀원이 <b>사번으로 가입 신청</b>하면 관리자가 설정의 "가입 승인 대기"에서 승인. 승인 전에는 아무것도 못 보는 대기 상태.</div></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">가입 오류(이메일 블로커) 해결</div>
+        <div class="ds">사번 계정은 받을 메일함이 없어 확인 메일 단계에서 가입이 막히던 문제 → <b>메일 확인 절차를 꺼서</b> 해결.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section class="track">
+    <div class="thead">
+      <span class="letter">B</span>
+      <h2>권한 4단계<small>게스트 · 유관자 · 팀원 · 관리자</small></h2>
+      <span class="pill part">뼈대 완료 · 살은 보류</span>
+    </div>
+    <div class="tbody">
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">역할 4단계 골격 <span class="when">7/7</span></div>
+        <div class="ds"><b>게스트</b>(로드맵·행사·바로가기만) → <b>유관자</b>(+로그인) → <b>팀원</b>(팀 콘텐츠 전체 열람 + 장비 열람) → <b>관리자</b>(+사용자 관리). 역할별로 메뉴와 화면이 자동으로 달라짐.</div></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">사용자 관리 화면 <span class="when">7/7</span></div>
+        <div class="ds">설정에서 <b>회원 목록 · 권한 변경 · 강퇴</b> 가능(본인 계정 잠금 방지 포함).</div></div>
+      </div>
+      <div class="item hold">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="#D6A23E"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></span>
+        <div><div class="tt">보류분 — 조건 생기면 착수</div>
+        <div class="ds">팀원 글쓰기 권한(팀원이 실제로 쓸 일이 생기면) · 유관자 장비 제한열람(초대할 때) · 계정 이력장부(추적할 일 생기면).</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section class="track">
+    <div class="thead">
+      <span class="letter">C</span>
+      <h2>개인화 1차<small>각자 보던 화면 · 배지 · 순서</small></h2>
+      <span class="pill done">완료 · 7/12</span>
+    </div>
+    <div class="tbody">
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">Stage 1 — 화면 기억 <span class="when">7/7</span><span class="mine">나에게만</span></div>
+        <div class="ds">캘린더 뷰(월/주/목록)·업무현황 탭을 <b>계정별 서버 저장</b> — 사무실 PC에서 설정한 게 집·폰에서도 그대로. 이후 모든 개인화가 재사용하는 기초 공사.</div></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">Stage 2 — 내 기준 새 글 배지 + 필터 기억 <span class="when">7/12</span><span class="mine">나에게만</span></div>
+        <div class="ds">메뉴의 새 글 숫자가 <b>"내가 안 본 글"만</b> 카운트 — 페이지에 들어가면 자동 읽음 처리, 이후 올라온 글만 다시 셈. 업무현황 <b>구분·담당자 필터도 기억</b>. 내부적으로 설정 저장을 <b>키 단위 병합</b>으로 바꿔 여러 기기·탭이 서로 설정을 지우던 위험도 함께 제거.</div></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">Stage 3 — 업무 카드 순서 개인별 <span class="when">7/12</span><span class="mine">나에게만</span></div>
+        <div class="ds">카드를 드래그해 바꾼 순서가 <b>내 계정에만 저장</b> — 팀원 화면 순서는 불변. 한 번도 안 바꾼 사람은 기존 공용 순서 그대로(화면 무변화). 상태 이동·삭제는 계속 팀 공유.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section class="track">
+    <div class="thead">
+      <span class="letter">D</span>
+      <h2>개인화 2차<small>홈 배치 · 관심 업무</small></h2>
+      <span class="pill done">완료 · 7/12</span>
+    </div>
+    <div class="tbody">
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">홈 화면 배치 개인화 <span class="mine">나에게만</span></div>
+        <div class="ds">홈 "운영 대시보드" 제목 옆 조절 아이콘 → 섹션(운영 KPI·일정·관심 업무·업무 현황·장비 현황·공지사항)의 <b>순서 변경·숨김</b>. "기본 배치로" 한 번에 복원. FAB 구축 로드맵은 항상 최상단 고정.</div></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">관심 업무 별(★) <span class="mine">나에게만</span></div>
+        <div class="ds">업무 카드의 별을 켜면 <b>홈 "관심 업무" 섹션에 고정</b>. 홈에서 다시 누르면 해제, 하나도 없으면 섹션 자체가 안 보임. (Remind 압정과 혼동되지 않게 별 아이콘.)</div></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA167" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+        <div><div class="tt">새 기능 안내 팝업 (후속)</div>
+        <div class="ds">로그인하면 위 기능들을 소개하는 안내가 1회 표시. <b>"다시 보지 않기" 체크 + 확인</b>한 사람에게만 사라지고, 그냥 닫으면 다음 접속 때 다시 안내. 새 기능 배포 시 전원에게 재안내 가능한 구조.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="qual">
+    <h3>품질 검증 (C Stage 2 ~ D)</h3>
+    <ul>
+      <li><span class="dot"></span>단계마다 <b>실제 로그인 실측</b> — 배지 감소/부활, 필터·순서 저장/복원, 팀 데이터 불변까지 DB로 확인</li>
+      <li><span class="dot"></span><b>멀티에이전트 적대적 리뷰 3회(총 21개 에이전트)</b> — 확정 결함 13건 발견, 전부 수정 후 배포</li>
+      <li><span class="dot"></span>DB 마이그레이션 1건(설정 키 단위 병합 저장) — 여러 기기 동시 사용 시 설정 유실 위험 구조적 제거</li>
+      <li><span class="dot"></span>매 커밋 타입체크·빌드 통과 · 자동 배포</li>
+    </ul>
+  </div>
+
+  <p class="foot">함께 보기: 로드맵 단계 탐색기 /mockups/roadmap-stages.html · 상세 기록 docs/ROADMAP-EASY.md · docs/BACKLOG.md</p>
+</div>
+</body>
+</html>
