@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">ANGELS PORTAL 데이터표 헤더 정렬 규칙</title>
+  <desc id="desc">텍스트는 왼쪽, 식별 번호와 날짜와 상태는 가운데, 비교 숫자는 오른쪽으로 정렬하는 다크 테마 데이터표 시안</desc>
+  <style>
+    .bg{fill:#0F1117}.card{fill:#161B22;stroke:#293244;stroke-width:1}.line{stroke:#293244;stroke-width:1}.guide{stroke:#5491DA;stroke-width:1;stroke-dasharray:4 7;opacity:.42}.h1{fill:#fff;font:700 31px 'Pretendard','Noto Sans KR',Arial,sans-serif}.sub{fill:#AAB4C3;font:400 17px 'Pretendard','Noto Sans KR',Arial,sans-serif}.head{fill:#AAB4C3;font:700 15px 'Pretendard','Noto Sans KR',Arial,sans-serif}.cell{fill:#F4F7FB;font:500 17px 'Pretendard','Noto Sans KR',Arial,sans-serif}.mute{fill:#7D8899;font:400 14px 'Pretendard','Noto Sans KR',Arial,sans-serif}.label{fill:#BBD7FF;font:700 15px 'Pretendard','Noto Sans KR',Arial,sans-serif}.small{fill:#AAB4C3;font:400 14px 'Pretendard','Noto Sans KR',Arial,sans-serif}.chipBlue{fill:#17304B;stroke:#315D95;stroke-width:1}.chipGreen{fill:#143226;stroke:#2F7651;stroke-width:1}.chipTxt{font:700 14px 'Pretendard','Noto Sans KR',Arial,sans-serif}.pill{fill:#1C2634;stroke:#334158;stroke-width:1}.accent{fill:#5491DA}.amber{fill:#D6A23E}.green{fill:#4DA167}
+  </style>
+  <rect class="bg" width="1600" height="900"/>
+  <text class="h1" x="96" y="92">DataTable 헤더 정렬 규칙</text>
+  <text class="sub" x="96" y="129">표는 대칭보다 빠른 훑기가 중요합니다. 헤더는 각 열의 데이터 정렬을 그대로 따릅니다.</text>
+
+  <rect class="card" x="96" y="190" width="1408" height="424" rx="16"/>
+  <text class="label" x="128" y="230">기본 목록표 · After 1</text>
+  <text class="mute" x="1310" y="230">행 높이 44px · 가로선만 사용</text>
+
+  <line class="line" x1="128" y1="276" x2="1472" y2="276"/>
+  <line class="line" x1="128" y1="340" x2="1472" y2="340"/>
+  <line class="line" x1="128" y1="416" x2="1472" y2="416"/>
+  <line class="line" x1="128" y1="492" x2="1472" y2="492"/>
+  <line class="line" x1="128" y1="568" x2="1472" y2="568"/>
+
+  <line class="guide" x1="173" y1="250" x2="173" y2="568"/>
+  <line class="guide" x1="286" y1="250" x2="286" y2="568"/>
+  <line class="guide" x1="1040" y1="250" x2="1040" y2="568"/>
+  <line class="guide" x1="1192" y1="250" x2="1192" y2="568"/>
+  <line class="guide" x1="1368" y1="250" x2="1368" y2="568"/>
+  <line class="guide" x1="1442" y1="250" x2="1442" y2="568"/>
+
+  <text class="head" text-anchor="middle" x="173" y="313">번호</text>
+  <text class="head" x="218" y="313">요청내용</text>
+  <text class="head" x="894" y="313">담당자</text>
+  <text class="head" text-anchor="middle" x="1040" y="313">게시일</text>
+  <text class="head" text-anchor="end" x="1192" y="313">예산</text>
+  <text class="head" text-anchor="middle" x="1368" y="313">상태</text>
+  <text class="head" text-anchor="middle" x="1442" y="313">관리</text>
+
+  <text class="cell" text-anchor="middle" x="173" y="386">8</text>
+  <text class="cell" x="218" y="386">업무 필터 Shift 복수선택</text>
+  <text class="cell" x="894" y="386">조성범</text>
+  <text class="cell" text-anchor="middle" x="1040" y="386">07.09</text>
+  <text class="cell" text-anchor="end" x="1192" y="386">1,250,000</text>
+  <rect class="chipBlue" x="1338" y="359" width="60" height="34" rx="17"/><text class="chipTxt" fill="#71ACF0" text-anchor="middle" x="1368" y="382">완료</text>
+  <text class="cell" text-anchor="middle" x="1442" y="386">⋮</text>
+
+  <rect x="129" y="417" width="1342" height="74" fill="#1C2634"/>
+  <text class="cell" text-anchor="middle" x="173" y="462">11</text>
+  <text class="cell" x="218" y="462">반복 일정 등록 지원</text>
+  <text class="cell" x="894" y="462">박세리</text>
+  <text class="cell" text-anchor="middle" x="1040" y="462">07.10</text>
+  <text class="cell" text-anchor="end" x="1192" y="462">480,000</text>
+  <rect class="chipGreen" x="1330" y="435" width="76" height="34" rx="17"/><text class="chipTxt" fill="#61B982" text-anchor="middle" x="1368" y="458">진행중</text>
+  <text class="cell" text-anchor="middle" x="1442" y="462">⋮</text>
+
+  <text class="cell" text-anchor="middle" x="173" y="538">14</text>
+  <text class="cell" x="218" y="538">첨부파일 미리보기</text>
+  <text class="cell" x="894" y="538">신현진</text>
+  <text class="cell" text-anchor="middle" x="1040" y="538">07.11</text>
+  <text class="cell" text-anchor="end" x="1192" y="538">—</text>
+  <rect class="pill" x="1340" y="511" width="56" height="34" rx="17"/><text class="chipTxt" fill="#B9C4D4" text-anchor="middle" x="1368" y="534">접수</text>
+  <text class="cell" text-anchor="middle" x="1442" y="538">⋮</text>
+
+  <g transform="translate(96 674)">
+    <rect class="card" width="330" height="145" rx="14"/><circle class="accent" cx="30" cy="33" r="6"/><text class="label" x="48" y="39">왼쪽 정렬</text><text class="small" x="30" y="75">제목 · 내용 · 이름</text><text class="small" x="30" y="105">긴 텍스트의 시작선을 맞춰</text><text class="small" x="30" y="126">빠르게 훑습니다.</text>
+  </g>
+  <g transform="translate(462 674)">
+    <rect class="card" width="330" height="145" rx="14"/><circle class="green" cx="30" cy="33" r="6"/><text class="label" x="48" y="39">가운데 정렬</text><text class="small" x="30" y="75">번호 · 짧은 날짜 · 상태 · 관리</text><text class="small" x="30" y="105">폭이 짧고 독립적인 값을</text><text class="small" x="30" y="126">정돈합니다.</text>
+  </g>
+  <g transform="translate(828 674)">
+    <rect class="card" width="330" height="145" rx="14"/><circle class="amber" cx="30" cy="33" r="6"/><text class="label" x="48" y="39">오른쪽 정렬</text><text class="small" x="30" y="75">금액 · 수량 · 비율 · 기간</text><text class="small" x="30" y="105">자릿수와 크기를 세로로</text><text class="small" x="30" y="126">빠르게 비교합니다.</text>
+  </g>
+  <g transform="translate(1194 674)">
+    <rect class="card" width="310" height="145" rx="14"/><text class="label" x="30" y="39">예외 · 비교표</text><text class="small" x="30" y="75">장비 사양·데모 지표처럼</text><text class="small" x="30" y="105">열 비교가 핵심일 때만</text><text class="small" x="30" y="126">세로선을 아주 옅게 추가합니다.</text>
+  </g>
+</svg>

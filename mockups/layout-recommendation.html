@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANGELS PORTAL · 레이아웃 추천 시안</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0f1117; --nav:#121722; --surface:#171d27; --surface2:#1c2430; --border:#2a3444; --text:#eef2f7; --muted:#96a2b4; --blue:#5491da; --green:#4da167; --amber:#d6a23e; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:1180px; background:#090c12; color:var(--text); font:14px/1.4 Inter, Pretendard, "Noto Sans KR", sans-serif; }
+    .note { position:fixed; z-index:5; right:20px; bottom:18px; padding:9px 12px; border:1px solid #334158; border-radius:8px; background:#121925e8; color:#b9c7d9; font-size:12px; }
+    .shell { min-height:100vh; display:grid; grid-template-columns:208px 1fr; grid-template-rows:56px 1fr; background:var(--bg); }
+    .brand { grid-row:1 / 3; padding:19px 18px; border-right:1px solid #232c3a; background:var(--nav); }
+    .brand-name { letter-spacing:.13em; font-size:17px; font-weight:800; }
+    .brand-sub { margin-top:2px; color:#77859a; font-size:10px; letter-spacing:.08em; }
+    .nav-group { margin-top:40px; }
+    .nav-label { margin:0 8px 9px; color:#69778a; font-size:11px; font-weight:700; }
+    .nav { display:flex; align-items:center; gap:10px; margin:3px 0; padding:10px 10px; border-radius:8px; color:#aeb9c9; }
+    .nav.active { background:#1c2b40; color:#8fc0ff; font-weight:700; }
+    .nav-icon { width:18px; height:18px; border:1.5px solid currentColor; border-radius:4px; opacity:.9; }
+    .top { display:flex; justify-content:space-between; align-items:center; padding:0 28px; border-bottom:1px solid #232c3a; background:#10151e; color:var(--muted); font-size:12px; }
+    .crumb { display:flex; gap:10px; align-items:center; }.dot { width:3px;height:3px;border-radius:50%;background:#657389; }
+    .account { display:flex; gap:15px; align-items:center; }.avatar { width:24px;height:24px;border-radius:50%;background:#33445d; }
+    main { overflow:hidden; }
+    .tabs { display:flex; gap:6px; padding:16px 32px 0; }
+    .tab { border:1px solid transparent; border-radius:7px; padding:7px 12px; background:transparent; color:#93a0b1; cursor:pointer; font:inherit; }
+    .tab.active { border-color:#31435d; background:#182335; color:#b8d5f8; }
+    .stage { display:none; padding:22px 32px 38px; }.stage.active { display:block; }
+    .canvas { margin:0 auto; }.wide { max-width:none; }.standard { max-width:1400px; }.focus { max-width:960px; }
+    .page-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }.eyebrow { color:#6fa7ed; font-size:12px; font-weight:700; }.page-title { margin:5px 0 3px; font-size:27px; letter-spacing:-.04em; }.desc { margin:0; color:var(--muted); }.actions { display:flex; gap:8px; margin-top:10px; }
+    button.action { border:1px solid #36465d; border-radius:8px; padding:9px 12px; background:#1b2533; color:#cdd7e5; font:inherit; } button.primary { border-color:#5491da; background:#3677c6; color:white; }
+    .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:14px; padding:12px; border:1px solid var(--border); border-radius:11px; background:var(--surface); }.field { min-width:140px; padding:9px 10px; border:1px solid #344054; border-radius:7px; color:#aab6c7; background:#141a23; }.search { margin-left:auto; width:245px; }
+    .calendar { display:grid; grid-template-columns:repeat(7,1fr); border:1px solid var(--border); border-radius:11px; overflow:hidden; background:var(--surface); }.day { min-height:112px; padding:10px; border-right:1px solid #293242; border-bottom:1px solid #293242; }.day:nth-child(7n) { border-right:0; }.weekday { min-height:36px; padding:9px; border-right:1px solid #293242; color:#aeb9c9; text-align:center; font-size:12px; font-weight:700; }.weekday:last-of-type { border-right:0; }.date { margin-bottom:9px; color:#d9e2ee; font-weight:700; }.event { display:flex; gap:6px; align-items:center; margin:5px 0; padding:4px 5px; border-radius:5px; background:#202b38; color:#c6d1df; font-size:11px; white-space:nowrap; overflow:hidden; }.tag { width:6px; height:6px; flex:0 0 auto; border-radius:50%; background:var(--blue); }.tag.green { background:var(--green); }.tag.amber { background:var(--amber); }
+    .dash-grid { display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }.card { padding:22px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }.kpi { grid-column:span 3; }.kpi-label { color:var(--muted); font-size:12px; }.kpi-value { margin-top:7px; font-size:29px; font-weight:750; }.wide-card { grid-column:span 8; min-height:254px; }.side-card { grid-column:span 4; }.mini-bars { display:flex; align-items:end; gap:11px; height:150px; margin-top:24px; }.bar { flex:1; border-radius:5px 5px 0 0; background:#315d95; }.bar:nth-child(2n){background:#4579bb}.list { margin-top:12px; }.row { display:flex; justify-content:space-between; padding:13px 0; border-bottom:1px solid #293242; color:#c9d4e2; }.row small { color:var(--muted); }
+    .article { padding:30px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }.article h2 { margin:0 0 12px; font-size:24px; }.article-meta { padding-bottom:20px; border-bottom:1px solid #2b3545; color:var(--muted); font-size:12px; }.article p { max-width:660px; margin:25px 0; color:#c7d1df; line-height:1.85; }.info { margin-top:28px; padding:18px; border-radius:9px; background:#1c2634; color:#b7c8db; }
+    .rule { margin:14px 0 0; color:#76859a; font-size:12px; }.rule b { color:#8ebcff; }
+    @media (max-width: 900px) { body { min-width:0; }.shell { grid-template-columns:1fr; grid-template-rows:52px 1fr; }.brand { display:none; }.top { padding:0 16px; }.tabs,.stage { padding-left:16px; padding-right:16px; }.page-head { display:block; }.actions { margin-top:16px; }.toolbar { flex-wrap:wrap; }.search { width:100%; margin-left:0; }.calendar { min-width:720px; }.wide { overflow:auto; }.kpi { grid-column:span 6; }.wide-card,.side-card { grid-column:span 12; } .note { display:none; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="brand"><div class="brand-name">ANGELS</div><div class="brand-sub">FAB PORTAL SYSTEM</div><div class="nav-group"><div class="nav-label">홈</div><div class="nav active"><i class="nav-icon"></i>대시보드</div><div class="nav-label" style="margin-top:25px">업무</div><div class="nav"><i class="nav-icon"></i>업무일정</div><div class="nav"><i class="nav-icon"></i>업무현황</div><div class="nav"><i class="nav-icon"></i>장비관리</div><div class="nav-label" style="margin-top:25px">정보</div><div class="nav"><i class="nav-icon"></i>공지사항</div><div class="nav"><i class="nav-icon"></i>바로가기</div></div></aside>
+    <header class="top"><div class="crumb"><span>ANGELS PORTAL</span><i class="dot"></i><span>운영 관리</span></div><div class="account"><span>알림</span><span>관리자 · 조성범</span><i class="avatar"></i></div></header>
+    <main>
+      <div class="tabs"><button class="tab active" data-stage="schedule">와이드 · 일정/표</button><button class="tab" data-stage="dashboard">일반 · 대시보드</button><button class="tab" data-stage="detail">집중 · 상세/설정</button></div>
+      <section id="schedule" class="stage active"><div class="canvas wide"><div class="page-head"><div><div class="eyebrow">WIDE CANVAS</div><h1 class="page-title">업무일정</h1><p class="desc">가로 정보가 중요한 달력과 표는 남는 폭을 충분히 사용합니다.</p></div><div class="actions"><button class="action">목록 보기</button><button class="action primary">일정 추가</button></div></div><div class="toolbar"><div class="field">2026년 7월</div><div class="field">전체 담당자</div><div class="field">전체 상태</div><div class="field search">검색 (일정·구분·내용)</div></div><div class="calendar"><div class="weekday">일</div><div class="weekday">월</div><div class="weekday">화</div><div class="weekday">수</div><div class="weekday">목</div><div class="weekday">금</div><div class="weekday">토</div><script>for(let i=1;i<=35;i++){document.write(`<div class="day"><div class="date">${i<=31?i:''}</div>${i%3===0?'<div class="event"><i class="tag"></i>센터 주간 업무 회의</div>':''}${i%5===0?'<div class="event"><i class="tag green"></i>장비 검토 일정</div>':''}${i%7===0?'<div class="event"><i class="tag amber"></i>외부 미팅</div>':''}</div>`)}</script></div><p class="rule"><b>추천 규칙:</b> 일정·장비비교·데이터 표는 화면에 남는 가로폭을 사용합니다.</p></div></section>
+      <section id="dashboard" class="stage"><div class="canvas standard"><div class="page-head"><div><div class="eyebrow">STANDARD CANVAS · MAX 1400px</div><h1 class="page-title">구축 현황</h1><p class="desc">여러 업무를 한눈에 보는 일반 운영 화면입니다.</p></div><div class="actions"><button class="action">기간 선택</button><button class="action primary">보고서 보기</button></div></div><div class="dash-grid"><div class="card kpi"><div class="kpi-label">진행 중 업무</div><div class="kpi-value">24</div></div><div class="card kpi"><div class="kpi-label">이번 주 일정</div><div class="kpi-value">12</div></div><div class="card kpi"><div class="kpi-label">검토 중 장비</div><div class="kpi-value">8</div></div><div class="card kpi"><div class="kpi-label">확인 필요</div><div class="kpi-value">3</div></div><div class="card wide-card"><b>FAB 구축 로드맵</b><div class="mini-bars"><i class="bar" style="height:38%"></i><i class="bar" style="height:56%"></i><i class="bar" style="height:71%"></i><i class="bar" style="height:85%"></i><i class="bar" style="height:65%"></i><i class="bar" style="height:95%"></i></div></div><div class="card side-card"><b>최근 업무</b><div class="list"><div class="row"><span>데모 결과 검토</span><small>오늘</small></div><div class="row"><span>구매 요청서 확인</span><small>어제</small></div><div class="row"><span>장비 사양 업데이트</span><small>7/08</small></div></div></div></div><p class="rule"><b>추천 규칙:</b> 대시보드·목록은 너무 퍼지지 않게 최대 1,400px에서 집중도를 지킵니다.</p></div></section>
+      <section id="detail" class="stage"><div class="canvas focus"><div class="page-head"><div><div class="eyebrow">FOCUSED CANVAS · MAX 960px</div><h1 class="page-title">공지 상세</h1><p class="desc">읽기와 입력에 집중해야 하는 화면입니다.</p></div><div class="actions"><button class="action">목록</button><button class="action">수정</button></div></div><article class="article"><h2>장비 데모 일정 및 검토 기준 안내</h2><div class="article-meta">운영관리팀 · 2026.07.10 · 조회 28</div><p>이번 장비 데모는 결과를 비교하고 이후 구매 검토에 참고할 수 있도록 진행합니다. 각 장비의 사진, 테스트 조건, 주요 지표와 코멘트를 동일한 기준으로 기록해 주세요.</p><p>읽기 중심의 내용은 지나치게 넓으면 줄을 찾기 어려워집니다. 그래서 상세·설정·작성 화면은 같은 포털 안에서도 폭을 제한합니다.</p><div class="info">첨부파일 2개 · 검토 기간 7월 15일 ~ 7월 22일</div></article><p class="rule"><b>추천 규칙:</b> 공지 상세·설정·작성 화면은 최대 960px로 읽기 편하게 유지합니다.</p></div></section>
+    </main>
+  </div>
+  <div class="note">상단 탭을 눌러 화면 성격별 폭을 비교해 보세요.</div>
+  <script>document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab,.stage').forEach(e=>e.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.stage).classList.add('active')}));</script>
+</body>
+</html>

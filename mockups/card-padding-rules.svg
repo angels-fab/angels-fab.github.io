@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">카드 패딩 규칙</title>
+  <desc id="desc">기본 카드 16픽셀, 긴 설명 카드 24픽셀, 목록 카드 0픽셀 패딩을 비교한 다크 테마 시안</desc>
+  <style>
+    .bg{fill:#0F1117}.card{fill:#161B22;stroke:#293244;stroke-width:1}.line{stroke:#293244;stroke-width:1}.soft{fill:#1C2634}.h1{fill:#fff;font:700 31px 'Pretendard','Noto Sans KR',Arial,sans-serif}.sub{fill:#AAB4C3;font:400 17px 'Pretendard','Noto Sans KR',Arial,sans-serif}.kicker{fill:#8FC0FF;font:700 14px 'Pretendard','Noto Sans KR',Arial,sans-serif}.title{fill:#fff;font:700 21px 'Pretendard','Noto Sans KR',Arial,sans-serif}.body{fill:#C9D3E1;font:400 16px 'Pretendard','Noto Sans KR',Arial,sans-serif}.mute{fill:#7D8899;font:400 14px 'Pretendard','Noto Sans KR',Arial,sans-serif}.note{fill:#BBD7FF;font:700 15px 'Pretendard','Noto Sans KR',Arial,sans-serif}.pill{fill:#17304B;stroke:#315D95;stroke-width:1}.pilltext{fill:#77B6F7;font:700 13px 'Pretendard','Noto Sans KR',Arial,sans-serif}.guide{stroke:#5491DA;stroke-width:1;stroke-dasharray:5 5;opacity:.65}.green{fill:#4DA167}.blue{fill:#5491DA}.amber{fill:#D6A23E}
+  </style>
+  <rect class="bg" width="1600" height="900"/>
+  <text class="h1" x="96" y="92">카드 패딩 규칙</text>
+  <text class="sub" x="96" y="129">카드의 목적에 따라 내부 여백만 달라집니다. 모서리 12px · 1px 보더는 공통입니다.</text>
+
+  <rect class="card" x="96" y="205" width="432" height="455" rx="12"/>
+  <circle class="blue" cx="128" cy="244" r="6"/><text class="kicker" x="146" y="250">기본 카드 · 16px</text>
+  <line class="guide" x1="112" y1="278" x2="112" y2="628"/><line class="guide" x1="512" y1="278" x2="512" y2="628"/>
+  <text class="mute" x="96" y="695">대시보드 · 현황 · 짧은 정보</text>
+  <rect class="soft" x="112" y="278" width="400" height="350" rx="8"/>
+  <text class="title" x="128" y="324">장비 현황</text>
+  <text class="mute" x="128" y="354">도입 프로젝트 기준</text>
+  <line class="line" x1="128" y1="382" x2="496" y2="382"/>
+  <text fill="#fff" font-family="Pretendard,Arial,sans-serif" font-size="48" font-weight="700" x="128" y="450">29</text><text class="body" x="194" y="445">대</text>
+  <text class="body" x="128" y="495">운영중 장비를 확인하고</text><text class="body" x="128" y="522">상세 화면으로 이동합니다.</text>
+  <rect class="pill" x="128" y="556" width="90" height="31" rx="15"/><text class="pilltext" text-anchor="middle" x="173" y="577">전체보기</text>
+  <text class="note" x="112" y="746">16px: 짧은 정보는 촘촘하고 빠르게</text>
+
+  <rect class="card" x="584" y="205" width="432" height="455" rx="12"/>
+  <circle class="green" cx="616" cy="244" r="6"/><text class="kicker" x="634" y="250">설명 카드 · 24px</text>
+  <line class="guide" x1="608" y1="278" x2="608" y2="628"/><line class="guide" x1="992" y1="278" x2="992" y2="628"/>
+  <text class="mute" x="584" y="695">안내 · 정책 · 읽을 내용이 긴 카드</text>
+  <rect class="soft" x="608" y="278" width="384" height="350" rx="8"/>
+  <text class="title" x="632" y="330">데모 결과 기록 안내</text>
+  <text class="mute" x="632" y="359">구매 검토를 위한 참고 자료</text>
+  <line class="line" x1="632" y1="390" x2="968" y2="390"/>
+  <text class="body" x="632" y="432">사진, 테스트 조건, 지표와 코멘트를</text><text class="body" x="632" y="461">같은 기준으로 기록해 두면 이후</text><text class="body" x="632" y="490">업체 선정 과정에서 비교하기 쉽습니다.</text>
+  <rect class="pill" x="632" y="540" width="100" height="31" rx="15"/><text class="pilltext" text-anchor="middle" x="682" y="561">작성 가이드</text>
+  <text class="note" x="608" y="746">24px: 문장이 숨 쉴 공간을 확보</text>
+
+  <rect class="card" x="1072" y="205" width="432" height="455" rx="12"/>
+  <circle class="amber" cx="1104" cy="244" r="6"/><text class="kicker" x="1122" y="250">목록 카드 · padding 0</text>
+  <text class="mute" x="1072" y="695">공지 · 업무 · 행사가 반복되는 목록</text>
+  <text class="title" x="1096" y="307">최근 공지</text><text class="pilltext" x="1430" y="307">전체보기</text>
+  <line class="line" x1="1072" y1="332" x2="1504" y2="332"/>
+  <rect x="1073" y="333" width="430" height="78" fill="#1C2634"/>
+  <rect class="pill" x="1096" y="356" width="48" height="28" rx="14"/><text class="pilltext" text-anchor="middle" x="1120" y="375">공지</text>
+  <text class="body" x="1162" y="375">7월 안전교육 일정 안내</text><text class="mute" text-anchor="end" x="1480" y="375">07.10</text>
+  <line class="line" x1="1072" y1="411" x2="1504" y2="411"/>
+  <rect class="pill" x="1096" y="434" width="58" height="28" rx="14"/><text class="pilltext" text-anchor="middle" x="1125" y="453">진행중</text>
+  <text class="body" x="1172" y="453">클린룸 배관 검토 회의</text><text class="mute" text-anchor="end" x="1480" y="453">07.11</text>
+  <line class="line" x1="1072" y1="490" x2="1504" y2="490"/>
+  <rect class="pill" x="1096" y="513" width="48" height="28" rx="14"/><text class="pilltext" text-anchor="middle" x="1120" y="532">공지</text>
+  <text class="body" x="1162" y="532">첨부파일 미리보기</text><text class="mute" text-anchor="end" x="1480" y="532">07.12</text>
+  <line class="line" x1="1072" y1="569" x2="1504" y2="569"/>
+  <text class="note" x="1072" y="746">0px: 행 자체가 간격을 가지므로 카드 여백 불필요</text>
+
+  <line class="line" x1="96" y1="805" x2="1504" y2="805"/>
+  <text class="body" x="96" y="850">결정 규칙: 기본은 16px · 문장 중심 설명은 24px · 반복 목록은 0px. 임의의 중간값은 사용하지 않습니다.</text>
+</svg>

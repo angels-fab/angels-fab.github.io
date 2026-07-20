@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>데모 코멘트 보드 — 균일 좁은 2열 masonry</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 24px; background: #0f1116; color: #dfe6f2; font-family: system-ui, -apple-system, "Malgun Gothic", sans-serif; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .ctl { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; color: #aab2c0; }
+  .ctl input[type=range] { width: 260px; }
+  .panel { background: #14161d; border: 1px solid #2a2e3a; border-radius: 10px; padding: 10px; }
+  /* 컴포넌트와 동일: 균일 좁은 카드(모두 1열) + grid 1px 행 + dense 실측 span */
+  .board { display: grid; grid-auto-rows: 1px; grid-auto-flow: row dense; column-gap: 10px; row-gap: 0; align-items: start; }
+  .item { align-self: start; min-width: 0; }
+  .card { border-radius: 8px; overflow: hidden; background: #1a1d26; box-shadow: 0 0 5px rgba(0,0,0,.3); }
+  .head { display: flex; align-items: center; gap: 7px; padding: 6px 10px; }
+  .title { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; line-height: 1.3; word-break: break-word; }
+  .who { flex: none; height: 20px; display: inline-flex; align-items: center; padding: 0 8px; font-size: 11px; font-weight: 600; border-radius: 7px; }
+  .body { padding: 7px 10px 10px; font-size: 12.5px; line-height: 1.5; color: #c4ccd8; border-top: 1px solid rgba(255,255,255,.12); }
+  .add { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px dashed #3a3f4c; border-radius: 10px; color: #7e8797; font-size: 12px; }
+  .lbl { color: #7e8797; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ctl">
+    <label>보드 폭 <input id="w" type="range" min="300" max="1100" value="560" /></label>
+    <span id="wv" class="lbl"></span>
+    <span id="cols" class="lbl"></span>
+    <span class="lbl">· 모든 카드 좁은 1열 균일 · 400px 미만이면 1열로 접힘 · 빈틈 없이 채움</span>
+  </div>
+  <div id="host" style="max-width: 560px;">
+    <div class="panel"><div class="board" id="board"></div></div>
+  </div>
+</div>
+<script>
+  var GAP = 10, MIN2 = 400;
+  var COLORS = ['#4a90e2','#2bb673','#e2724a','#8a7bd8','#c9a227','#d15aa0'];
+  var DATA = [
+    { t:'FIB 밀링 속도 재현성', a:'김민석', c:0, b:'Helios 5 UC로 line 단면 68μm³/분 확인. 이전 방문 대비 재현성 안정적.' },
+    { t:'세정 조건', a:'이서연', c:1, b:'IPA 린스 후 잔류 확인 필요.' },
+    { t:'대면적 단면 가공', a:'박준호', c:2, b:'~1mm급은 레이저 하이드라가 압도적으로 빠름. Ga-FIB로는 현실적으로 어려움. 조건표는 별도로 정리해서 공유하겠습니다. 방문 당일 측정값 포함.' },
+    { t:'샘플 준비', a:'최유진', c:3, b:'유리 기판 2종 준비 완료.' },
+    { t:'다음 데모 일정', a:'정하늘', c:4, b:'4월 3주차 방문 예정. 회차 카드 미리 만들어둘게요.' },
+    { t:'경쟁 장비 비교 메모', a:'김민석', c:0, b:'타사 대비 밀링 속도·표면 품질 종합. 각 항목별 우열은 최신 회차 값 기준으로 자동 강조. 세부 스펙보다 체감 지표(가공시간) 위주.' },
+    { t:'질문', a:'이서연', c:1, b:'Ar PFIB 조건에서 curtaining 정도는?' },
+    { t:'레이저 옵션', a:'박준호', c:2, b:'fs 레이저 병용 시 대면적 처리량 개선 확인.' }
+  ];
+  var host = document.getElementById('host'), board = document.getElementById('board');
+  var wIn = document.getElementById('w'), wv = document.getElementById('wv'), colsEl = document.getElementById('cols');
+  var els = [], ro = null, raf = 0;
+
+  function render() {
+    if (ro) ro.disconnect();
+    board.innerHTML = ''; els = [];
+    DATA.forEach(function (d) {
+      var item = document.createElement('div'); item.className = 'item';
+      var card = document.createElement('div'); card.className = 'card';
+      var col = COLORS[d.c];
+      card.style.border = '1px solid ' + col;
+      var head = document.createElement('div'); head.className = 'head';
+      head.innerHTML = '<span class="title" style="color:' + col + '">' + d.t + '</span>' +
+        '<span class="who" style="border:1px solid ' + col + '; color:' + col + '">' + d.a + '</span>';
+      var body = document.createElement('div'); body.className = 'body'; body.textContent = d.b;
+      card.appendChild(head); card.appendChild(body); item.appendChild(card);
+      board.appendChild(item);
+      els.push({ item: item });
+    });
+    var addItem = document.createElement('div'); addItem.className = 'item';
+    var add = document.createElement('div'); add.className = 'add'; add.textContent = '＋ 코멘트 추가';
+    addItem.appendChild(add); board.appendChild(addItem);
+    els.push({ item: addItem });
+
+    ro = new ResizeObserver(schedule);
+    ro.observe(board);
+    els.forEach(function (e) { ro.observe(e.item); });
+    schedule();
+  }
+
+  function schedule() { if (!raf) raf = requestAnimationFrame(doLayout); }
+  function doLayout() {
+    raf = 0;
+    var W = board.clientWidth;
+    var cols = W >= MIN2 ? 2 : 1;
+    board.style.gridTemplateColumns = cols === 1 ? '1fr' : 'repeat(2, minmax(0,1fr))';
+    // 모든 카드 1열(auto). 하단 추가 카드만 전폭
+    els.forEach(function (e) { e.item.style.gridColumn = e.full ? '1 / -1' : 'auto'; });
+    els.forEach(function (e) { e.item.style.gridRowEnd = 'span ' + (Math.round(e.item.getBoundingClientRect().height) + GAP); });
+    colsEl.textContent = '→ ' + cols + '열';
+  }
+
+  wIn.oninput = function () { host.style.maxWidth = wIn.value + 'px'; wv.textContent = wIn.value + 'px'; schedule(); };
+  wv.textContent = wIn.value + 'px';
+  render();
+</script>
+</body>
+</html>

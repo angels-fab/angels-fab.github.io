@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업무카드 첨부 구역 시안 비교</title>
+<style>
+  /* tokens.ts 미러 — darkPalette·accent·radius·typescale·motion */
+  :root {
+    --bg: #0F1117; --paper: #161B22; --hover: #1D2635; --border: #293244; --divider: #232C3A;
+    --ink: #FFFFFF; --ink2: #AAB4C3; --muted: #7D8899;
+    --blue: #5491DA; --green: #4DA167; --amber: #D6A23E; --purple: #A98AE0;
+    --tone: 114 199 141; /* workTone.green (진행중) */
+    --r-chip: 8px; --r-card: 12px; --r-modal: 16px;
+    --fast: .12s; --base: .15s;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; padding: 40px 32px 80px; }
+  h1 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: var(--ink2); margin-bottom: 34px; }
+  h2 { font-size: 18px; font-weight: 700; margin: 40px 0 6px; display: flex; align-items: center; gap: 8px; }
+  .desc { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+  .rec { font-size: 11px; font-weight: 700; color: #fff; background: var(--green); border-radius: 999px; padding: 3px 9px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; align-items: start; }
+
+  /* ── 업무카드(진행중 톤) 재현 ── */
+  .card { border: 1px solid rgb(var(--tone) / .24); background: rgb(var(--tone) / .055); border-radius: var(--r-card); overflow: hidden; }
+  .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; background: rgb(var(--tone) / .09); border-bottom: 1px solid rgb(var(--tone) / .14); }
+  .chip { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: var(--r-chip); }
+  .chip.cat { color: #7db3ef; background: rgba(84,145,218,.16); border: 1px solid rgba(84,145,218,.35); }
+  .chip.dept { color: #56c1c8; background: rgba(70,183,190,.14); border: 1px solid rgba(70,183,190,.32); }
+  .title { flex: 1; min-width: 120px; font-size: 14px; font-weight: 600; }
+  .mgr { width: 26px; height: 26px; border-radius: 50%; background: #2f8f4e; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .date { font-size: 12px; font-family: ui-monospace, monospace; color: var(--ink2); background: rgba(170,180,195,.14); border: 1px solid rgba(170,180,195,.3); border-radius: var(--r-chip); padding: 3px 8px; }
+  .body { padding: 12px 14px; font-size: 13px; color: var(--ink2); line-height: 1.65; }
+  .body .b { display: flex; gap: 7px; }
+  .body .b::before { content: '•'; color: var(--muted); }
+
+  /* ── 공통: 첨부 칩(세련화) — hover 시 크기 표기가 다운로드 아이콘으로 스왑 ── */
+  .att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 185px), 1fr)); gap: 6px; }
+  .att { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 5px 8px 5px 7px; border-radius: var(--r-chip);
+         border: 1px solid var(--border); background: var(--paper); cursor: pointer; font: inherit; color: var(--ink); text-align: left;
+         transition: border-color var(--base), background var(--base), transform var(--fast); }
+  .att:hover { border-color: var(--blue); background: var(--hover); }
+  .att:active { transform: scale(.985); }
+  .fico { width: 18px; height: 18px; border-radius: 4px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: #fff; }
+  .fico.pdf { background: #d64541; } .fico.xls { background: #2e7d4f; } .fico.img { background: #4a6fd0; } .fico.hwp { background: #2ea0c9; }
+  .att .nm { flex: 1; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .att .end { position: relative; flex: none; width: 34px; height: 16px; }
+  .att .sz, .att .dl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; transition: opacity var(--base); }
+  .att .sz { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .att .dl { opacity: 0; color: var(--blue); }
+  .att:hover .sz { opacity: 0; }
+  .att:hover .dl { opacity: 1; }
+  .att svg { width: 15px; height: 15px; }
+
+  /* 구역 헤더 라벨 (클립 13px + 캡션 11px) */
+  .zone-label { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+  .zone-label svg { width: 13px; height: 13px; }
+  .zone-label .n { color: var(--ink2); }
+
+  /* ── 시안 A: 푸터 트레이(풀와이드 구역) ── */
+  .vA .zone { border-top: 1px solid rgb(var(--tone) / .14); background: rgba(0,0,0,.16); padding: 9px 14px 11px; display: flex; flex-direction: column; gap: 7px; }
+
+  /* ── 시안 B: 인라인 디바이더(본문 안) ── */
+  .vB .zone { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgb(var(--tone) / .22); display: flex; flex-direction: column; gap: 7px; }
+
+  /* ── 시안 C: 미니멀 필 스트립(라벨 없음) ── */
+  .vC .zone { border-top: 1px solid rgb(var(--tone) / .14); padding: 9px 14px 11px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .vC .att { width: auto; max-width: 240px; }
+
+  /* ── 작성/수정 카드 첨부 구역 ── */
+  .compose { border: 1px solid var(--green); box-shadow: inset 0 0 0 1px var(--green); background: rgba(77,161,103,.1); border-radius: var(--r-card); overflow: hidden; }
+  .compose .head { background: rgba(77,161,103,.18); border-bottom-color: rgba(77,161,103,.3); }
+  .compose .field { background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: var(--r-chip); padding: 5px 9px; font-size: 13px; color: var(--muted); }
+  .compose .zone { margin: 10px 14px 14px; padding-top: 10px; border-top: 1px dashed rgba(77,161,103,.35); display: flex; flex-direction: column; gap: 7px; }
+  .addchip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px dashed var(--border); border-radius: 999px;
+             color: var(--ink2); font-size: 12px; font-weight: 600; cursor: pointer; background: none; transition: color var(--base), border-color var(--base); width: fit-content; }
+  .addchip:hover { color: var(--blue); border-color: var(--blue); }
+  .addchip svg { width: 15px; height: 15px; }
+  .upchip { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 8px; border-radius: var(--r-chip); background: rgba(255,255,255,.05); border: 1px solid var(--border); }
+  .upchip .x { margin-left: auto; color: var(--muted); cursor: pointer; display: flex; }
+  .upchip .x:hover { color: #E05B54; }
+  .upchip .x svg { width: 13px; height: 13px; }
+  .upchip .nm { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .upchip .sz { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+  .dropzone { position: relative; }
+  .drop-overlay { position: absolute; inset: 6px; border: 2px dashed var(--green); border-radius: var(--r-card); background: rgba(77,161,103,.14);
+                  display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 700; color: #7fd6a0; backdrop-filter: blur(1.5px); }
+  .drop-overlay svg { width: 20px; height: 20px; }
+  .note { font-size: 12px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+  .note b { color: var(--ink2); font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>업무카드 첨부 구역 — 시안 비교</h1>
+  <div class="sub">공통 개선: 칩 hover 시 크기 표기 → 다운로드 아이콘 스왑(레이아웃 불변) · 클릭 스케일 피드백 · 파일유형 아이콘 · tabular 숫자. 아래 파일칩에 마우스를 올려보세요.</div>
+
+  <div class="grid">
+
+    <!-- 시안 A -->
+    <div>
+      <h2>시안 A — 푸터 트레이 <span class="rec">권장</span></h2>
+      <div class="desc">카드 맨 아래 풀와이드 구역. 살짝 가라앉은 배경(트레이)으로 본문과 확실히 분리 — 공지 상세의 첨부 섹션과 같은 문법.</div>
+      <div class="card vA">
+        <div class="head">
+          <span class="chip cat">회의</span><span class="chip dept">시설팀</span>
+          <span class="title">FAB 클린룸 공조 설계 검토회의</span>
+          <span class="mgr">성범</span><span class="date">07.15</span>
+        </div>
+        <div class="body">
+          <div class="b">공조 조닝 변경안 도면 검토</div>
+          <div class="b">외조기 용량 재산정 결과 공유</div>
+        </div>
+        <div class="zone">
+          <div class="zone-label">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6h-1.5z"/></svg>
+            첨부파일 <span class="n">3</span>
+          </div>
+          <div class="att-grid">
+            <button class="att"><span class="fico pdf">PDF</span><span class="nm">공조설계_검토안_v3.pdf</span><span class="end"><span class="sz">2.4 MB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+            <button class="att"><span class="fico xls">XLS</span><span class="nm">외조기_용량산정.xlsx</span><span class="end"><span class="sz">184 KB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+            <button class="att"><span class="fico img">IMG</span><span class="nm">현장사진_0714.jpg</span><span class="end"><span class="sz">1.1 MB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 시안 B -->
+    <div>
+      <h2>시안 B — 인라인 디바이더</h2>
+      <div class="desc">본문 열 안에서 점선 구분선만으로 나눔. 트레이 배경 없음 — 가장 가벼운 분리감, Check 박스 옆 폭에 갇힘.</div>
+      <div class="card vB">
+        <div class="head">
+          <span class="chip cat">회의</span><span class="chip dept">시설팀</span>
+          <span class="title">FAB 클린룸 공조 설계 검토회의</span>
+          <span class="mgr">성범</span><span class="date">07.15</span>
+        </div>
+        <div class="body">
+          <div class="b">공조 조닝 변경안 도면 검토</div>
+          <div class="b">외조기 용량 재산정 결과 공유</div>
+          <div class="zone">
+            <div class="zone-label">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6h-1.5z"/></svg>
+              첨부파일 <span class="n">3</span>
+            </div>
+            <div class="att-grid">
+              <button class="att"><span class="fico pdf">PDF</span><span class="nm">공조설계_검토안_v3.pdf</span><span class="end"><span class="sz">2.4 MB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+              <button class="att"><span class="fico xls">XLS</span><span class="nm">외조기_용량산정.xlsx</span><span class="end"><span class="sz">184 KB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+              <button class="att"><span class="fico img">IMG</span><span class="nm">현장사진_0714.jpg</span><span class="end"><span class="sz">1.1 MB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 시안 C -->
+    <div>
+      <h2>시안 C — 미니멀 필 스트립</h2>
+      <div class="desc">라벨 없이 파일 필만 한 줄로. 가장 조용하지만 "첨부 구역"이라는 인지가 약하고 개수 파악이 어려움.</div>
+      <div class="card vC">
+        <div class="head">
+          <span class="chip cat">회의</span><span class="chip dept">시설팀</span>
+          <span class="title">FAB 클린룸 공조 설계 검토회의</span>
+          <span class="mgr">성범</span><span class="date">07.15</span>
+        </div>
+        <div class="body">
+          <div class="b">공조 조닝 변경안 도면 검토</div>
+          <div class="b">외조기 용량 재산정 결과 공유</div>
+        </div>
+        <div class="zone">
+          <button class="att"><span class="fico pdf">PDF</span><span class="nm">공조설계_검토안_v3.pdf</span><span class="end"><span class="sz">2.4 MB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+          <button class="att"><span class="fico xls">XLS</span><span class="nm">외조기_용량산정.xlsx</span><span class="end"><span class="sz">184 KB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+          <button class="att"><span class="fico img">IMG</span><span class="nm">현장사진_0714.jpg</span><span class="end"><span class="sz">1.1 MB</span><span class="dl"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></span></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 작성/수정 카드 -->
+  <h2 style="margin-top:56px">작성·수정 카드 — 첨부 구역 + 드래그&드롭 (공통 적용안)</h2>
+  <div class="desc">본문 아래 점선 구분 첨부 구역: [파일 첨부] 추가 칩이 상시 보여 발견성 확보(헤더 클립과 병행). 파일을 카드 위로 끌어오면 드롭 오버레이.</div>
+  <div class="grid">
+    <div class="compose">
+      <div class="head">
+        <span class="field">회의</span><span class="field">시설팀</span><span class="field">조성범</span>
+        <span style="flex:1"></span>
+        <span class="field" style="width:100%">FAB 클린룸 공조 설계 검토회의</span>
+      </div>
+      <div class="body">업무 내용 입력…</div>
+      <div class="zone">
+        <div class="zone-label">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6h-1.5z"/></svg>
+          첨부파일 <span class="n">1</span>
+        </div>
+        <div class="att-grid">
+          <div class="upchip"><span class="fico pdf">PDF</span><span class="nm">공조설계_검토안_v3.pdf</span><span class="sz">2.4 MB</span>
+            <span class="x"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></span></div>
+        </div>
+        <button class="addchip">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 6v11.5a4 4 0 0 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 0 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6h-1.5z"/></svg>
+          파일 첨부
+        </button>
+      </div>
+    </div>
+    <div class="compose dropzone">
+      <div class="head">
+        <span class="field">회의</span><span class="field">시설팀</span><span class="field">조성범</span>
+        <span style="flex:1"></span>
+        <span class="field" style="width:100%">FAB 클린룸 공조 설계 검토회의</span>
+      </div>
+      <div class="body">업무 내용 입력…<br><br><br></div>
+      <div class="drop-overlay">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4a7.5 7.5 0 0 0-6.96 4.75A6 6 0 0 0 6 20h13a5 5 0 0 0 .35-9.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+        여기에 놓으면 업로드
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>공통 세련화 요소</b> — ① 파일칩 hover: 크기 표기가 파랑 다운로드 아이콘으로 크로스페이드(고정폭 슬롯이라 레이아웃 시프트 없음) ② 클릭 시 미세 스케일(.985) 피드백
+    ③ 다운로드 중 스피너 → 완료 시 초록 체크 1.2초 표시 ④ 구역 라벨: 클립 13px + 캡션 11px/600 + 건수 ⑤ 터치 기기에선 다운로드 아이콘 상시 표시(hover 없음 대응)
+  </div>
+</body>
+</html>
