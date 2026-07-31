@@ -9,6 +9,13 @@
           document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=1280')
         }
       } catch (e) {}
+      // 테마 초기 세팅 — 앱 렌더 전에 <html data-theme>를 확정해 다크→라이트 깜빡임(FOUC) 방지
+      try {
+        var t = localStorage.getItem('angels-theme')
+        document.documentElement.dataset.theme = t === 'light' || t === 'dark' ? t : 'dark'
+      } catch (e) {
+        document.documentElement.dataset.theme = 'dark'
+      }
     </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -23,8 +30,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" />
     <title>ANGELS PORTAL</title>
-    <script type="module" crossorigin src="/assets/index-Do1JbPSt.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BqXF6iyN.css">
+    <script type="module" crossorigin src="/assets/index-CJ1LcbX3.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CzS_s6E-.css">
   </head>
   <body>
     <div id="root"></div>
