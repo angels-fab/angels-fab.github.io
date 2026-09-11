@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "ANGELS FAB 구축 포털",
+  "short_name": "ANGELS",
+  "description": "GIST 첨단AI반도체팹센터 구축 관리 포털",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "/#/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#0F1117",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
