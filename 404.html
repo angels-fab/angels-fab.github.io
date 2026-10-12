@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex" />
+<title>ANGELS 포털</title>
+<script>
+  // 없는 주소(2026-10-12) — 출장 링크 카드 주소(/t/<id>/#<토큰>)는 카드 페이지가 아직 없거나 걷혔어도 웹일정표로 이어 준다.
+  // 그 밖의 없는 주소는 포털 첫 화면으로
+  var t = location.hash.slice(1)
+  location.replace('/' + (/^\/t\//.test(location.pathname) && /^[A-Za-z0-9_-]{32}$/.test(t) ? '#/trip/' + t : ''))
+</script>
+</head>
+<body></body>
+</html>
