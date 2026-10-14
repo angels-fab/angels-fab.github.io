@@ -20,14 +20,25 @@
       }
     </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <!-- 홈 화면에 추가(PWA) — 아이폰은 설치된 상태에서만 웹푸시가 온다(iOS 16.4+) -->
-    <link rel="manifest" id="app-manifest" href="/manifest.webmanifest" />
+    <!-- 홈 화면에 추가(PWA) — 아이폰은 설치된 상태에서만 웹푸시가 온다(iOS 16.4+).
+         manifest 는 아래 스크립트가 건다: 웹일정표로 열면 걸지 않는다(2026-10-14 사용자 제보 '홈 화면에 일정표가 아니라 메인이 저장된다' 3차) -->
     <script>
-      // 웹일정표(#/trip/<토큰>)로 열면 홈 화면 추가 = 그 일정표(2026-10-14 사용자 제보) — 아이폰은 manifest 의 start_url 을 저장하므로
-      // 처음부터 그 일정표용 manifest(엣지 함수 trip-manifest, start_url = 이 일정표)를 건다. 화면에서 나중에 바꾸면 사파리가 이미 읽어 둔 뒤라 안 먹었다
+      // 웹일정표 = 주소의 #/trip/<토큰> 또는 ?trip=<토큰>. 아이폰 홈 화면 추가는 manifest 가 있으면 그 start_url(메인)을,
+      // 없으면 지금 주소를 저장하는데 # 뒤를 버리는 것으로 보인다(manifest 떼기·다른 주소 manifest 두 번 다 메인이 저장됨).
+      // 그래서 웹일정표에서는 manifest 를 아예 걸지 않고, 주소에 ?trip=<토큰> 을 함께 남긴다 — # 뒤가 버려져도 이 일정표로 열리게.
+      // 홈 화면에서 ?trip= 만 남은 채 열리면 #/trip/<토큰> 을 다시 붙인다
       try {
-        var tm = location.hash.match(/^#\/trip\/([A-Za-z0-9_-]{32})/)
-        if (tm) document.getElementById('app-manifest').href = 'https://rmvutlhdcfkqubzrckqf.supabase.co/functions/v1/trip-manifest?t=' + tm[1]
+        var th = location.hash.match(/^#\/trip\/([A-Za-z0-9_-]{32})/)
+        var tq = location.search.match(/[?&]trip=([A-Za-z0-9_-]{32})/)
+        var tt = th ? th[1] : !location.hash || location.hash === '#/' ? tq && tq[1] : null
+        if (tt) {
+          if (!tq || tq[1] !== tt || !th) history.replaceState(null, '', '/?trip=' + tt + '#/trip/' + tt)
+        } else {
+          var ml = document.createElement('link')
+          ml.rel = 'manifest'
+          ml.href = '/manifest.webmanifest'
+          document.head.appendChild(ml)
+        }
       } catch (e) {}
     </script>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -57,7 +68,7 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:url" content="https://angels-fab.github.io/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="/assets/index-C7cDjz9R.js"></script>
+    <script type="module" crossorigin src="/assets/index-BIuV6D42.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BM5bq8Ze.css">
   </head>
   <body>
