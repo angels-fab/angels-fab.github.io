@@ -14,6 +14,7 @@
       // 테마 초기 세팅 — 앱 렌더 전에 <html data-theme>를 확정해 다크→라이트 깜빡임(FOUC) 방지
       try {
         var t = localStorage.getItem('angels-theme')
+        if (t === 'system') t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
         document.documentElement.dataset.theme = t === 'light' || t === 'dark' ? t : 'dark'
       } catch (e) {
         document.documentElement.dataset.theme = 'dark'
@@ -68,8 +69,8 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:url" content="https://angels-fab.github.io/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="/assets/index-DHidJ61F.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D2vZU9G9.css">
+    <script type="module" crossorigin src="/assets/index-BgYMfoSS.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-xOC7L4C-.css">
   </head>
   <body>
     <div id="root"></div>
