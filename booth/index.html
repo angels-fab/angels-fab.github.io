@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- maximum-scale=1: iOS 사파리의 '작은 입력창 포커스 시 자동 확대' 방지(입력 글자를 16px로
+         키우던 테마 규칙의 대체 — 사용자 손가락 핀치 줌은 iOS 10+ 에서 이 값과 무관하게 항상 됨) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <script>
+      try {
+        if (localStorage.getItem('forceDesktop') === '1') {
+          document.querySelector('meta[name="viewport"]').setAttribute('content', 'width=1280')
+        }
+      } catch (e) {}
+      // 테마 초기 세팅 — 앱 렌더 전에 <html data-theme>를 확정해 다크→라이트 깜빡임(FOUC) 방지
+      try {
+        var t = localStorage.getItem('angels-theme')
+        if (t === 'system') t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = t === 'light' || t === 'dark' ? t : 'dark'
+      } catch (e) {
+        document.documentElement.dataset.theme = 'dark'
+      }
+    </script>
+    <link rel="icon" type="image/png" href="/booth/favicon.png" />
+    <!-- 홈 화면에 추가(PWA) — 아이폰은 설치된 상태에서만 웹푸시가 온다(iOS 16.4+).
+         manifest 는 아래 스크립트가 건다: 웹일정표로 열면 걸지 않는다(2026-10-14 사용자 제보 '홈 화면에 일정표가 아니라 메인이 저장된다' 3차) -->
+    <script>
+      // 웹일정표 = 주소의 #/trip/<토큰> 또는 ?trip=<토큰>. 아이폰 홈 화면 추가는 manifest 가 있으면 그 start_url(메인)을,
+      // 없으면 지금 주소를 저장하는데 # 뒤를 버리는 것으로 보인다(manifest 떼기·다른 주소 manifest 두 번 다 메인이 저장됨).
+      // 그래서 웹일정표에서는 manifest 를 아예 걸지 않고, 주소에 ?trip=<토큰> 을 함께 남긴다 — # 뒤가 버려져도 이 일정표로 열리게.
+      // 홈 화면에서 ?trip= 만 남은 채 열리면 #/trip/<토큰> 을 다시 붙인다
+      try {
+        var th = location.hash.match(/^#\/trip\/([A-Za-z0-9_-]{32})/)
+        var tq = location.search.match(/[?&]trip=([A-Za-z0-9_-]{32})/)
+        var tt = th ? th[1] : !location.hash || location.hash === '#/' ? tq && tq[1] : null
+        if (tt) {
+          // 경로는 지금 그대로(포털 '/', 체험관 '/booth/') — '/' 로 박으면 체험관 일정표가 포털 주소로 바뀐다
+          if (!tq || tq[1] !== tt || !th) history.replaceState(null, '', location.pathname + '?trip=' + tt + '#/trip/' + tt)
+        } else {
+          var ml = document.createElement('link')
+          ml.rel = 'manifest'
+          ml.href = '/manifest.webmanifest'
+          void ml /* 체험관: 홈 화면 추가(manifest) 없음 */
+        }
+      } catch (e) {}
+    </script>
+    <link rel="apple-touch-icon" href="/booth/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="체험관" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      rel="stylesheet"
+      as="style"
+      crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+    <!-- 손글씨(데모결과 코멘트 종이 테마) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" />
+    <title>업무포털 체험관</title>
+    <!-- 링크 미리보기(카카오톡·슬랙 등, 2026-10-12 사용자 지시) — 주소를 붙여 넣으면 이 카드가 뜬다. 해시 주소(#/…)는 서버에 안 가서 모든 링크가 이 하나를 쓴다 -->
+    <meta name="description" content="가상 부서로 업무포털을 직접 눌러 보는 체험관" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="업무포털 체험관" />
+    <meta property="og:title" content="업무포털 체험관" />
+    <meta property="og:description" content="가상 부서로 업무포털을 직접 눌러 보는 체험관" />
+    <meta property="og:image" content="https://angels-fab.github.io/og-portal.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://angels-fab.github.io/booth/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="module" crossorigin src="/booth/assets/index-BjXhGMLd.js"></script>
+    <link rel="stylesheet" crossorigin href="/booth/assets/index-Dndkre5o.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

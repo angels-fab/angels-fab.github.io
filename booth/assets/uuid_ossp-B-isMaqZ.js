@@ -1,0 +1,1 @@
+import{u as s}from"./chunk-ZSOCVAT7-CUb-ofjX.js";s();var o=async(t,u)=>({bundlePath:new URL("/booth/assets/uuid-ossp.tar-mKsH9dJM.gz",import.meta.url)}),e={name:"uuid-ossp",setup:o};export{e as uuid_ossp};

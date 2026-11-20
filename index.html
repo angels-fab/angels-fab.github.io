@@ -33,7 +33,8 @@
         var tq = location.search.match(/[?&]trip=([A-Za-z0-9_-]{32})/)
         var tt = th ? th[1] : !location.hash || location.hash === '#/' ? tq && tq[1] : null
         if (tt) {
-          if (!tq || tq[1] !== tt || !th) history.replaceState(null, '', '/?trip=' + tt + '#/trip/' + tt)
+          // 경로는 지금 그대로(포털 '/', 체험관 '/booth/') — '/' 로 박으면 체험관 일정표가 포털 주소로 바뀐다
+          if (!tq || tq[1] !== tt || !th) history.replaceState(null, '', location.pathname + '?trip=' + tt + '#/trip/' + tt)
         } else {
           var ml = document.createElement('link')
           ml.rel = 'manifest'
@@ -69,8 +70,8 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:url" content="https://angels-fab.github.io/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="/assets/index-BUugnqn7.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CF6b89XY.css">
+    <script type="module" crossorigin src="/assets/index-DEl-tAE9.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dndkre5o.css">
   </head>
   <body>
     <div id="root"></div>
