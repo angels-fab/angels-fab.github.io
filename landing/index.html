@@ -1,0 +1,1523 @@
+<!doctype html>
+<!--
+  ANGELS 포털 — 로그인 전 첫 화면(알갱이 로고 · 조감도 · 하늘 · 날씨 · 계절). 2026-11-21 시안 42를 옮긴 것이고, 이제 이 파일이 원본이다.
+  · 포털의 src/pages/Landing 이 화면 가득 iframe 으로 띄운다. 로그인 · 가입 신청 · 다음 화면은 window.parent.__angelsLanding 으로 포털에 넘긴다.
+  · 고칠 때는 /landing/index.html?lab 으로 따로 열면 시안 조작 줄(날씨 · 계절 · 시간 · 로그인 결과)이 나온다. 그냥 열면 포털로 돌려보낸다.
+  · tests/visual/compare.mjs 가 이 화면으로 로그인한다 — 로그인 창의 role=dialog · 라벨 "사번" · "비밀번호" · 버튼 이름 "로그인"을 바꾸지 말 것.
+  · 날씨 · 미세먼지는 오픈메테오(열쇠 없음, 광주 좌표만 보냄). 사용자가 고른 것 · 퇴짜 놓은 것은 Claude 메모리 login-landing-particles 참조.
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANGELS 통합업무포털</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --bg: #0a0a0a; --ink: #f2f4f9; --muted: #9aa2b3; --line: rgba(255,255,255,.14); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); overflow: hidden; -webkit-font-smoothing: antialiased; -webkit-user-select: none; user-select: none; touch-action: none;
+    font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; }
+
+  /* 무대 — 검은 바탕에 별(알갱이)과 마우스 빛만 */
+  .view { position: fixed; inset: 0; overflow: hidden; perspective: 1600px; perspective-origin: 50% 50%; }
+  .scene { position: absolute; inset: 0; z-index: 2; transform-origin: 50% 50%; will-change: transform; }
+  #sky { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }   /* 하늘과 해를 그리는 판 — 알갱이 뒤 */
+  #cld { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }   /* 구름 — 낮은 해상도로 그려 늘인다(부드러워서 티가 안 난다) */
+  #wxf { position: absolute; inset: 0; z-index: 3; display: block; width: 100%; height: 100%; pointer-events: none; transition: opacity .35s; }   /* 알갱이 앞을 지나는 빗줄기 · 눈송이 몇 개 */
+  body.dlg #wxf { opacity: 0; }
+  #dust { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0; }   /* 미세먼지 — 하늘을 덮는 뿌연 막 */
+  #wx { position: absolute; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; pointer-events: none; }   /* 비 · 눈 · 바람에 날리는 먼지 · 번개 줄기 */
+  .scene canvas { position: absolute; display: block; pointer-events: none; }
+  .flash { position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 46%, rgba(228,232,255,.95), rgba(130,125,255,.5) 45%, rgba(10,10,10,0) 78%); }
+  .flash.on { animation: flash 1.5s ease-out forwards; }
+  @keyframes flash { 0% { opacity: 0; } 22% { opacity: .85; } 100% { opacity: 0; } }
+
+  /* 가운데 — 로고 자리(.slot)와 조감도 자리(.bslot)는 빈 칸이고(폭이 같다), 알갱이가 그 칸을 찾아가 그려진다 */
+  .stage { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; pointer-events: none; }
+  .hero { display: flex; flex-direction: column; align-items: center; gap: 22px; --lw: min(30.24vw, calc(448px + max(0px, (100vw - 1481px) * .14))); --bw: min(37.8vw, calc(560px + max(0px, (100vw - 1481px) * .175))); }
+  .slot { width: var(--lw); aspect-ratio: 720 / 132; }
+  .bslot { width: var(--bw); aspect-ratio: 1274 / 372; }
+  /* '통합업무포털' — 두 버튼의 머리글(조감도 아래, 조감도 폭). 메인으로 돌아올 때는 알갱이가 거의 다 모인 뒤에 뜬다 */
+  .portal { display: flex; align-items: center; gap: 16px; width: var(--bw); margin: 0 0 -10px; font-size: 13px; font-weight: 500; letter-spacing: .5em; color: rgba(236,240,255,.66); transition: opacity .3s .5s; }
+  .portal::before, .portal::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.17); opacity: 0; }
+  body.in .portal::before, body.in .portal::after { animation: rise .5s 1.35s forwards; }
+  body.done .portal::before, body.done .portal::after { opacity: 1; animation: none; }
+  .portal b { font-weight: inherit; white-space: nowrap; }
+  .portal span:last-child { letter-spacing: 0; }
+  .portal span { display: inline-block; opacity: 0; filter: blur(9px); translate: 0 8px; }
+  body.in .portal span { animation: letter .5s calc(1.35s + var(--i) * 50ms) cubic-bezier(.2,.7,.2,1) forwards; }
+  @keyframes letter { to { opacity: 1; filter: blur(0); translate: 0 0; } }
+  @keyframes rise { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+  @media (max-width: 860px) { .hero { --lw: 69vw; --bw: 86vw; gap: 24px; } }
+
+  /* 갈림길 버튼 — 조감도 아래, 두 버튼을 합친 폭 = 조감도 폭. 왼쪽 포털 로그인 · 오른쪽 체험관 */
+  .fork { display: flex; gap: 10px; width: var(--bw); margin-top: 2px; }
+  .enter { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: clamp(44px, calc(var(--bw) * .081), 56px); border-radius: 10px; border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.05);
+    color: var(--ink); font-size: clamp(15px, calc(var(--bw) * .027), 18px); font-weight: 600; letter-spacing: .08em; font-family: inherit; white-space: nowrap; cursor: pointer; pointer-events: auto; opacity: 0;
+    transition: opacity .3s .5s, background .2s, border-color .2s, color .2s, scale .12s; }
+  .enter:active { scale: .98; background: rgba(255,255,255,.18); }
+  .enter.try:active { background: rgba(110,168,255,.26); }
+  .enter svg { flex: none; width: 20px; height: 20px; fill: currentColor; }
+  body.in .enter { animation: rise .6s 1.5s forwards; }
+  body.in .enter.try { animation-delay: 1.6s; }
+  .enter:hover { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.62); }
+  .enter.try { border-color: rgba(110,168,255,.55); background: rgba(110,168,255,.08); color: #a9cbff; }
+  .enter.try:hover { background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.85); }
+
+  /* 로그인 창 — 테두리 · 입력 칸 · 버튼 틀은 알갱이가 그리고, 글자와 입력만 여기 얹는다(칸 자리는 알갱이 그림과 같은 숫자) */
+  .card { position: fixed; left: 50%; top: 46%; width: 380px; height: 304px; translate: -50% -50%; z-index: 30; opacity: 0; pointer-events: none; transition: opacity .35s; }
+  body.dlg .card { opacity: 1; pointer-events: auto; transition: opacity .35s .4s; }
+  body:not(.lite) .card { text-shadow: 0 0 6px #000, 0 0 2px #000; }
+  .card > * { position: absolute; margin: 0; }
+  .card h2 { left: 24px; top: 18px; display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; }
+  .card h2 svg { width: 20px; height: 20px; fill: currentColor; }
+  .card .desc { left: 24px; top: 56px; width: 332px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+  .card label { left: 24px; font-size: 12px; font-weight: 600; color: #d4d4d4; }
+  .card input { left: 24px; width: 332px; height: 38px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
+  .join { left: 24px; top: 273px; font-size: 13px; color: var(--muted); }
+  .err { left: 24px; top: 197px; font-size: 12px; color: #ff9c9c; opacity: 0; transition: opacity .2s; }
+  body.bad .err { opacity: 1; }
+  .join .link { margin-left: 6px; padding: 2px; border: 0; border-radius: 4px; background: none; color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,.35); text-underline-offset: 3px; }
+  .join .link:hover { text-decoration-color: #fff; }
+  .join .link:focus-visible { outline: none; text-decoration-color: #fff; text-decoration-thickness: 2px; }
+  @media (max-width: 768px) { .card input { font-size: 16px; } }   /* 아이폰은 입력 글자가 16px 보다 작으면 누를 때 화면을 확대한다 */
+  .btn { top: 220px; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; }
+  /* 로그인 버튼 — 판으로 채우지 않는다(알갱이 화면과 따로 논다). 입력 칸은 가는 네모 테두리, 버튼은 굵고 밝은 알약 모양 테두리 + 바깥 빛으로 알갱이만으로 구별한다 */
+  .btn.solid { left: 24px; width: 332px; border-radius: 20px; color: #fff; font-weight: 700; letter-spacing: .1em; text-shadow: 0 0 6px #000, 0 0 2px #000; transition: opacity .2s, scale .12s; }
+  .btn.solid:active { scale: .985; }
+  .btn.ghost { left: 312px; top: 268px; width: 44px; height: 28px; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .btn.ghost:hover { color: var(--ink); }
+  .btn.ghost:focus-visible { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+  /* 기다리는 동안 — 다시 누르지 못하게 */
+  body.wait .card input, body.wait .btn { pointer-events: none; }
+  body.wait .btn.solid { opacity: .55; }
+  /* 4 키보드로 옮길 때의 초점 표시 — 브라우저 기본 테두리 대신 화면에 맞는 빛 */
+  .enter:focus-visible { outline: none; border-color: rgba(255,255,255,.8); background: rgba(255,255,255,.12); }
+  .enter.try:focus-visible { border-color: rgba(169,203,255,.95); background: rgba(110,168,255,.2); }
+  .btn:focus-visible { outline: none; }   /* 로그인 버튼의 초점은 알갱이 테두리가 밝아지는 것으로 보인다 */
+  body.lite .btn.solid:focus-visible { outline: 2px solid rgba(255,255,255,.6); outline-offset: 2px; }   /* 정지 그림일 때만 선으로 */
+  /* 5 움직임 줄이기를 켠 PC — 글자 · 버튼도 움직이지 않고 바로 보인다(알갱이는 정지 그림) */
+  body.rm .portal span, body.rm .enter, body.rm .portal::before, body.rm .portal::after { animation: none !important; opacity: 1; filter: none; translate: 0 0; }
+  body.rm .next { scale: 1; transition: opacity .25s; }
+  /* 휴대폰 — 알갱이가 없으니 창을 보통 모양으로 그린다 */
+  body.lite .card { background: rgba(20,20,22,.94); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 30px 70px -24px rgba(0,0,0,.9); max-width: calc(100vw - 16px); }
+  body.lite .card input { border: 1px solid rgba(255,255,255,.17); background: rgba(10,11,16,.8); }
+  body.lite .btn.solid { background: #f5f5f5; color: #111; text-shadow: none; }
+
+  /* 등장 연출이 끝난 뒤 · 로그인 창이 떴을 때 · 넘어갈 때 */
+  body.done .portal span { opacity: 1; filter: none; translate: 0 0; animation: none; }
+  body.done .enter { opacity: 1; animation: none; }
+  body.dlg .portal, body.dlg .enter, body.gone .portal, body.gone .enter { opacity: 0 !important; pointer-events: none; transition: opacity .2s; }
+  body.gone .card { opacity: 0 !important; transition: opacity .2s; }
+
+  /* 다음 화면(임시 그림) — 진입 장면 끝에 페이드로 뜬다. 실제로는 이 자리에 포털 · 체험관 화면이 온다 */
+  .next { position: fixed; inset: 0; z-index: 35; display: grid; grid-template-columns: 64px 1fr; grid-template-rows: auto 1fr; opacity: 0; scale: .94; pointer-events: none; background: #0f1013;
+    transition: opacity .55s cubic-bezier(.3,0,.2,1), scale .95s cubic-bezier(.16,1,.3,1); }
+  body.arrived .next { opacity: 1; scale: 1; }
+  .nx-band { grid-column: 1 / -1; height: 0; background: #2f6fed; }
+  body.booth .nx-band { height: 36px; }
+  .nx-side { background: #15171c; border-right: 1px solid rgba(255,255,255,.06); }
+  .nx-main { display: flex; flex-direction: column; gap: 18px; min-height: 0; padding: 28px 40px; }
+  .nx-main i { display: block; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; background: #17191f; }
+  .nx-h { width: 220px; height: 30px; border-radius: 8px; background: #1b1e25; }
+  .nx-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; } .nx-row i { height: 110px; }
+  .nx-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1; min-height: 0; }
+  .nx-cap { position: absolute; left: 50%; top: 50%; translate: -50% -50%; padding: 8px 16px; border: 1px dashed rgba(255,255,255,.25); border-radius: 10px; background: rgba(12,12,12,.8); color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+  /* ── 시간대 하늘 — 바탕 빛은 .view 에 직접 칠한다(JS 가 시각에 맞춰 넣는다). --day = 낮의 밝은 정도(0 밤 ~ 1 한낮) ── */
+  .view::before { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: #05060b; opacity: 0; transition: opacity .45s; }
+  body.dlg .view::before { opacity: calc(var(--day, 0) * .32); }   /* 로그인 창이 뜨면 밝은 하늘을 어둡게 눌러 창의 글자가 또렷하게 */
+  body.sky .portal { color: rgba(236,240,255, calc(.58 + .36 * var(--day, 0))); text-shadow: 0 1px 10px rgba(4,12,30, calc(var(--day, 0) * .55)); }
+  body.p4.sky .enter { background: linear-gradient(rgba(6,12,26, calc(var(--day, 0) * .36)), rgba(6,12,26, calc(var(--day, 0) * .36))), rgba(255,255,255,.035); }
+  body.p4.sky .enter:hover { background: linear-gradient(rgba(6,12,26, calc(var(--day, 0) * .3)), rgba(6,12,26, calc(var(--day, 0) * .3))), rgba(255,255,255,.1); }
+  body.p4.sky .enter.try { background: linear-gradient(rgba(6,12,26, calc(var(--day, 0) * .4)), rgba(6,12,26, calc(var(--day, 0) * .4))), rgba(110,168,255,.08); }
+  body.p4.sky .enter.try:hover { background: linear-gradient(rgba(6,12,26, calc(var(--day, 0) * .34)), rgba(6,12,26, calc(var(--day, 0) * .34))), rgba(110,168,255,.18); }
+  .bar input[type=range] { width: 170px; accent-color: #cfd6ee; }
+  .bar .todv { min-width: 44px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ── 다듬기(시안 조작 줄에서 하나씩 켜고 끈다) ── */
+  /* 1 글씨 결 — 가늘게, 자간을 넓게 */
+  body.p1 .portal { font-weight: 400; letter-spacing: .66em; color: rgba(236,240,255,.58); }
+  body.p1 .enter { font-weight: 500; letter-spacing: .16em; }
+  body.p1 .card h2 { font-size: 17px; font-weight: 500; letter-spacing: .06em; }
+  body.p1 .card h2 svg { width: 17px; height: 17px; }
+  body.p1 .card label { font-size: 11px; font-weight: 500; letter-spacing: .1em; color: var(--muted); }
+  body.p1 .card input { letter-spacing: .03em; }
+  body.p1 .btn.solid { font-weight: 600; letter-spacing: .22em; }
+  body.p1 .join, body.p1 .btn.ghost { font-size: 12px; letter-spacing: .02em; }
+  /* 2 화면 깊이 — 가장자리는 어둡게, 로고 뒤에는 아주 옅은 빛 */
+  body.p2 .view::before, body.p2 .view::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+  body.p2 .view::before { background: radial-gradient(ellipse 46% 40% at 50% 47%, rgba(120,130,200,.14), rgba(120,130,200,0) 72%); }
+  body.p2 .view::after { background: radial-gradient(ellipse 78% 74% at 50% 48%, rgba(0,0,0,0) 50%, rgba(0,0,0,.56) 100%); }
+  /* 4 유리 같은 메인 버튼 — 가늘고 옅은 테두리, 반투명 바탕, 올리면 안쪽에서 밝아진다 */
+  body.p4 .enter { border-radius: 12px; border-color: rgba(255,255,255,.22); background: rgba(255,255,255,.035); }
+  body.p4 .enter:hover { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.085); }
+  body.p4 .enter.try { border-color: rgba(120,172,255,.4); background: rgba(110,168,255,.06); }
+  body.p4 .enter.try:hover { border-color: rgba(140,186,255,.75); background: rgba(110,168,255,.14); }
+  .seg.multi button[aria-pressed="false"] { color: #7f8798; }
+
+  /* 시안 조작 줄 — 실제 화면에는 없다 */
+  .bar { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 12px; padding: 7px 14px;
+    border: 1px dashed rgba(255,255,255,.22); border-radius: 12px; background: rgba(12,12,12,.86); font-size: 12px; color: var(--muted); white-space: nowrap; flex-wrap: wrap; justify-content: center; row-gap: 8px; max-width: calc(100vw - 16px); }
+  .bar .tag { font-weight: 700; color: var(--ink); }
+  .bar { left: 8px; right: 8px; transform: none; width: fit-content; margin: 0 auto; }
+  .bar .grp { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .bar .wxlive { color: var(--ink); white-space: nowrap; } .bar .wxlive:empty { display: none; }
+  @media (max-width: 860px) { .bar { flex-wrap: wrap; justify-content: center; width: calc(100vw - 16px); } }
+  .seg { display: inline-flex; overflow: hidden; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; }
+  .seg button { padding: 6px 10px; border: 0; background: transparent; color: #cdd2de; font-size: 12px; font-family: inherit; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #f2f4f9; color: #0c0e14; font-weight: 700; }
+  .again { padding: 6px 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; background: transparent; color: #cdd2de; font-size: 12px; font-family: inherit; cursor: pointer; }
+
+  /* ── 포털에 끼운 판(src/pages/Landing 이 iframe 으로 띄운다) ── */
+  body:not(.lab) .bar { display: none; }   /* 조작 줄은 ?lab 으로 따로 열었을 때만 */
+  body.host .next { display: none; }   /* 다음 화면 임시 그림 — 포털이 뒤에서 뜨므로 안 쓴다 */
+  .card { visibility: hidden; transition: opacity .35s, visibility 0s .35s; }   /* 닫힌 로그인 창의 칸에 탭으로 들어가지 않게 */
+  body.dlg .card { visibility: visible; transition: opacity .35s .4s, visibility 0s; }
+  body.gone .card { transition: opacity .2s, visibility 0s .2s; }
+  .err { width: 332px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<div class="view">
+  <canvas id="sky"></canvas>
+  <canvas id="cld"></canvas>
+  <canvas id="wx"></canvas>
+  <div id="dust"></div>
+  <div class="scene" id="scene">
+    <canvas id="fx"></canvas>
+    <canvas id="gl"></canvas>
+  </div>
+  <canvas id="wxf"></canvas>
+</div>
+
+<main class="stage">
+  <section class="hero">
+    <div class="slot" id="slot" role="img" aria-label="ANGELS 첨단AI반도체팹센터"></div>
+    <div class="bslot" id="bslot" role="img" aria-label="GIST FAB 조감도"></div>
+    <p class="portal" aria-label="통합업무포털"><b><span style="--i:0">통</span><span style="--i:1">합</span><span style="--i:2">업</span><span style="--i:3">무</span><span style="--i:4">포</span><span style="--i:5">털</span></b></p>
+    <div class="fork">
+      <button class="enter" id="enter" type="button"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M511-120q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h269v-600H511q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h269q24 0 42 18t18 42v600q0 24-18 42t-42 18H511Zm-26-330H150q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h333l-81-81q-9-9-8.5-21t9.5-21q9-9 21.5-9t21.5 9l133 133q9 9 9 21t-9 21L447-326q-8.8 9-20.9 8.5-12.1-.5-21.49-9.5-8.61-9-8.61-21.5t9-21.5l80-80Z"/></svg>로그인</button>
+      <button class="enter try" id="try" type="button"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M147-200q-38 0-59.5-25.5T72-296l48-335q8-53 49.5-91t94.5-38h433q53 0 94.5 38t49.5 91l47 335q6 45-15.5 70.5T813-200q-23 0-39-7.5T747-226L643-330H317L213-226q-11 11-27 18.5t-39 7.5Zm18-64 126-126h378l126 126q5 5 18 9 9 0 13.5-9t2.5-18l-48-339q-5-35-29.5-57T697-700H263q-30 0-54.5 22T179-621l-48 339q-2 9 2.5 18t13.5 9q7 0 18-9Zm563-188q12-12 12-28t-12-28q-12-12-28-12t-28 12q-12 12-12 28t12 28q12 12 28 12t28-12Zm-85-130q12-12 12-28t-12-28q-12-12-28-12t-28 12q-12 12-12 28t12 28q12 12 28 12t28-12ZM480-478Zm-180-42v50q0 11 7 18t18 7q11 0 18-7t7-18v-50h50q11 0 18-7t7-18q0-11-7-18t-18-7h-50v-50q0-11-7-18t-18-7q-11 0-18 7t-7 18v50h-50q-11 0-18 7t-7 18q0 11 7 18t18 7h50Z"/></svg>체험하기</button>
+    </div>
+  </section>
+</main>
+
+<section class="card" id="card" role="dialog" aria-label="로그인">
+  <h2><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M220-80q-24.75 0-42.37-17.63Q160-115.25 160-140v-434q0-24.75 17.63-42.38Q195.25-634 220-634h70v-96q0-78.85 55.61-134.42Q401.21-920 480.11-920q78.89 0 134.39 55.58Q670-808.85 670-730v96h70q24.75 0 42.38 17.62Q800-598.75 800-574v434q0 24.75-17.62 42.37Q764.75-80 740-80H220Zm314.5-222.03Q557-324.06 557-355q0-30-22.67-54.5t-54.5-24.5q-31.83 0-54.33 24.5t-22.5 55q0 30.5 22.67 52.5t54.5 22q31.83 0 54.33-22.03ZM350-634h260v-96q0-54.17-37.88-92.08-37.88-37.92-92-37.92T388-822.08q-38 37.91-38 92.08v96Z"/></svg>로그인</h2>
+  <label for="f1" style="top:62px">사번</label><input id="f1" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" style="top:82px">
+  <label for="f2" style="top:132px">비밀번호</label><input id="f2" name="password" type="password" autocomplete="current-password" style="top:152px">
+  <p class="err" id="err" role="alert"></p>
+  <button class="btn solid" id="go" type="button">로그인</button>
+  <div class="join">계정이 없나요?<button class="link" id="join" type="button">가입 신청</button></div>
+  <button class="btn ghost" id="cancel" type="button">취소</button>
+</section>
+<section class="next" id="next" aria-hidden="true">
+  <div class="nx-band"></div><div class="nx-side"></div>
+  <div class="nx-main"><div class="nx-h"></div><div class="nx-row"><i></i><i></i><i></i><i></i><i></i></div><div class="nx-two"><i></i><i></i></div></div>
+  <div class="nx-cap" id="nxcap">포털 화면 (임시 그림)</div>
+</section>
+<div class="flash" id="flash"></div>
+
+<div class="bar" id="bar"><span class="tag">시안 조작</span><span class="grp">로그인 결과<div class="seg" id="mockres"><button data-v="1" aria-pressed="true">성공</button><button data-v="0">틀림</button></div></span><span class="grp">움직임 줄이기<div class="seg" id="mockrm"><button data-v="0" aria-pressed="true">끔</button><button data-v="1">켬</button></div></span><span class="grp">햇무리<div class="seg" id="haloseg"><button data-v="0" aria-pressed="true">가끔</button><button data-v="1">켬</button><button data-v="2">끔</button></div></span><span class="grp">계절<div class="seg" id="seaseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="0">봄</button><button data-v="1">여름</button><button data-v="2">가을</button><button data-v="3">겨울</button></div></span><span class="grp">크리스마스<div class="seg" id="xmseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="1">켬</button></div></span><span class="grp">날씨<div class="seg" id="wxseg"><button data-v="0" aria-pressed="true">맑음</button><button data-v="1">흐림</button><button data-v="2">비</button><button data-v="3">눈</button><button data-v="7">진눈깨비</button><button data-v="4">바람</button><button data-v="5">천둥번개</button><button data-v="6">실제</button></div></span><span class="grp">미세먼지<div class="seg" id="hzseg"><button data-v="0" aria-pressed="true">좋음</button><button data-v="1">나쁨</button><button data-v="2">매우 나쁨</button></div></span><span class="wxlive" id="wxlive"></span><span class="grp">시간<input type="range" id="tod" min="0" max="24" step="0.25" value="12" aria-label="시간"><span class="todv" id="todv">--:--</span><button class="again" id="todnow" type="button">지금</button><button class="again" id="todplay" type="button">하루 돌려 보기</button></span><button class="again" id="again" type="button">처음부터 다시</button></div>
+
+<script>
+(function () {
+  'use strict';
+  // 포털(src/pages/Landing)이 띄웠나 — 포털이 window.__angelsLanding 에 login · signup · reveal · done 을 걸어 둔다. 따로 열면 ?lab(조작 줄 있는 시안)일 때만 보여 주고, 아니면 포털로 보낸다
+  function host() { try { return window.parent !== window && window.parent.__angelsLanding || null; } catch (e0) { return null; } }
+  function hostCall(name, a) { var h = host(); try { if (h && h[name]) h[name](a); } catch (e1) {} }
+  var HOSTED = !!host(), LAB = !HOSTED && /[?&]lab\b/.test(location.search);
+  if (!HOSTED && !LAB) { location.replace('../'); return; }
+  document.body.classList.toggle('host', HOSTED); document.body.classList.toggle('lab', LAB);
+  var M = {"w":720,"h":132,"b64":"AAAAAAAA4A8AAAAAAAAAAAAAAH8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+D8AAAAAAAAAAAAAwP8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/P8AAAAAAAAAAAAA8P8DAAAAAAAAAAAAAPj/////HwAAgP8/AAAAAADw/wEAAP//////PwAAAADw////////fwD4/wAAAAAAAAAAAOD///////9/AAAAAAAA/v8BAAAAAAAAAAAA+P8HAAAAAAAAAAAAAP///////wAAgP//AQAAAAD4/wEAwP//////fwAAAAD8////////fwD4/wAAAAAAAAAAAPj///////9/AAAAAAAA/v8BAAAAAAAAAAAA+P8HAAAAAAAAAAAAwP///////wMAgP//BwAAAAD4/wEA8P///////wAAAAD/////////fwD4/wAAAAAAAAAAAP7///////9/AAAAAAAA/v8BAAAAAAAAAAAA+P8HAAAAAAAAAAAA4P///////wcAgP//DwAAAAD4/wEA+P///////wEAAID/////////fwD4/wAAAAAAAAAAAP////////8/AAAAAAAA/P8DAAAAAAAAAAAA/v8HAAAAAAAAAAAA8P///////w8AgP//HwAAAAD4/wEA/P///////wcAAMD/////////fwD4/wAAAAAAAAAAgP////////8fAAAAAAAA/P8PAAAAAAAAAAAA//8DAAAAAAAAAAAA+P///////x8AgP//PwAAAAD4/wEA/v///////w8AAOD/////////fwD4/wAAAAAAAAAAwP////////8fAAAAAAAA4P8/AAAAAAAAAADA/38AAAAAAAAAAAAA/v///////38AgP//PwAAAAD4/wEA/////////x8AAPj/////////fwD4/wAAAAAAAAAA4P////////8PAAAAAAAAAPD/AAAAAAAAAADw/wAAAAAAAAAAAAAA//z///////8AgP//fwAAAAD4/wHAf////////z8AAPz3////////fwD4/wAAAAAAAAAA+O////////8PAAAAAAAAAOD/AwAAAAAAAAD8fwAAAAAAAAAAAACA//j///////8BgP///wAAAAD4/wHgf/7//////38AAP7n////////fwD4/wAAAAAAAAAA/M////////8HAAAAAAAAAID/DwAAAAAAAAD/HwAAAAAAAAAAAADA//D///////8DgP///wEAAAD4/wHwf/z///////8AAP/H////////fwD4/wAAAAAAAAAA/o////////8HAAAAAAAAAAD+HwAAAAAAAID/BwAAAAAAAAAAAADg/+D///////8DgP///wMAAAD4/wHwf/j///////8BgP+H////////fwD4/wAAAAAAAAAA/g////////8DAAAAAAAAAAD4fwAAAAAAAOD/AQAAAAAAAAAAAADg/+D///////8HgP///wcAAAD4/wH4f/D///////8DgP8H////////fwD4/wAAAAAAAAAA/w/+//////8BAAAAAAAAAADg/wEAAAAAAPh/AAAAAAAAAAAAAADw/8D///////8PgP///w8AAAD4/wH8f+D///////8HwP8H/v//////fwD4/wAAAAAAAACA/w/8//////8BAAAAAAAAAACA/wcAAAAAAP4fAAAAAAAAAAAAAADw/4D///////8PgP///x8AAAD4/wH8fwAAAAAAAAAAwP8HAAAAAAAAAAD4/wAAAAAAAACA/w8AAAAAAAAAAAAAAAAAAAAA/x8AAAAAgP8PAAAAAAAAAAAAAADw/wAAAAAAgP8PgP///x8AAAD4/wH8fwAAAAAAAAAAwP8HAAAAAAAAAAD4/wAAAAAAAACA/w8AAAAAAAAAAAAAAAAAAAAA/D8AAAAA4P8DAAAAAAAAAAAAAAD4/wAAAAAAgP8fgP///z8AAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAACA/w8AAAAAAAAAAAAAAPAfAAAA8P8B8P8A+P8AAACA/wAAAAAAAAD4/wAAAAAAgP8fgP///38AAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAPx/AAAAwP8D/v8H/D8AAADg/wMAAAAAAAD4/wAAAAAAgP8fgP/f//8AAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAP7/AAAAAP+P//8f/w8AAADw/wcAAAAAAAD4/wAAAAAAgP8fgP+f//8BAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAP7/AQAAAPz//////wMAAAD4/wcAAAAAAAD4/wAAAAAAgP8fgP8f//8DAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAP//AQAAAPj//////wEAAAD4/wcAAAAAAAD4/wAAAAAAgP8fgP8f/v8HAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAP7/AQAAAOD/////fwAAAAD4/wcAAAAAAAD4/wAAAAAAgP8fgP8f/P8HAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAP7/BwAAAID/HwD/HwAAAAD+/wMAAAAAAAD4/wAAAAAAgP8fgP8f+P8PAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAPj/HwAAAMD/HwD8PwAAAID//wEAAAAAAAD4/wAAAAAAgP8fgP8f+P8fAAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAAAAAAAMD/PwAAAPD/fwDw/wAAAOD/PwAAAAAAAAD4/wAAAAAAgP8fgP8f8P8/AAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAA+D8AAADw/wEAAPz//wHA/wMAAPD/AAAAwP8BAAD4/wAAAAAAgP8fgP8f4P9/AAD4/wH+fwAAAAAAAAAA4P8HAAAAAAAAAAD4/wAAAAAAAADA/w8AAAAAAAAA/H8AAADA/wMAAP7f/weA/wcAAPw/AAAA4P8DAAD4/wAAAAAAgP8fgP8fwP//AAD4/wH+fwD4//////8H4P8H/P//////fwD4/wAAAAAAAADA/////////////v8AAAAA/w8AgP8H/h8A/h8AAP8PAAAA8P8HAAD4/wAAAAAAgP8fgP8fgP//AAD4/wH+fwD4//////8H4P8H/P//////fwD4/wAAAAAAAADA//////////////8BAAAA/D8A4P8B/P8H+H8AwP8DAAAA+P8PAAD4/wAAAAAAgP8fgP8fAP//AwD4/wH+fwD4//////8H4P8H/P//////fwD4/wAAAAAAAADA//////////////8BAAAA+P8A+H8A8P8/4P8B8P8AAAAA+P8PAAD4/wAAAAAAgP8fgP8fAP7/AwD4/wH+fwD4//////8H4P8H/P//////fwD4/wAAAAAAAADA/////////////v8BAAAA4P8D/h8AwP9/gP8H/H8AAAAA+P8HAAD4/wAAAAAAgP8fgP8fAP7/BwD4/wH+fwD4//////8H4P8H/P//////fwD4/wAAAAAAAADA/////////////P8HAAAAAP+P/wcAAP//AP4f/x8AAAAA/v8DAAD4/wAAAAAAgP8fgP8fAPz/DwD4/wH+fwD4//////8H4P8H/P//////fwD4/wAAAAAAAADA////////////+P8fAAAAAP7f/wMAAP//APy//wcAAACA//8BAAD4////////gf8fgP8fAPj/HwD4/wH+fwD4////3/8H4P8H/P//////fwD4/wAAAAAAAADA////////////gPl/AAAAAPj//wAAAP//APD//wEAAADg/xkAAAD4////////g/8fgP8fAPD/PwD4/wH+fwD4////z/8H4P8H/P//////fwD4/wAAAAAAAADA////////////APD/AQAAAOD/PwAAAP7/AMD/fwAAAAD4/wAAAAD4////////h/8fgP8fAOD/fwD4/wH+fwD4////x/8H4P8H/P//////fwD4/wAAAAAAAADA////////////AMD/AwAAAMD/DwAAAPx/AAD/PwAAAAD8PwAAAAD4////////j/8fgP8fAMD/fwD4/wH+fwD4////w/8H4P8H/P//////fwD4/wAAAAAAAADA////////////AAD/DwAAAMD/AwAAAPAPAID/PwAAAAD/DwAAAAD4////////n/8fgP8fAID//wD4/wH+fwD4////wf8H4P8H/P//////fwD4/wAAAAAAAADA////////////AAD8PwAAAPD/AAAAAAAAAOD//wAAAMD/AwAAAAD4////////n/8fgP8fAAD//wH4/wH+fwD4////wP8H4P8H/P//////fwD4/wAAAAAAAADA////////////AADw/wAAAPh/AAAAAAAAAPD//wEAAPD/AAAAAAD4////////v/8fgP8fAAD//wP4/wH+fwD4//9/wP8H4P8H/P//////fwD4/wAAAAAAAADA////////////AADg/wMAAP4fAAAAAAAAAPy//w8AAPx/AAAAAAD4//////////8fgP8fAAD+/wf4/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPz/AAAA/w8AgP8HAAAAAAAAAP8P/h8AAP8PAAAAAAD4//////////8fgP8fAAD8/w/4/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAA/h8A4P8BAAAAAAAAwP8D+H8AgP8HAAAAAAD4//////////8fgP8fAAD4/x/4/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAA+H8A+H8AAAAAAHgA8P8A4P8B4P8BAAAAAAD4//////////8fgP8fAADw/z/4/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAA4P8B/h8AAAAAAP7//X8AgP8H+H8AAAAAAAD4//////////8fgP8fAADg/z/4/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAgP8H/w8AAAAAAP///x8AAP8f/h8AAAAAAAD4//////////8fgP8fAADA/3/4/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAAP7f/wMAAAAAwP///wcAAPy//wcAAAAAAAD4//////////8fgP8fAADA///4/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAAPj//wAAAAAA8P///wEAAPD//wMAAAAAAAD4/wAAAAAAgP8fgP8fAACA///5/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAAPD/PwAAAAAA/P//fwAAAMD//wAAAAAAAAD4/wAAAAAAgP8fgP8fAAAA///7/wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAAMD/DwAAAAAA/w//HwAAAAD/PwAAAAAAAAD4/wAAAAAAgP8fgP8fAAAA/v///wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAAID/AwAAAADA/wMABAAAAAD8PwAAAAAAAAD4/wAAAAAAgP8fgP8fAAAA/P///wH+fwAAAAAAwP8H4P8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAAMD/AQAAAADg/wEAAAAAAAD4fwAAAAAAAAD4/wAAAAAAgP8fgP8fAAAA+P///wH8fwAAAAAAwP8HwP8HAAAAAAAAAAD4/wAAAAAAAAAAAAAAAAAAAPj/AAAAAPB/AAAAAAD4fwAAAMAHAADg/wAAAAAAAAD4/wAAAAAAgP8fgP8fAAAA+P///wH8f8D///////8HwP8H/v//////PwD4/4D///////8PwP//////D/h/AAAAAPAfAAAAAAD+HwAAAPg/AACA/wAAAAAAAAD4/wAAAAAAgP8fgP8fAAAA4P///wH8f/D///////8DwP8H////////PwDw/8D///////8P4P//////H/h/AAAAAPgHAAAAAID/BwAAAPz/AAAA/gEAAAAAAAD4/wAAAAAAgP8fgP8fAAAA4P///wH4f/D///////8DgP8H////////PwDw/+D///////8H4P//////P/g/AAAAAPgDAAAAAOD/AQAAAP7/AQAA+AEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAwP///wHwf/j///////8BgP+H////////HwDg//D///////8H8P//////f/g/AAAAAPgBAAAAAPh/AAAAAP7/AQAA+AEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAgP///wHwf/z///////8BAP/H////////HwDA//j///////8D8P//////f/gfAAAAAPgBAAAAAPw/AAAAAP7/AQAA+AEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAP///wHgf/7///////8AAP7n////////DwCA//j///////8B+P////////gPAAAAAPgDAAAAEP8PAAAAgP//AAAA/AEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAP7//wHAf/////////8AAPz3////////BwAA//z///////8B+P////////kHAAAAAPgPAACA//8DAAAAwP9/AAAA/wEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAPz//wEA/////////38AAPD/////////BwAA/v////////8A/P////////sDAAAAAPg/AADA//8AAAAA8P8fAADA/wEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAPj//wEA/v///////z8AAOD/////////AwAA/P////////8A/v////////8AAAAAAPj/AADg/z8AAAAA/D8AAADw/wEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAPD//wEA/P///////x8AAMD/////////AwAA+P///////38A/v///////38AAAAAAPj/AwDg/x8AAAAA/w8AAAD8/wEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAPD//wEA+P///////w8AAID/////////AQAA4P///////z8A/////////z8AAAAAAPj/DwDg/x8AAADA/wMAAAD//wEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAMD//wEA8P///////wcAAAD/////////AAAAwP///////z8A/////////x8AAAAAAPj/PwDg/x8AAADw/wAAAID//wEAAAAAAAD4/wAAAAAAgP8fgP8fAAAAAAD//wEAwP///////wEAAAD8////////AAAAAP///////x+A/////////wcAAAAAAPj5fwDA/w8AAAD4fwAAAOD/+QEAAAAAAAD4/wAAAAAAAP8fgP8fAAAAAAD8/wEAAP7/////fwAAAADg//////9/AAAAAPz//////x+A/////////wEAAAAAAPjh/wEA/wMAAAD+HwAAAPh/+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPiB/wcAAAAAAID/BwAAAP4f+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgB/x8AAAAAAOD/AQAAgP8P+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgB/D8AAAAAAPh/AAAAwP8D+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgB4P8AAAAAAPw/AAAA+P8A+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgBwP8DAAAAAP8PAAAA/D8A+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgBAP8PAAAAwP8DAAAA/w8A+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgBAPw/AAAA8P8AAADA/wMA+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgBAPD/AAAA/D8AAADw/wEA+AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPgDAOD/AwAA/x8AAAD8fwAA/AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAPAID/DwDA/wcAAAD/HwAA/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/AAD+HwDg/wEAAID/BwDA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD/AAD4fwD4fwAAAOD/AQDwfwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD/AwDg/wH+HwAAAPh/AAD8PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID/BwDA/wf/DwAAAP4/AAD+HwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD/HwAA////AwAAgP8PAID/fwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPj/fwAA/P//AAAA4P8DAOD//wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP7//wEA8P8/AAAA8P8AAPj//wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+P/wcAwP8PAAAA/D8AAP4f/w8AAAAAAAAAAB8A8AAAAAAAgA8AAAAAAAAAAAAAAAAAAPABAAAAAAAAAAAAAAAA+AAAAAAAAB4AAAAAAMAHAAAAAAD4AAAAwP8D/h8AAP8PAAAA/w8AgP8H/D8AAAAAAAAAAB8A+AEAAAAAgA8AAAAAAAAAAAAAAAAAAPABAAAAAAAAAAAAAAB8+AAAAAAAHx8AAAAAwMcHAAAAAAD4AAAA8P8A/D8AAPw/AADA/wMAwP8D8P8AAAAAAAAAAB8A+AEAAAAAgA8AAAAAAAAAAAAAAAAAAPABAAAAAAAAAAAA8AF8+AAAAAAAHx8AAAAAwMcHAAAAAAD4AAAA/D8A8P8AAPj/AADw/wEA8P8AwP8DAAAAAAAAAB8A+AEAAAAAgA8AAAAAAAAAAAAAAHwAHvABAAD4//9/AAAA8AF8+AAA+P8fHx8AAAAPwMcHAAAAAAD4AAAA/w8AwP8DAOD/AwD4fwAA/D8AAP8PAAAAAAAAgB8A+AEA4P//gA8AAAAAAAAAAAQAAHwAPvABAAD4////AAAA8AF8+AAA/P8/Hx8AAIAPwMcHAID//wf4AACA/wcAAP8PAID/BwD+HwAA/w8AAP4fAAAAAACA//8/+AEA4P//gA8AAADwDwAAAH4AAHwAPvABAAD4////AAAA8AF8+AAA/P8/Hx8AAIAPwMcHAID//wf4AADg/wEAAPw/AAD+f8D/BwDA/wMAAPh/AAAAAACA//8/+AEA4P//gA8AAADwHwAAAH4AAHwAPvABAAD4////AAAA8AF8+AAA/P8/Hx8AAIAPwMcHAID//wf4AAD4fwAAAPD/AAD4////AQDw/wAAAOD/AQAAAACA//8/+AEA4P//gA8AAADwHwAAAH4AAHwAPvABAAD4//9/AAAA+AF8+AAA4MMPHx8AAIAPwMcHAID//wf4AAD+HwAAAOD/AQDw//9/AAD4fwAAAID/BwAAAACA//8/+AEA4AcAgA8AAAD4HwAAAH4AAHwAPvABAAD4AAAAAADg//98+AAA4MMHHx8AAIAPwMcHAIAfAAD4AID/BwAAAID/BwDA//8/AAD+HwAAAAD+HwAAAAAAgB8A+AEA4AcAgA8AAAD4PwAAAH4AAHwAP/ABAAD4AAAAAADg//98+AAA4MMHHx8AAIAPwMcHAIAfAAD4AOD/AQAAAOD/HwAA/v8PAID/fwAAAAD4fwAAAAAAgB8A+AEA4AcAgA8AAAD4PwAAAH4AAPz/P/ABAAD4AAAAAADg//98+AAA4MMH/x8AAIAf/scHAIAfAAD4APj/AAAAAPD/fwAA/P8DAOD//wAAAADw/wEAAAAAgB8A+AEA4AcAgA8AAAD8PwAAAH4AAPz/P/ABAAD4AAAAAADg//98+AAA4MMH/x8AAIAf/8cHAIAfAAD48P8/AAAAAPz//wEAgB8AAPj//wMAAADA//8AAAAAgB/w/wEA4AcAgP8DAAD8fgAAAH4AAPz/P/B/AAD4AAAAAAAA8AF8+AAA4MMH/x8AAIAf/8cHAIAfAAD4/P8PAAAAAP+P/wcAAAAAAP4f/w8AAAAA//8DAAAAgD/w/wEA4AcAgP8DAAB8fgAAAH4AAPz/P/B/AAD4AAAAAAAA8AF8+AAA4MMH/x8AAIAf/8cHAIAfAAD4/v8DAAAAwP8H/w8AAAAAgP8P/j8AAAAA/P8HAAAAwD/w/wEA4AcAgP8DAAB+fgAAAH4AAHwAPvB/AAD4AAAAAAAA8AF8+AAA4MMHHx8AAMA//scHAIAfAAD4//8BAAAA4P8B/D8AAAAAwP8D+P8AAAAA+P8PAAAA4H/w/wEA4AcAgP8DAAB+/AAAAH4AAHwAPvB/AAD4AAAAAAAA8AF8+AAA4MMHHx8AAMA/wMcHAIAfAPD///8BAAAA+H8A8P8AAAAA8P8A4P8DAAAA+P8PAAAA4P8A+AEA4AcAgB8AAAB//AAAAH4AAHwAPvB/AAD4AAAAAAAA8OF/+AAA4MMHHx8AAOB/wMcHAID///n///8AAAAA/h8AwP8DAAAA/D8AgP8HAAAA8P8PAAAA8PsB+AEA4AcAgA8AAAA//AEAAH4AAHwAPvABAAD4AAAAAAAA+OF/+AAA4MMnHx8AAOB/wMcHAID///n//v8AAACA/wcAAP8PAAAA/w8AAP4fAAAA8P8HAAAA/PEH+AEA4AcAhg8AAAA/+AEAAH4AAHwAPvABAAD4AAAAAAAA+ON/+AAA/P8/Hx8AAPD5wMcHAID///n//D8AAADg/wEAAPw/AADA/wMAAPh/AAAAwP8DAAAA/uA/+AEA4P//jw8AAIA/+AEAAH4AAHwAPvABAAD4////AAAA+ON/+AAA/P8/Hx8AAPj5w8cHAID///H/4A8AAADw/wAAAPh/AADg/wEAAPD/AQAAAH8AAADAf+B/+AEA4P//jw8AAIAf+AEAAH4AAPz/P/ABAAD4////AAAA+ON/+AAA/P9/Hx8AAPzwx8cHAIAfAAD4AAAAAPD/PwAAAOD/AQD4fwAAAMD//wAAAAAAAADAP4A/+AEA4P//jw8AAIAf8AMAAH4AAPz/P/ABAAD4////AAAA/AN8+AAA/P8PHx8AAP/gz8cHAIAfAAD4AAAAAPz/DwAAAID/BwD+HwAAAAD//wMAAAAAAACAHwAe+AEA4P//gw8AAMAf8AMAAH4AAPz/P/ABAAD4////AAAA/Ad8+AAAAAAAHx8AAH/Ax8cHAIAfAAD4AAAAAP7/AwAAAMD/P8D/PwAAAAD8/wcAAAAAAACABwAY+AEA4P8BgA8AAMAP8AcAAH4AAPz/P/ABAAD4////AAAA/gd8+AAAAAAAHx8AAD+Aw8cHAIAfAAD4AAAAAP7/AQAAAPD//////wAAAAD4/wcAAAAAAAAAAQAA8AEAAAAAgA8AAMAP4AcAAH4AAAAAAPABAAAAwA8AAAAAvg98+AAAAAAAAAAAAB4Aw8cHAIAfAAD4AAAAAP7/AQAAAPz//////wMAAAD4/wcAAAAAAAAAAAAAAAAAAAAAgA8AAOD//wcAAH4AAAAAAPABAAAAwA8AAAAAnx98+AAAAD4AAB8AAAQAwMcHAIAfAAD4AAAAAP7/AQAAAP7f//+//wcAAAD4/wcAAAAAAAAAAAAAAAAAAAAAgA8AAOD//w8AAH4AAAAAAPABAAAAwA8AAAAAHz98+AAAAD4AAB8AAAAAwMcHAIAfAAD4AAAAAPz/AAAAgP8H//8P/h8AAADw/wMAAAAAAAAA4P///wEAAHwAgA8AAOD//w8AAH4AAAAAAPABAAAAwA8AAACAD358+AAAAD4AAB8AAAAAwMcHAIAfABz4AAAAAPg/AAAA4P8B+P8B+H8AAADA/wEAAAAAAAAA4P///wEAAHwAgA8AAPD//w8AAH4AAMAPAPABAAAAwA8AAADAD/58+AAAAD4AAB8AAIAPwMcHAID//x/4AAAAAMAPAAAA+P8AwD8A8P8BAAAAPgAAAAAAAAAA4P///wEAAHwAgA8AAPD//x8AAH4AAMAPAPABAAAAwA8AAADwB/x9+AAAAP7//x8AAIAPwMcHAID//x/4AAAAAAAAAAAA/j8AAAAAwP8HAAAAAAAAAAAAAAAA4P///wEAAHwAgA8AAPADgB8AAH4AAMAPAPABAAAAwA8AAADwB/h8+AAAAP7//x8AAIAPAMAHAID//x/4AAAAAAAAAACA/wcAAAAAAP8fAAAAAAAAAAAAAAAA4AMA8AEAAHwAAAAAAPgDgD8AAH4AAMAPAAAAAAAAwA8AAADwAXB8+AAAAP7//x8AAIAPAMAHAID//w/4AAAAAAAAAADA/wMAAAAAAPw/AAAAAAAAAAAAAAAA4AMA8AEAAHwAAAAAAPgBgD8AAH4AAMAPAAAAAAAAwA8AAADgAWB8+AAAAP7//x8AAIAPAAAAAID/AwD4AAAAAAAAAADw/wAAAAAAAPD/AAAAAAAAAAAAAAAA4AMA8AEAAHwAAAAAAPwBAD8AAH4AAMAPAAAAAMD/////DwBAAAB8+AAAAH4AAB8AAIAPAAAAAAAAAAD4AAAAAAAAAAD8PwAAAAAAAMD/AwAAAAAAAAAAAAAA4AMA8AEAAHwAAAAAAPwAAH8AAH4AAMAPAAAAAMD/////DwAAAAB8+AAAAD4AAB8AAIAPAAAAAAAAAAD4AAAAAAAAAAD/DwAAAAAAAAD/DwAAAAAAAAAAAAAA4AMA8AEAAHwAAAAAAPwAAH8AAH4AAMAPAAAAAMD/////DwAAAAB8+AAAAD4AAB8AAIAPAAAAAAAAAAD4AAAAAAAAAMD/AwAAAAAAAAD8PwAAAAAAAAAAAAAA4AMA8AEAAHwAAAAAAP4AAH4AAH4AAMAPAAAAAMD/////DwAAAAB8+AAAAD4AAB8AAIAPAAAAAAAAAAD4AAAAAAAAAPD/AQAAAAAAAAD4/wAAAAAAAAAAAAAA4P///wEAAPz//z8AAP4AAP4AAH4AAMD///8HAAAAAAAAAAAAAAB8+AAAAP7//x8AAID///8PAAAAAAD4AAAAAAAAwP9/AAAAAAAAAADg/z8AAAAAAAAAAAAA4P///wEAAPz//z8AAAAAAAAAAAAAAMD///8HAAAAAAAAAAAAAAB8+AAAAP7//x8AAID///8PAAAAAAD4AAAAAAAA+P8fAAAAAAAAAACA//8BAAAAAAAAAAAA4P///wEAAPz//z8AAAAAAAAAAAAAAMD///8HAAAAAAAAAAAAAAB8+AAAAP7//x8AAID///8PAAAAAAD4AAAAAAAA/P8HAAAAAAAAAAAA/v8DAAAAAAAAAAAA4P///wEAAPz//z8AAAAAAAAAAAAAAMD///8HAAAAAAAAAAAAAAAA+AAAAP7//x8AAID///8PAAAAAAD4AAAAAAAA/v8BAAAAAAAAAAAA+P8HAAAAAAAAAAAA4P///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+AAAAPz//x8AAAAAAAAAAAAAAAD4AAAAAAAA/v8BAAAAAAAAAAAA+P8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v8BAAAAAAAAAAAA+P8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v8AAAAAAAAAAAAA8P8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+H8AAAAAAAAAAAAA4P8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8B8AAAAAAAAAAAAAgP8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"};
+  // 조감도(1593×987)에서 건물만 단순하게 딴 실루엣 — 좌표는 원본 그림 기준.
+// hull = 건물 덩어리(아주 옅게) · f = 채운 면([진하기, 점들…]) · l = 선([굵기, 진하기, 점들…]). 알갱이로 바꿀 때 진하기만큼 촘촘해진다.
+var BIRD = {
+  box: [238, 446, 1274, 372],   // x, y, 가로, 세로
+  hull: [0.045, 451,596, 640,512, 860,478, 1468,476, 1479,499, 1474,560, 1472,640, 1499,688, 1499,806, 451,798, 446,729],
+  f: [
+    // 지붕 — 왼쪽에서 오른쪽으로 휘어 오르는 판
+    [1, 407,577, 450,561, 498,545, 560,522, 600,507, 640,494, 695,481, 750,470, 805,461.5, 860,456, 915,453, 970,451.5, 1080,451, 1300,452.5, 1440,455, 1462,459, 1470,466,
+        1468,474, 1440,474, 1300,473, 970,472.5, 915,473.5, 860,476.4, 805,481.3, 750,489, 695,498.4, 640,510, 600,521, 560,533, 498,552, 450,566, 407,580],
+    // 윗띠 — 왼쪽은 지붕을 따라 휘고, 오른쪽은 곧다
+    [1, 451,592, 504,577, 548,563, 598,548, 640,534, 695,519, 750,509.4, 805,503.3, 860,499.5, 890,498.4,
+        890,520.4, 805,525.9, 750,530.3, 706,535.8, 680,545, 640,556, 597,570, 519,590, 457,603],
+    [1, 890,498.4, 1479,499, 1474,536, 1082,536, 1072,547, 882,547],
+    // 가운데 흰 띠들
+    [1, 868,574, 1058,574, 1051,593, 862,593],
+    [1, 599,610, 737,598, 728,626, 599,634],
+    [1, 496,673, 544,657, 600,645, 660,636, 728,632, 852,629, 845,650, 728,652, 660,656, 600,664, 544,675, 496,682],
+    [1, 860,606, 1048,606, 1029,650, 845,650],
+    [0.8, 1285,593, 1472,593, 1469,623, 1285,623],
+    [0.9, 479,726.5, 680,718.5, 790,716, 790,728, 680,729.5, 479,737.5],
+    // 기단(갈색 벽) + 계단 빗면
+    [0.46, 930,698, 1385,698, 1385,772, 933,772, 933,810, 745,810],
+    // 오른쪽 별동
+    [0.16, 1388,634, 1466,638, 1499,688, 1499,787, 1388,803],
+    // 왼쪽 상자 — 구멍 뚫린 면 / 그늘진 면
+    [0.9, 252,599, 335,569.5, 335,738, 252,742],
+    [0.5, 335,569.5, 405,578, 405,729, 335,738]
+  ],
+  l: [
+    // 지붕 아래 기둥
+    [2.5, 0.8, 515,547, 515,573], [2.5, 0.8, 560,533, 560,559], [2.5, 0.8, 610,518, 610,544], [2.5, 0.8, 655,507, 655,530], [2.5, 0.8, 711,496, 711,516],
+    [2.5, 0.8, 781,485, 781,506], [2.5, 0.8, 874,476, 874,499], [2.5, 0.8, 982,473, 982,499], [2.5, 0.8, 1091,473, 1091,499], [2.5, 0.8, 1201,473, 1201,499], [2.5, 0.8, 1308,473, 1308,499],
+    // 상자 아래 다리
+    [3, 0.9, 303,741, 312,785], [3, 0.9, 341,739, 350,786], [3, 0.9, 377,739, 387,786],
+    // 오른쪽 유리벽 가로줄
+    [1.6, 0.42, 1052,548.5, 1470,548.5], [1.6, 0.42, 1052,563, 1470,563], [1.6, 0.42, 1052,578, 1470,578], [1.6, 0.42, 1052,592.5, 1470,592.5], [1.6, 0.42, 1040,607, 1470,607],
+    [1.6, 0.42, 1034,622, 1470,622], [1.6, 0.42, 1028,636.5, 1470,636.5], [1.6, 0.42, 1022,651, 1470,651], [1.6, 0.42, 860,666, 1392,666],
+    // 가운데 유리벽 가로줄 + 왼쪽으로 삐져나온 짧은 날개
+    [1.6, 0.42, 765,543, 880,543], [1.6, 0.42, 760,558, 1052,558], [1.6, 0.42, 755,573, 866,573], [1.6, 0.42, 748,587, 862,587], [1.6, 0.42, 742,603, 858,603], [1.6, 0.42, 735,618, 852,618],
+    [3.5, 0.9, 700,541, 762,539], [3.5, 0.9, 698,556, 758,554], [3.5, 0.9, 695,571, 753,569], [3.5, 0.9, 692,585, 745,583],
+    // 왼쪽 벽 가로줄 · 아래층 유리
+    [1.4, 0.3, 412,612, 594,612], [1.4, 0.3, 412,624, 594,624], [1.4, 0.3, 412,636, 594,636], [1.4, 0.3, 412,648, 594,648], [1.4, 0.3, 412,660, 520,660],
+    [1.4, 0.3, 412,684, 594,684], [1.4, 0.3, 412,696, 594,696], [1.4, 0.3, 412,708, 594,708],
+    [1.4, 0.3, 600,672, 850,668], [1.4, 0.3, 560,686, 850,682], [1.4, 0.3, 500,700, 850,696],
+    // 테라스 난간 · 계단 난간 · 현관 지붕
+    [1.5, 0.7, 858,669, 1382,669], [1.6, 0.75, 766,778, 926,684], [2, 0.6, 465,749.5, 700,747.5],
+    // 기단 윤곽 — 윗변 · 오른쪽 변 · 계단 빗변 · 난간 기둥
+    [2.4, 0.95, 930,698, 1385,698], [1.8, 0.75, 1385,698, 1385,772], [2.6, 0.95, 745,810, 930,698],
+    [1.3, 0.5, 930,669, 930,698], [1.3, 0.5, 1020,669, 1020,698], [1.3, 0.5, 1110,669, 1110,698], [1.3, 0.5, 1200,669, 1200,698], [1.3, 0.5, 1290,669, 1290,698], [1.3, 0.5, 1382,669, 1382,698],
+    // 1층 유리 세로줄
+    [1.3, 0.3, 480,752, 480,794], [1.3, 0.3, 512,752, 512,795], [1.3, 0.3, 544,751, 544,796], [1.3, 0.3, 576,751, 576,797], [1.3, 0.3, 608,750, 608,798],
+    [1.3, 0.3, 640,750, 640,799], [1.3, 0.3, 672,749, 672,800], [1.3, 0.3, 704,749, 704,802],
+    // 기단 아래 유리 띠
+    [1.8, 0.8, 933,773, 1385,773],
+    [1.3, 0.62, 957,776, 957,807], [1.3, 0.62, 981,776, 981,807], [1.3, 0.62, 1005,776, 1005,807], [1.3, 0.62, 1029,776, 1029,807], [1.3, 0.62, 1053,776, 1053,807], [1.3, 0.62, 1077,776, 1077,807],
+    [1.3, 0.62, 1101,776, 1101,807], [1.3, 0.62, 1125,776, 1125,807], [1.3, 0.62, 1149,776, 1149,807], [1.3, 0.62, 1173,776, 1173,807], [1.3, 0.62, 1197,776, 1197,807], [1.3, 0.62, 1221,776, 1221,807],
+    [1.3, 0.62, 1245,776, 1245,807], [1.3, 0.62, 1269,776, 1269,807], [1.3, 0.62, 1293,776, 1293,807], [1.3, 0.62, 1317,776, 1317,807], [1.3, 0.62, 1341,776, 1341,807], [1.3, 0.62, 1365,776, 1365,807],
+    // 별동 윤곽 · 가로줄
+    [1.5, 0.5, 1388,634, 1466,638, 1499,688, 1499,787], [1.3, 0.25, 1392,700, 1497,700], [1.3, 0.25, 1392,730, 1497,730], [1.3, 0.25, 1392,760, 1497,760],
+    // 땅
+    [1.5, 0.55, 245,790, 450,797, 745,810, 1385,810, 1505,800]
+  ],
+  text: [1316, 735, 28, 'GIST FAB']
+};
+function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 가장 가는 선 굵기(원본 좌표)
+  var B = BIRD, i, j, p;
+  function poly(q, s) { x.beginPath(); x.moveTo(q[s], q[s + 1]); for (j = s + 2; j < q.length; j += 2) x.lineTo(q[j], q[j + 1]); }
+  x.lineCap = 'butt'; x.lineJoin = 'round';
+  poly(B.hull, 1); x.closePath(); x.fillStyle = 'rgba(' + rgb + ',' + B.hull[0] + ')'; x.fill();
+  for (i = 0; i < B.l.length; i++) { p = B.l[i]; poly(p, 2); x.strokeStyle = 'rgba(' + rgb + ',' + p[1] + ')'; x.lineWidth = Math.max(p[0], minW || 0); x.stroke(); }
+  for (i = 0; i < B.f.length; i++) { p = B.f[i]; poly(p, 1); x.closePath(); x.fillStyle = 'rgba(' + rgb + ',' + p[0] + ')'; x.fill(); }
+  // 왼쪽 상자의 뚫린 구멍 — 늘 같은 자리에 나오게 씨앗을 고정한다
+  var seed = 11, hw = Math.max(1.8, (minW || 0) * 0.6), hh = Math.max(2.2, (minW || 0) * 0.7);
+  function R() { seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+  x.globalCompositeOperation = 'destination-out'; x.fillStyle = '#000';
+  for (var c = 0; c < 13; c++) for (var r = 0; r < 20; r++) {
+    var u = (c + 0.5) / 13, v = (r + 0.5) / 20, X = 252 + u * 83, yt = 599 - u * 29.5, yb = 742 - u * 4, Y = yt + v * (yb - yt);
+    if (R() < 0.46 * (1 - Math.abs(v - 0.5) * 0.7)) x.fillRect(X - hw, Y - hh, hw * 2, hh * 2);
+  }
+  x.fillStyle = 'rgba(0,0,0,0.6)'; x.fillRect(B.text[0] - 72, B.text[1] - 19, 144, 37);   // 글자 둘레는 벽을 덜어 내 글자가 묻히지 않게
+  x.globalCompositeOperation = 'source-over';
+  x.fillStyle = 'rgba(' + rgb + ',1)'; x.font = '700 ' + B.text[2] + 'px Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(B.text[3], B.text[0], B.text[1]);
+}
+
+  function $(id) { return document.getElementById(id); }
+  function F(n) { return new Float32Array(n); }
+  var skew = 0; function T() { return performance.now() + skew; }   // 시계 — 점검할 때만 skew 로 시간을 앞당긴다
+  function rr(x, X, Y, w, h, r) { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); }
+  var body = document.body, scene = $('scene'), fx = $('fx'), glc = $('gl'), slot = $('slot'), bslot = $('bslot'), flashEl = $('flash');
+  var fxx = fx.getContext('2d'), CARD_W = 380, CARD_H = 304;
+
+  /* ── 1. 그림 → 알갱이 자리 ── */
+  var raw = atob(M.b64), LX = [], LY = [], k, i;
+  for (k = 0; k < M.w * M.h; k++) if ((raw.charCodeAt(k >> 3) >> (k & 7)) & 1) { LX.push(k % M.w); LY.push((k / M.w) | 0); }
+  var LOGOC = document.createElement('canvas');   // 휴대폰 정지 화면용 — 알갱이 없이 그리는 로고
+  (function () {
+    LOGOC.width = M.w; LOGOC.height = M.h; var x = LOGOC.getContext('2d'), im = x.createImageData(M.w, M.h), d = im.data;
+    for (var q = 0; q < LX.length; q++) { var o = (LY[q] * M.w + LX[q]) * 4; d[o] = 236; d[o + 1] = 240; d[o + 2] = 250; d[o + 3] = 255; }
+    x.putImageData(im, 0, 0);
+  })();
+  function sample(gw, gh, kk, tx, ty, dens, paint, U, V, T, id) {   // 그림을 격자로 떠서, 진한 만큼 촘촘하게 알갱이 자리를 뽑는다
+    var c = document.createElement('canvas'); c.width = gw; c.height = gh;
+    var x = c.getContext('2d'); x.setTransform(kk, 0, 0, kk, tx, ty); paint(x);
+    var d = x.getImageData(0, 0, gw, gh).data;
+    for (var q = 0; q < gw * gh; q++) {
+      var a = d[q * 4 + 3] / 255 * dens;
+      if (a > 0.02 && Math.random() < a) { U.push((q % gw + Math.random()) / gw); V.push(((q / gw | 0) + Math.random()) / gh); T.push(id); }
+    }
+  }
+  // 조감도 실루엣
+  var BU = [], BV = [], BT = [], GWB = 560, GHB = Math.round(GWB * BIRD.box[3] / BIRD.box[2]), kb = GWB / BIRD.box[2];
+  sample(GWB, GHB, kb, -BIRD.box[0] * kb, -BIRD.box[1] * kb, 1, function (x) { drawBird(x, '255,255,255', 1 / kb); }, BU, BV, BT, 0);
+  (function () {   // 지붕 윗변을 따라 붉게 달아오를 알갱이 한 줄
+    var rf = BIRD.f[0], bx = BIRD.box;
+    for (var e2 = 0; e2 < 16; e2++) {
+      var x0 = rf[1 + e2 * 2], y0 = rf[2 + e2 * 2], x1 = rf[3 + e2 * 2], y1 = rf[4 + e2 * 2], st = Math.ceil(Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) / 1.1);
+      for (var t2 = 0; t2 < st; t2++) { var u2 = (t2 + Math.random()) / st; BU.push((x0 + (x1 - x0) * u2 - bx[0]) / bx[2]); BV.push((y0 + (y1 - y0) * u2 + 0.5 + Math.random() * 3 - bx[1]) / bx[3]); BT.push(2); }
+    }
+  })();
+  var NL = LX.length, NB = BU.length, N = NL + NB, NC = N, ND = 2600, NT = N + ND;
+  // 로그인 창 — 알갱이 전부가 옮겨 가 만든다. 0 테두리 · 1 사번 칸 · 2 비밀번호 칸 · 3 로그인 버튼 · 4 창 안에 깔리는 먼지 · 5 테두리 밖 빛무리
+  var CU = new Float32Array(N), CV = new Float32Array(N), CT = new Uint8Array(N), cn = 0;
+  function cells(paint) {   // 그림에서 칠해진 칸들을 뽑는다(1칸 = 창의 1px)
+    var c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
+    var x = c.getContext('2d'); paint(x); var d = x.getImageData(0, 0, CARD_W, CARD_H).data, out = [];
+    for (var q = 0; q < CARD_W * CARD_H; q++) if (d[q * 4 + 3] > 110) out.push(q);
+    return out;
+  }
+  function fill(list, count, id) {   // 그 칸들에 알갱이 자리를 count 개 고루 뿌린다 — 선은 여러 겹 쌓여 또렷해진다
+    for (var q = 0; q < count && cn < N; q++) { var c2 = list[(Math.random() * list.length) | 0]; CU[cn] = (c2 % CARD_W + Math.random()) / CARD_W; CV[cn] = ((c2 / CARD_W | 0) + Math.random()) / CARD_H; CT[cn++] = id; }
+  }
+  function stroke(w) { return function (x) { x.lineWidth = w; x.strokeStyle = '#fff'; x.stroke(); }; }
+  fill(cells(function (x) { rr(x, 2, 2, CARD_W - 4, CARD_H - 4, 12); stroke(3)(x); }), Math.round(N * 0.24), 0);
+  fill(cells(function (x) { rr(x, 24.5, 82.5, 331, 37, 7); stroke(2.2)(x); }), Math.round(N * 0.09), 1);
+  fill(cells(function (x) { rr(x, 24.5, 152.5, 331, 37, 7); stroke(2.2)(x); }), Math.round(N * 0.09), 2);
+  fill(cells(function (x) { rr(x, 25, 221, 330, 38, 19); stroke(3)(x); }), Math.round(N * 0.11), 3);
+  fill(cells(function (x) { rr(x, 25, 221, 330, 38, 19); stroke(17)(x); x.globalCompositeOperation = 'destination-out'; rr(x, 23.5, 219.5, 333, 41, 20.5); x.fillStyle = '#000'; x.fill(); }), Math.round(N * 0.05), 6);
+  (function () {   // 테두리 밖으로 번지는 옅은 빛무리 — 바깥으로 갈수록 성기게
+    var per = 2 * (CARD_W + CARD_H), cnt = Math.round(N * 0.36);
+    for (var q = 0; q < cnt && cn < N; q++) {
+      var t = Math.random() * per, o = 3 - Math.log(1 - Math.random() * 0.97) * 13, X2, Y2;
+      if (t < CARD_W) { X2 = t; Y2 = -o; } else if (t < CARD_W + CARD_H) { X2 = CARD_W + o; Y2 = t - CARD_W; } else if (t < 2 * CARD_W + CARD_H) { X2 = t - CARD_W - CARD_H; Y2 = CARD_H + o; } else { X2 = -o; Y2 = t - 2 * CARD_W - CARD_H; }
+      CU[cn] = X2 / CARD_W; CV[cn] = Y2 / CARD_H; CT[cn++] = 5;
+    }
+  })();
+  fill(cells(function (x) {   // 창 안쪽 — 입력 칸과 버튼 속은 비워 글자가 또렷하게
+    rr(x, 5, 5, CARD_W - 10, CARD_H - 10, 9); x.fillStyle = '#fff'; x.fill(); x.globalCompositeOperation = 'destination-out';
+    rr(x, 26, 84, 328, 34, 6); x.fill(); rr(x, 26, 154, 328, 34, 6); x.fill(); rr(x, 15, 211, 350, 58, 29); x.fill();
+  }), N - cn, 4);
+  var GX = F(NL), GY = F(NL), H0X = F(N), H0Y = F(N), HX = F(N), HY = F(N), X = F(N), Y = F(N), Z = F(N), VX = F(N), VY = F(N), VZ = F(N);
+  var KS = F(N), S0 = F(N), LT = F(N), TN = F(N), PH = F(N), E = F(N), BA = F(N), SA = F(N), GS = F(N), AS = F(N), AM = F(N), CS = F(N), SPK = F(N);
+  var TH = F(N), OM = F(N), SP = F(N), FQ = F(N), GV = F(N), GF = F(N), GT = F(N), GD = F(N), CAF = F(N), CZ = F(N);   // 떠돌 때의 방향 · 굽이 · 빠르기 / 모인 정도(0 별 ~ 1 제자리)와 그 변화
+  var M0 = new Float64Array(N), MD = F(N), MP = F(N), QX = F(N), QY = F(N), QNX = F(N), QNY = F(N), QJ = F(N), QL = F(N), EG = F(N), WA = F(N);   // 장면 전환 — 알갱이마다 출발 시각 · 걸리는 시간 · 지금까지 간 몫
+  var G0 = new Float64Array(N), TS = new Float64Array(N), TY = new Uint8Array(N), CK = new Uint8Array(N), CIX = new Int32Array(N);
+  for (i = 0; i < N; i++) {
+    var bld = i >= NL, rs = Math.random(), big = rs > 0.9;
+    if (!bld) { GX[i] = LX[i] + Math.random() - 0.5; GY[i] = LY[i] + Math.random() - 0.5; }
+    KS[i] = 0.014 + Math.random() * 0.024;
+    S0[i] = rs < 0.5 ? 0.55 + Math.random() * 0.3 : big ? 1.3 + Math.random() * 0.45 : 0.85 + Math.random() * 0.35;   // 굵기는 제각각 — 가는 것이 많고 굵고 밝은 것이 드물다
+    LT[i] = 0.55 + Math.random() * 0.95; TN[i] = big ? 1.2 : 0.56 + Math.random() * 0.42;
+    BA[i] = bld ? 0.27 + Math.random() * 0.18 : 0.32 + Math.random() * 0.2;
+    SA[i] = Math.random() < 0.04 ? 0.45 + Math.random() * 0.35 : 0.07 + Math.random() * 0.2;   // 별(먼지)일 때 밝기 — 대부분 아주 흐리다
+    PH[i] = Math.random() * 6.2832; FQ[i] = 0.5 + Math.random() * 1.9;
+    TH[i] = Math.random() * 6.2832; OM[i] = (Math.random() - 0.5) * 0.012; SP[i] = 0.16 + Math.pow(Math.random(), 2.2) * 1.25;   // 저마다 다른 방향 · 다른 빠르기로 굽이치며 떠돈다
+    AM[i] = 1.5 + Math.random() * 1.0; CS[i] = (Math.random() < 0.86 ? 1 : -1) * (0.25 + Math.random() * 0.5);
+    TY[i] = bld && BT[i - NL] === 2 ? 2 : 0; CIX[i] = -1; CAF[i] = 1;
+  }
+  (function () {   // 어느 알갱이가 창의 어느 자리로 갈지 — 왼쪽 것은 왼쪽으로(조금씩 섞어) 가게 짝지어, 뒤엉키지 않고 흐르듯 모양이 바뀐다
+    var gi = [], ci = [], q;
+    for (q = 0; q < N; q++) { gi.push([(q < NL ? 0.5 + (GX[q] / M.w - 0.5) * 0.8 : BU[q - NL]) + Math.random() * 0.3, q]); ci.push([CU[q] + Math.random() * 0.3, q]); }
+    gi.sort(function (a, b) { return a[0] - b[0]; }); ci.sort(function (a, b) { return a[0] - b[0]; });
+    for (q = 0; q < N; q++) { var j2 = gi[q][1], c3 = ci[q][1], t4 = CT[c3]; CIX[j2] = c3; CK[j2] = t4 + 1; CAF[j2] = t4 === 4 ? 0.2 : t4 === 5 ? 0.13 : t4 === 6 ? 0.34 : t4 === 3 ? 1.35 : 1.2; CZ[j2] = t4 === 3 ? 0.92 : t4 < 4 ? 0.82 : 0.95; WA[j2] = Math.atan2((CV[c3] - 0.5) * CARD_H, (CU[c3] - 0.5) * CARD_W); }
+  })();
+  // 끝까지 하늘에 남는 별 — 이것도 저마다 떠돈다
+  var DX = F(ND), DY = F(ND), DZ = F(ND), DTH = F(ND), DOM = F(ND), DSP = F(ND), DS = F(ND), DA = F(ND), DPH = F(ND), DFQ = F(ND);
+  var buf = new Float32Array(NT * 8);
+
+  /* ── 2. 화면 크기 · 자리 ── */
+  var VW = 0, VH = 0, DPR = 1, CW = 0, CH = 0, OX = 0, OY = 0, lite = false, started = false, mode = 0;   // mode 0 로고 · 조감도 / 1 로그인 창
+  var cx = 0, cy = 0, LW = 0, LH = 0, cell = 1, bx0 = 0, by0 = 0, BW = 0, BH = 0, mx = 0, my = 0, cardL = 0, cardT = 0;
+  function resize() {
+    VW = window.innerWidth; VH = window.innerHeight; DPR = Math.min(window.devicePixelRatio || 1, 2);
+    lite = RM || forceLite; body.classList.toggle('lite', lite); body.classList.toggle('rm', RM);   // 움직임 줄이기를 켰거나 기기가 버거워할 때만 가만히 있는 그림 — 휴대폰도 기본은 알갱이
+    var oCW = CW, oCH = CH, oOX = OX, oOY = OY, q, q0 = QS;
+    QS = Math.max(VW <= 768 ? 2 : 1, QSL); if (QS === 2 && q0 === 1) for (q = 1; q < N; q += 2) buf[q * 8 + 7] = 0;   // 휴대폰 폭에서는 알갱이를 절반만 쓴다(느린 기기 판정으로 줄인 것은 그대로 둔다)
+    OX = Math.round(VW * 0.08); OY = Math.round(VH * 0.08); CW = VW + OX * 2; CH = VH + OY * 2;   // 기울어도 가장자리가 안 보이게 넉넉히
+    NDV = Math.min(ND, Math.round(CW * CH / 480)); for (q = NDV; q < ND; q++) buf[(N + q) * 8 + 7] = 0;   // 배경 별 수는 화면 넓이에 맞춘다(작은 화면에 별이 빽빽하지 않게)
+    if (started && oCW > 0 && (oCW !== CW || oCH !== CH)) {   // 떠도는 별 · 먼지를 새 화면 크기에 맞춰 옮긴다
+      for (q = 0; q < ND; q++) { DX[q] = (DX[q] + oOX) * CW / oCW - OX; DY[q] = (DY[q] + oOY) * CH / oCH - OY; }
+      for (q = 0; q < N; q++) if (GV[q] < 1) { X[q] = (X[q] + oOX) * CW / oCW - OX; Y[q] = (Y[q] + oOY) * CH / oCH - OY; }
+    }
+    [fx, glc].forEach(function (c) {
+      c.style.left = -OX + 'px'; c.style.top = -OY + 'px'; c.style.width = CW + 'px'; c.style.height = CH + 'px';
+      c.width = Math.round(CW * DPR); c.height = Math.round(CH * DPR);
+    });
+    glc.style.display = lite ? 'none' : '';
+    if (gl) gl.viewport(0, 0, glc.width, glc.height);
+    retarget();
+    if (viewEl) applySky();
+    wxResize();
+  }
+  function retarget() {
+    var r = slot.getBoundingClientRect(), rb = bslot.getBoundingClientRect(), j;
+    LW = r.width; LH = r.height; cx = r.left + LW / 2; cy = r.top + LH / 2; cell = LW / M.w;
+    BW = rb.width; BH = rb.height; bx0 = rb.left; by0 = rb.top; skyCx = bx0 + BW / 2; skyCy = by0 + BH * 0.2; skyIw = BW > 0 ? 2 / BW : 0;
+    if (!(LW > 0)) return;
+    mx = (cx + bx0 + BW / 2) / 2; my = (cy + by0 + BH / 2) / 2; KCS = Math.min(1, (VW - 16) / CARD_W); cardEl.style.scale = KCS === 1 ? '' : KCS.toFixed(4); cardL = VW / 2 - CARD_W * KCS / 2; cardT = VH * 0.46 - CARD_H * KCS / 2;   // 좁은 화면에서는 로그인 창을 폭에 맞춰 줄인다(글자와 알갱이 틀을 같은 비율로)
+    var cb = BW / GWB, g1 = Math.max(1.5, Math.min(6, cell * 2.3)), g2 = Math.max(1.5, Math.min(6, cb * 2.1)), a1 = Math.max(0.22, Math.min(1, cell / 1.2)), a2 = Math.max(0.22, Math.min(1, cb / 1.3));   // 작게 그릴수록 알갱이가 겹치니 그만큼 옅게
+    for (j = 0; j < NL; j++) { H0X[j] = cx + (GX[j] - M.w / 2 + 0.5) * cell; H0Y[j] = cy + (GY[j] - M.h / 2 + 0.5) * cell; GS[j] = g1; AS[j] = a1; }
+    for (j = NL; j < N; j++) { H0X[j] = bx0 + BU[j - NL] * BW; H0Y[j] = by0 + BV[j - NL] * BH; GS[j] = g2; AS[j] = a2; }
+    (function () {   // 가장자리 알갱이 찾기 — 윗면(1) · 오른쪽 가장자리(2). 3px 칸으로 나눠 위 · 오른쪽 칸이 비어 있는지 본다(날씨가 닿는 곳)
+      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, q, gw, gh, g, gx, gy;
+      for (q = 0; q < N; q++) { if (H0X[q] < x0) x0 = H0X[q]; if (H0X[q] > x1) x1 = H0X[q]; if (H0Y[q] < y0) y0 = H0Y[q]; if (H0Y[q] > y1) y1 = H0Y[q]; }
+      gw = ((x1 - x0) / 3 | 0) + 9; gh = ((y1 - y0) / 3 | 0) + 9; g = new Uint8Array(gw * gh);
+      for (q = 0; q < N; q++) g[(((H0Y[q] - y0) / 3 | 0) + 4) * gw + ((H0X[q] - x0) / 3 | 0) + 4] = 1;
+      for (q = 0; q < N; q++) { gx = ((H0X[q] - x0) / 3 | 0) + 4; gy = ((H0Y[q] - y0) / 3 | 0) + 4; EDG[q] = (g[(gy - 2) * gw + gx] || g[(gy - 3) * gw + gx] ? 0 : 1) | (g[gy * gw + gx + 2] || g[gy * gw + gx + 3] ? 0 : 2) | (g[(gy - 1) * gw + gx] ? 0 : 4); }
+    })();
+    for (j = 0; j < N; j++) home(j);
+    if (lite) drawStatic();
+  }
+  function home(j) {   // 지금 장면에서 이 알갱이가 갈 자리
+    var ci = CIX[j];
+    if (mode === 1 && ci >= 0) { HX[j] = cardL + CU[ci] * CARD_W * KCS; HY[j] = cardT + CV[ci] * CARD_H * KCS; }
+    else { HX[j] = H0X[j]; HY[j] = H0Y[j]; }
+  }
+  function drawStatic() {   // 휴대폰 — 별 몇 개 + 로고 + 건물 실루엣을 한 번만 그린다
+    var c = fxx, kk = BW / BIRD.box[2], seed = 5, q;
+    function R() { seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+    scene.style.transform = 'none';
+    c.setTransform(DPR, 0, 0, DPR, 0, 0); c.clearRect(0, 0, CW, CH); c.setTransform(DPR, 0, 0, DPR, OX * DPR, OY * DPR);
+    for (q = 0; q < 110; q++) { c.fillStyle = 'rgba(205,218,255,' + (0.12 + R() * 0.5).toFixed(2) + ')'; c.fillRect(R() * VW, R() * VH, 1.3, 1.3); }
+    c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.drawImage(LOGOC, cx - LW / 2, cy - LH / 2, LW, LH);
+    c.save(); c.translate(bx0, by0); c.scale(kk, kk); c.translate(-BIRD.box[0], -BIRD.box[1]); c.globalAlpha = 0.92; drawBird(c, '228,234,248', 1.1 / kk); c.restore();
+  }
+
+  /* ── 3. 알갱이 그리기(WebGL) — 안 되면 2D 로 ── */
+  var gl = null, c2d = null, prog, fadeProg, vbo, qbo, aP, aC, uV, uT, fA, fK;
+  function initGL() {
+    try { gl = glc.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, preserveDrawingBuffer: true }); } catch (err) { gl = null; }
+    if (!gl) { c2d = glc.getContext('2d'); return; }
+    function sh(type, src) { var o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o);
+      if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; }
+    function pg(vs, fs) { var p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p; }
+    prog = pg(
+      'attribute vec4 aP; attribute vec4 aC; uniform vec4 uV; uniform vec3 uT; varying vec4 vC;' +
+      'void main(){ float x=aP.x+uV.z+aP.z*uT.x; float y=aP.y+uV.w+aP.z*uT.y;' +
+      ' gl_Position=vec4(x*uV.x-1.0, 1.0-y*uV.y, 0.0, 1.0); gl_PointSize=max(1.0, aP.w*uT.z); vC=aC; }',
+      'precision mediump float; varying vec4 vC;' +
+      'void main(){ float d=length(gl_PointCoord-0.5)*2.0; float core=smoothstep(0.56,0.26,d); float halo=smoothstep(1.0,0.15,d)*0.2;' +
+      ' float a=(core+halo)*vC.a; gl_FragColor=vec4(vC.rgb*a, a); }');
+    fadeProg = pg('attribute vec2 aQ; void main(){ gl_Position=vec4(aQ,0.0,1.0); }',
+      'precision mediump float; uniform float uK; void main(){ gl_FragColor=vec4(0.0,0.0,0.0,uK); }');
+    aP = gl.getAttribLocation(prog, 'aP'); aC = gl.getAttribLocation(prog, 'aC');
+    uV = gl.getUniformLocation(prog, 'uV'); uT = gl.getUniformLocation(prog, 'uT');
+    fA = gl.getAttribLocation(fadeProg, 'aQ'); fK = gl.getUniformLocation(fadeProg, 'uK');
+    vbo = gl.createBuffer(); qbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, qbo); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    gl.enable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.clearColor(0, 0, 0, 0);
+  }
+  function renderGL() {
+    gl.useProgram(fadeProg); gl.bindBuffer(gl.ARRAY_BUFFER, qbo);   // 앞 장면을 조금 남겨 빛 꼬리를 만든다
+    gl.enableVertexAttribArray(fA); gl.vertexAttribPointer(fA, 2, gl.FLOAT, false, 0, 0);
+    gl.blendFunc(gl.ZERO, gl.SRC_ALPHA); gl.uniform1f(fK, gfk); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.useProgram(prog); gl.bindBuffer(gl.ARRAY_BUFFER, vbo); gl.bufferData(gl.ARRAY_BUFFER, buf, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 4, gl.FLOAT, false, 32, 0);
+    gl.enableVertexAttribArray(aC); gl.vertexAttribPointer(aC, 4, gl.FLOAT, false, 32, 16);
+    gl.uniform4f(uV, 2 / CW, 2 / CH, OX, OY);
+    gl.uniform3f(uT, Math.tan(ry * 0.0174533), -Math.tan(rx * 0.0174533), DPR);
+    gl.blendFunc(gl.ONE, gl.ONE); gl.drawArrays(gl.POINTS, 0, NT);
+  }
+  function render2D() {
+    var c = c2d; c.setTransform(DPR, 0, 0, DPR, OX * DPR, OY * DPR); c.clearRect(-OX, -OY, CW, CH);
+    c.fillStyle = 'rgba(232,238,255,0.8)'; c.beginPath();
+    for (var j = 0; j < N; j++) { var o = j * 8; if (buf[o + 7] < 0.12) continue; var z = buf[o + 3] * 0.42; c.rect(buf[o] - z / 2, buf[o + 1] - z / 2, z, z); }
+    c.fill();
+  }
+
+  /* ── 4. 상태 ── */
+  var C1 = [0.56, 0.44, 1.0], C2 = [0.80, 0.90, 1.0];   // 노광 — UV 보랏빛 → 뜨거운 흰 푸른빛
+  var SXp = 0, SYp = 0, PX = 0, PY = 0, PVX = 0, PVY = 0, pw = 0, lastMove = -1e9;
+  var rx = 0, ry = 0, freeUntil = 0, introEnd = 0, morphUntil = 0, doneTimer = 0, rings = [], accent = false, focusBox = 0;
+  var gate = 0, gateT0 = 0, gateTimer = 0, garr = false, gcx = 0, gcy = 0, gw = CARD_W, gh = CARD_H, gtg = 0, gcam = 0, gzk = 0, gspd = 0, gtr = 0, gfk = 0.5, garrT = 0;
+  var viewEl = document.querySelector('.view'), skyStar = 1, skyG = 1, skyS = 0, skyCx = 0, skyCy = 0, skyIw = 0, skyUx = 0, skyUy = 0, skyK = 0, todH = -1, todPlay = 0, skyMode = 3, skyc = $('sky'), sgl = null, sprog = null, sloc = {}, haloMode = 0, SKO = {}, skyLast = null;   // 하늘 그리는 판 · (시안) 햇무리 0 가끔 / 1 켬 / 2 끔   // 시간대 하늘 — 별이 보이는 정도 · 알갱이 밝기 · 해가 있는 쪽(- 왼쪽 ~ + 오른쪽) · (시안) 막대로 고른 시각
+  var POL = [0, 1, 0, 1, 1, 1, 1], C1B = [0.76, 0.74, 1.0], CLR1 = C1, shOn = false, shPos = 0;   // 다듬기 여섯(1~6 켬 · 끔) · 5 옅은 보라 · 3 지나가는 빛
+  var KCS = 1, QSL = 1, NDV = ND, cardEl = $('card'), waiting = false, waitT0 = 0, waitTimer = 0, shk = 0, shkPrev = 0, shakeT0 = 0, hotBtn = false, focBtn = false, btnGlow = 0, snapT = 0, snapBox = 0, mockOk = true, loginRes = null, okAt = 0, gdone = false;   // 로그인 확인을 기다리는 중 · 틀렸을 때 흔들림 · 버튼에 올린 마우스 · (시안) 결과
+  var RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches), forceLite = false, QS = 1, ft = 4, fcount = 0;   // 움직임 줄이기 · 느린 PC(알갱이 절반 → 정지 그림)   // 진입 장면 — 1 로그인 · 2 체험하기 / 지난 시간 · 시점이 들어간 깊이 · 먼 별이 스치는 빠르기   // 색 포인트 없음 — 알갱이는 모두 무채색(사용자 확정)
+  function fwd(x, y) {   // 무대 좌표 → 화면 좌표(기울기 반영)
+    var a = rx * 0.0174533, b = ry * 0.0174533, u = x - VW / 2, v = y - VH / 2;
+    var x1 = u * Math.cos(b), z1 = -u * Math.sin(b);
+    var y2 = v * Math.cos(a) - z1 * Math.sin(a), z2 = v * Math.sin(a) + z1 * Math.cos(a), sc = 1600 / (1600 - z2);
+    return [VW / 2 + x1 * sc, VH / 2 + y2 * sc];
+  }
+  function toScene(sx, sy) { var gx = sx, gy = sy, f; for (var q = 0; q < 3; q++) { f = fwd(gx, gy); gx += sx - f[0]; gy += sy - f[1]; } return [gx, gy]; }
+  function mkEase(x1, y1, x2, y2) {   // CSS cubic-bezier 와 같은 곡선을 표로 떠 둔다 — 느리게 출발해 빨라졌다가 부드럽게 멈춘다
+    var t = new Float32Array(258), q, n2, lo, hi, m, w;
+    for (q = 0; q <= 256; q++) {
+      lo = 0; hi = 1;
+      for (n2 = 0; n2 < 24; n2++) { m = (lo + hi) / 2; w = 1 - m; if (3 * w * w * m * x1 + 3 * w * m * m * x2 + m * m * m < q / 256) lo = m; else hi = m; }
+      m = (lo + hi) / 2; w = 1 - m; t[q] = 3 * w * w * m * y1 + 3 * w * m * m * y2 + m * m * m;
+    }
+    t[0] = 0; t[256] = 1; t[257] = 1; return t;
+  }
+  function ez(t, u) { var f = u * 256, n2 = f | 0; return t[n2] + (t[n2 + 1] - t[n2]) * (f - n2); }
+  var EIN = mkEase(0.7, 0, 0.3, 1), EMV = mkEase(0.52, 0, 0.3, 1), gEase = EIN;   // 등장(출발을 더 느리게) · 장면 전환(포털 회의모드 전환과 같은 곡선 .52,0,.3,1)
+  function ramp(j, from, to, t0, dur) { GF[j] = from; GT[j] = to; G0[j] = t0; GD[j] = dur; TS[j] = 0; }   // 모인 정도를 from → to 로 천천히 바꾼다
+
+  /* ── 5. 움직임 한 걸음(1/60초) ── */
+  function step(now) {
+    var active = now - lastMove < 3000, j, q, u;
+    pw += ((active ? 1 : 0) - pw) * 0.08;
+    var tl = mode === 1 ? 0 : 1;   // 로그인 창이 떠 있을 땐 기울이지 않는다 — 알갱이 틀과 글자 · 입력 칸이 어긋나지 않게
+    var nx = active ? (SXp / VW - 0.5) * 2 : Math.sin(now * 0.00023) * 0.55, ny = active ? (SYp / VH - 0.5) * 2 : Math.cos(now * 0.00031) * 0.45;
+    rx += (-ny * 2.4 * tl - rx) * 0.05; ry += (nx * 3.2 * tl - ry) * 0.05;
+    var p = toScene(SXp, SYp), ox = PX, oy = PY;
+    PX += (p[0] - PX) * 0.32; PY += (p[1] - PY) * 0.32; PVX = PX - ox; PVY = PY - oy;
+    for (q = rings.length - 1; q >= 0; q--) { rings[q].r += 13; rings[q].life *= 0.955; if (rings[q].life < 0.06) rings.splice(q, 1); }
+    var nr = rings.length, rg; for (q = 0; q < nr; q++) { rg = rings[q]; rg.o2 = (rg.r + 30) * (rg.r + 30); rg.i2 = rg.r > 30 ? (rg.r - 30) * (rg.r - 30) : 0; }   // 물결이 지나는 띠(반지름 ±30px)
+    if (now > introEnd) for (q = 0; q < wxSpkN; q++) SPK[(Math.random() * N) | 0] = 1;   // 다 모인 뒤 — 몇 알씩 별처럼 반짝인다(색 없이 밝기만)
+    if (now > introEnd && !gate && mode === 0) {   // 날씨가 로고 · 조감도에 닿는 방식 — 윤곽은 지키고, 가장자리 알갱이 조금만 반응한다
+      var wn = wxP.rn * 42, wk = wxFx === 2;   // 비 — 윗면(빗물이 맺히는 곳) 알갱이가 물방울처럼 반짝인다
+      for (q = 0; q < wn; q++) { j = (Math.random() * N) | 0; if ((EDG[j] & 1) && SPK[j] < 0.4) SPK[j] = 0.4 + Math.random() * 0.45; }
+      wn = wk ? wxP.rn * 30 / QS : 0;   // 비(뚜렷하게) — 비를 맞은 윗면 알갱이가 살짝 내려앉았다가 천천히 제자리로 돌아온다
+      for (q = 0; q < wn; q++) { j = ((Math.random() * N) | 0) & (QS === 2 ? ~1 : ~0); if ((EDG[j] & 1) && GV[j] === 1 && M0[j] === 0 && DRP[j] < now - 900 && WBL[j] < now) { DRP[j] = now + 380 + Math.random() * 420; if (SPK[j] < 0.5) SPK[j] = 0.5; } }
+      wn = wxP.sn * 10;   // 눈 — 윗면에 내려앉은 눈이 가끔 은은하게 빛난다
+      for (q = 0; q < wn; q++) { j = (Math.random() * N) | 0; if ((EDG[j] & 1) && SPK[j] < 0.25) SPK[j] = 0.25 + Math.random() * 0.2; }
+      wn = wxBlow * (wk ? 400 : 460) / QS;   // 바람 — 돌풍이 왼쪽에서 오른쪽으로 훑고 지나갈 때, 가장자리 알갱이가 모래처럼 날렸다가 돌아온다(뚜렷하게 = 윗면에서도)
+      for (q = 0; q < wn; q++) {
+        j = ((Math.random() * N) | 0) & (QS === 2 ? ~1 : ~0);
+        if ((EDG[j] & (wk ? 3 : 2)) && GV[j] === 1 && M0[j] === 0 && WBL[j] < now && Math.sin(now * 0.0021 - H0X[j] * 0.006) > 0.2 && (j >= NL || Math.random() < (wk ? 0.2 : 0.35))) WBL[j] = now + 300 + Math.random() * (wk ? 800 : 650);
+      }
+    }
+
+    if (gate) gateStep(now);
+    var RH = mode === 1 ? 2.5 : 50, R = mode === 1 ? 26 : 130, R2 = R * R, free = now < freeUntil, morph = now < morphUntil;   // 마우스 둘레 빈 구멍 — 지름 100px(로그인 창에서는 5px)
+    var dsh = 0, wph = waiting ? (now - waitT0) * 0.0075 : 0, shp = (now % 8000) / 1500;
+    shOn = POL[3] === 1 && mode === 0 && !gate && now > introEnd && shp < 1; if (shOn) shPos = skyS > 0.05 ? bx0 + BW + 170 - shp * (BW + 340) : bx0 - 170 + shp * (BW + 340);   // 스치는 빛은 해가 있는 쪽에서 들어온다
+    btnGlow = focBtn ? 0.5 + 0.14 * Math.sin(now * 0.0055) : hotBtn ? 0.45 : 0;   // 로그인 버튼 — 키보드 초점이면 은은하게 숨 쉬듯, 마우스를 올리면 고르게 밝아진다
+    if (shakeT0) {   // 틀렸을 때 — 창이 통째로(알갱이 틀과 글자가 같이) 좌우로 세 번 흔들리다 잦아든다
+      var tsh = now - shakeT0; if (tsh > 460) { shk = 0; shakeT0 = 0; } else shk = -11 * Math.sin(tsh * 0.041) * (1 - tsh / 460);
+      dsh = shk - shkPrev; shkPrev = shk; cardEl.style.transform = shk ? 'translateX(' + shk.toFixed(2) + 'px)' : '';
+    }
+    if (waiting && loginRes && now - waitT0 > 850 && (loginRes !== 'ok' || now - okAt > 250)) resolveLogin();   // 답이 와도 0.85초는 기다리는 장면을 보여 준다 · 성공이면 포털이 뒤에서 뜰 틈(0.25초)을 준다
+    var w1 = now * 0.0011, w2 = now * 0.0009, tn = now * 0.001, x0 = -OX - 30, x1 = VW + OX + 30, y0 = -OY - 30, y1 = VH + OY + 30;
+    for (j = 0; j < N; j += QS) {
+      var x = X[j], y = Y[j], vx = VX[j], vy = VY[j], e = E[j], gg = GT[j], gp = GV[j], fr = 0.885, rem;
+      if (gate) {   // 진입 — 알갱이마다 제 때에 제자리를 떠나 앞뒤로 흩어지고, 시점이 그 속으로 점점 빠르게 빨려 들어간다
+        u = (gtg - QL[j]) / MD[j]; u = u < 0 ? 0 : u > 1 ? 1 : u; u = u * u * (3 - 2 * u); MP[j] = u;   // 제자리를 떠난 정도(천천히 떠나 부드럽게)
+        rem = 1 + QJ[j] * u - gcam;   // 시점에서 본 깊이(1 = 처음 놓여 있던 면) — 가까워질수록 크게 · 빠르게 스쳐 지나간다
+        rem = rem < 0.03 ? 34 : 1 / rem; EG[j] = rem;
+        var gdt = gtg - QL[j]; gdt = gdt < 0 ? 0 : gdt * u;   // 옆으로는 별처럼 느리게 떠돈다
+        var gbx = QX[j] + QNX[j] * gdt, gby = QY[j] + QNY[j] * gdt, gph = 0.24 * (1 - 1 / rem), gsn = gph - gph * gph * gph / 6, gcs = 1 - gph * gph / 2;   // 가까워질수록 조금 더 돈다(최대 14도쯤)
+        HX[j] = gcx + (gbx * gcs - gby * gsn) * rem; HY[j] = gcy + (gbx * gsn + gby * gcs) * rem;
+      }
+      if (G0[j] !== 0) {
+        u = (now - G0[j]) / GD[j];
+        if (u <= 0) gg = GF[j]; else if (u >= 1) { G0[j] = 0; if (gg === 1) TS[j] = now; } else gg = GF[j] + (gg - GF[j]) * ez(gEase, u);
+      }
+      GV[j] = gg;
+      if (dsh !== 0) x += dsh;
+      if (shOn && gg === 1) { u = x + (y - by0) * 0.5 - shPos; if (u > -80 && u < 80) { u = (1 - (u < 0 ? -u : u) / 80) * 0.46; if (u > SPK[j]) SPK[j] = u; } }   // 지나가는 빛 띠에 닿은 알갱이가 잠깐 밝아진다
+      for (q = 0; q < nr; q++) {   // 물결 — 지나가는 자리의 알갱이가 살짝 밀리며 잠깐 밝아진다(색 없이)
+        rg = rings[q]; var rdx = x - rg.x, rdy = y - rg.y, rd2 = rdx * rdx + rdy * rdy;
+        if (rd2 < rg.o2 && rd2 > rg.i2) { var rd = Math.sqrt(rd2) + 0.01, rf = (1 - Math.abs(rd - rg.r) / 30) * rg.life; vx += rdx / rd * rf * 1.1; vy += rdy / rd * rf * 1.1; if (rf * 0.85 > SPK[j]) SPK[j] = rf * 0.85; }
+      }
+      if (waiting && CK[j] === 1) {   // 기다리는 동안 — 테두리를 따라 빛 두 줄기가 꼬리를 끌며 돈다
+        u = WA[j] - wph; u -= Math.floor(u / 3.14159 + 0.5) * 3.14159;
+        if (u > -0.6 && u < 0.1) { u = u < 0 ? 1 + u / 0.6 : 1 - u / 0.1; if (u > SPK[j]) SPK[j] = u; }
+      } else if (btnGlow > 0 && (CK[j] === 4 || CK[j] === 7) && SPK[j] < btnGlow) SPK[j] = btnGlow;
+      if (free) fr = 0.985;
+      else {
+        var dxh = HX[j] + shk - x, dyh = HY[j] - y, ax, ay, am, cap;
+        if (gg < 1) {   // 아직 별 — 저마다 굽이치며 떠돌다가, 느리게 출발해 점점 빨라지며 제자리로 휘돌아 들어간다
+          var th = TH[j] += OM[j] + Math.sin(tn * FQ[j] + PH[j]) * 0.014, sp = SP[j] * (1 - gg) * 0.111;
+          vx += Math.cos(th) * sp; vy += Math.sin(th) * sp; fr = 0.9;
+          if (gg > gp) {   // 남은 길의 몫만큼 다가간다 — 어디서 출발했든, 밀려났든 제때 도착한다
+            rem = 1 - gp; var hk = rem > 1e-4 ? (gg - gp) / rem : 1, dh = Math.sqrt(dxh * dxh + dyh * dyh) + 1, cs = CS[j] * (dh < 260 ? dh / 260 : 1) * 24 * gg * (1 - gg);
+            if (hk > 1) hk = 1;
+            x += dxh * hk - dyh / dh * cs; y += dyh * hk + dxh / dh * cs;
+          }
+        } else if (M0[j] !== 0) {   // 장면이 바뀌는 중 — 밝은 채로, 느리게 출발해 빨라졌다가 부드럽게 새 자리에 앉는다
+          u = (now - M0[j]) / MD[j]; fr = 0.86;
+          if (u >= 1) { M0[j] = 0; x += dxh; y += dyh; }
+          else if (u > 0) {
+            var ms = ez(EMV, u), mk, dm = Math.sqrt(dxh * dxh + dyh * dyh) + 1, cm = CS[j] * (dm < 180 ? dm / 180 : 1) * 16 * ms * (1 - ms);
+            rem = 1 - MP[j]; mk = rem > 1e-4 ? (ms - MP[j]) / rem : 1; if (mk > 1) mk = 1; else if (mk < 0) mk = 0; MP[j] = ms;
+            x += dxh * mk - dyh / dm * cm; y += dyh * mk + dxh / dm * cm;
+          }
+        } else {   // 제자리 — 아주 조금 숨 쉬듯 흔들린다
+          ax = (dxh + Math.sin(w1 + PH[j]) * 0.45 * wxWob + (EDG[j] ? wxLean * (0.5 + 0.5 * Math.sin(now * 0.0021 - H0X[j] * 0.006)) : 0)) * KS[j]; ay = (dyh + Math.cos(w2 + PH[j]) * 0.45 * wxWob) * KS[j]; am = ax * ax + ay * ay;
+          cap = dxh * dxh + dyh * dyh > 8100 ? AM[j] * 1.4 : 1.7;   // 아직 멀리 있으면 서두르지 않는다
+          if (am > cap * cap) { am = cap / Math.sqrt(am); ax *= am; ay *= am; }
+          if (WBL[j] > now && mode === 0) { ax = ax * 0.1 + wxWF * (0.6 + 0.5 * LT[j]) + Math.cos(tn * 5.3 + PH[j] * 7) * wxSeaSp; ay = ay * 0.1 + Math.sin(tn * 5.3 + PH[j] * 7) * wxSeaFl - wxSeaUp; } else if (DRP[j] > now && mode === 0) { ax = ax * 0.15 + 0.008; ay = ay * 0.15 + 0.042; }   // 비를 맞은 알갱이 — 살짝 내려앉는다   // 바람에 들린 알갱이 — 바람 따라 날리다가 제자리로 돌아온다
+          if (gate) { x += dxh; y += dyh; vx = 0; vy = 0; }   // 진입 중 — 띠에 실려 함께 넓어진다
+          else { vx += ax; vy += ay; if (snapT > now && CK[j] === snapBox) { vx += dxh * 0.3; vy += dyh * 0.3; fr = 0.6; } }   // 방금 글자를 친 칸 — 세게 당겨 금방 제자리로
+        }
+        if (pw > 0.02 && !gate) {   // 마우스 = UV 빛 — 가운데는 비고(블랙홀), 밀려난 알갱이가 둘레에 모여 달아오르며 살짝 돈다
+          var dx = x - PX, dy = y - PY, d2 = dx * dx + dy * dy;
+          if (d2 < R2) {
+            var d = Math.sqrt(d2) + 0.001, ux = dx / d, uy = dy / d, f = 1 - d / R, push, gw; f = f * f * pw;
+            push = (d < RH ? 1.1 + 2.9 * (1 - d / RH) : 1.1 * (1 - (d - RH) / (R - RH))) * pw * (0.75 + LT[j] * 0.25);
+            vx += ux * push - uy * f * 0.55 + PVX * f * 0.16; vy += uy * push + ux * f * 0.55 + PVY * f * 0.16;
+            VZ[j] += f * 0.9; gw = d < RH ? pw : f * 1.5; if (gw > e) e = gw > 1 ? 1 : gw;
+          }
+        }
+        if (focusBox && CK[j] === focusBox + 1 && gg === 1 && e < 0.8) e = 0.8;   // 입력 중인 칸의 틀이 UV 빛으로 달아오른다
+      }
+      vx *= fr; vy *= fr; x += vx; y += vy;
+      if (gg === 0 && GT[j] === 0) { if (x < x0) x = x1; else if (x > x1) x = x0; if (y < y0) y = y1; else if (y > y1) y = y0; }   // 별로 떠도는 알갱이는 화면 밖으로 나가면 반대편에서 들어온다
+      var z = Z[j], vz = VZ[j];
+      if (free) { vz *= 0.995; z += vz; } else if (gg > 0) { vz += -z * 0.06 * gg; vz *= 0.86; z += vz; if (z < 0) z = 0; }
+      if (gg === 1 && !morph && now - WBL[j] > 900) { var h = (vx * vx + vy * vy) * 0.02; if (h > 1) h = 1; h *= 0.85; if (h > e) e = h; }   // 떠돌거나 모이는 동안엔 색을 입히지 않는다 — 별빛 그대로
+      X[j] = x; Y[j] = y; VX[j] = vx; VY[j] = vy; Z[j] = z; VZ[j] = vz; E[j] = e * 0.978; SPK[j] *= 0.95;
+    }
+    for (j = 0; j < NDV; j++) {   // 하늘에 남는 별 — 저마다 굽이치며 떠돈다
+      var dt = DTH[j] += DOM[j] + Math.sin(tn * DFQ[j] + DPH[j]) * 0.012;
+      DX[j] += Math.cos(dt) * DSP[j] + wxDust * (0.5 + DSP[j] * 5); DY[j] += Math.sin(dt) * DSP[j];
+      if (gzk > 0) {   // 진입 중 — 별이 가운데에서 바깥으로 스쳐 지나간다(안으로 들어가는 느낌). 화면을 벗어난 별은 가운데서 다시 나온다
+        DX[j] += (DX[j] - gcx) * gzk; DY[j] += (DY[j] - gcy) * gzk;
+        if (DX[j] < x0 || DX[j] > x1 || DY[j] < y0 || DY[j] > y1) { DX[j] = gcx + (Math.random() - 0.5) * 300; DY[j] = gcy + (Math.random() - 0.5) * 200; }
+      }
+      if (DX[j] < x0) DX[j] = x1; else if (DX[j] > x1) DX[j] = x0;
+      if (DY[j] < y0) DY[j] = y1; else if (DY[j] > y1) DY[j] = y0;
+    }
+  }
+
+  /* ── 6. 그리기 ── */
+  function drawFx() {
+    var c = fxx, g, q, gr = mode === 1 ? 42 : 180;
+    c.setTransform(DPR, 0, 0, DPR, 0, 0); c.clearRect(0, 0, CW, CH); c.setTransform(DPR, 0, 0, DPR, OX * DPR, OY * DPR);
+    if (pw > 0.02) {   // 마우스 빛
+      g = c.createRadialGradient(PX, PY, 0, PX, PY, gr);
+      var gpc = POL[5] ? '198,202,255' : '126,120,255';
+      g.addColorStop(0, 'rgba(' + gpc + ',' + ((POL[5] ? 0.042 : 0.15) * pw).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + gpc + ',0)');
+      c.fillStyle = g; c.fillRect(PX - gr, PY - gr, gr * 2, gr * 2);
+    }
+    if (gate && gcam > 0.4) {   // 진입 — 다가가는 곳에서 빛이 번져 나오고, 다음 화면이 그 빛 속에서 떠오르며 빛은 잦아든다
+      var bk = (gcam - 0.4) / 0.6, bf = garr ? 1 - (T() - garrT) / 520 : 1, bc = gate === 2 ? '120,170,255' : '210,218,255', br2, ba;
+      if (bk > 1) bk = 1; bk = bk * bk * (3 - 2 * bk); if (bf < 0) bf = 0; br2 = 110 + 430 * bk; ba = 0.3 * bk * bf;
+      if (ba > 0.004) { g = c.createRadialGradient(gcx, gcy, 0, gcx, gcy, br2); g.addColorStop(0, 'rgba(' + bc + ',' + ba.toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + bc + ',0)'); c.fillStyle = g; c.fillRect(gcx - br2, gcy - br2, br2 * 2, br2 * 2); }
+    }
+  }
+  function draw(now) {
+    scene.style.transform = 'rotateX(' + rx.toFixed(3) + 'deg) rotateY(' + ry.toFixed(3) + 'deg)';
+    drawFx();
+    var j, o, tw = now * 0.003, card = mode === 1, ak;
+    gfk = gate ? 0.56 + 0.24 * gtr : 0.5; ak = Math.pow((1 - gfk) * 2, 0.35);   // 빛 꼬리가 길어지는 만큼 한 점의 밝기는 낮춘다(가만히 있는 별이 번쩍 밝아지지 않게)
+    for (j = 0; j < N; j += QS) {
+      o = j * 8;
+      var e = E[j], t = TN[j], z = Z[j], gg = GV[j], g2 = gg * gg, ek = 0, hot = 1, u = SPK[j] * 0.6, r = 0.84 * t, g = 0.89 * t, b = t, a, sz;
+      r += (1.1 - r) * u; g += (1.1 - g) * u; b += (1.15 - b) * u;
+      if (!card && gg === 1 && TY[j] === 2 && accent && TS[j] > 0) {   // 붉은빛은 지붕 선 한 곳 — 제자리에 다 모인 뒤에야 켜진다
+        ek = (now - TS[j] - 150) / 900; ek = ek < 0 ? 0 : ek > 1 ? 1 : ek;
+        hot = 1 + (1.7 * (0.75 + 0.25 * Math.sin(tw * 1.7 + PH[j])) - 1) * ek; r += (1 - r) * ek; g += (0.4 + e * 0.35 - g) * ek; b += (0.16 + e * 0.3 - b) * ek;
+      }
+      if (ek === 0 && e > 0.01) {
+        if (e < 0.5) { u = e * 2; r += (CLR1[0] - r) * u; g += (CLR1[1] - g) * u; b += (CLR1[2] - b) * u; }
+        else { u = (e - 0.5) * 2; r = CLR1[0] + (C2[0] - CLR1[0]) * u; g = CLR1[1] + (C2[1] - CLR1[1]) * u; b = CLR1[2] + (C2[2] - CLR1[2]) * u; }
+      }
+      var gk = gate ? MP[j] : 0, eg = gate ? EG[j] : 1, gz2 = eg < 1 ? 1 : eg > 14.3 ? 7 : 1 + (eg - 1) * 0.45, ga2 = eg < 1 ? 1 : (eg > 30 ? 0 : eg > 16 ? (30 - eg) / 14 : 1) * (eg > 2 ? 1.5 : 1 + (eg - 1) * 0.5) / (1 + (gz2 - 1) * 0.25);   // 제자리를 떠난 정도 · 가까워진 배율 · 알 크기(가까울수록 크게) · 밝기(커진 만큼 옅게 — 초점이 나간 빛망울)
+      if (gate === 2 && gk > 0) { r += (0.45 * t - r) * gk; g += (0.68 * t - g) * gk; b += (1.02 * t - b) * gk; }   // 체험하기 — 떠나는 알갱이부터 푸르게 물든다
+      a = BA[j] * AS[j] * (card ? CAF[j] + (0.85 - CAF[j]) * gk : 1) * ga2 * (1 + e * 0.36) * hot * (1 + SPK[j] * 1.3) * g2;
+      if (gk > 0) a *= 1 - gk * (0.16 - 0.16 * Math.sin(tw * FQ[j] * 2 + PH[j]));   // 떠난 알갱이는 별처럼 깜빡인다
+      if (g2 < 1) a += SA[j] * (0.55 + 0.45 * Math.sin(tw * FQ[j] + PH[j])) * (1 - g2);   // 별일 때 — 저마다 다른 박자로 깜빡인다
+      sz = S0[j] * GS[j] * (card ? CZ[j] + (1 - CZ[j]) * gk : 1) * gz2 * (0.85 + 0.15 * g2) * (1 + e * 0.2) * (1 + z * 0.012) * (1 + ek * 0.35 + SPK[j] * 0.3); if (POL[6] && card && !gate && CK[j] > 0 && CK[j] < 4) { a *= 0.74; sz *= 0.84; } if (sz > 48) sz = 48;
+      var yo = 0;
+      if (!card && !gate && (EDG[j] & 4)) {
+        if (wxCap > 0.01) { var ck = wxCap * (j < NL ? 0.45 : 1); sz *= 1 + 1.3 * ck; a *= 1 + 1.7 * ck; r += (1.12 - r) * ck; g += (1.12 - g) * ck; b += (1.14 - b) * ck; yo = -1.6 * ck; }   // 눈 — 맨 윗줄 알갱이가 크고 희게, 살짝 위로: 지붕과 글자 위에 눈이 얹힌다
+        if (wxXmOn && j >= NL && j % 23 === 0) {   // 크리스마스 — 지붕 선을 따라 따뜻한 전구가 저마다 다른 박자로 깜빡인다
+          var xb = ((j / 23) | 0) % 4, xt = 0.55 + 0.45 * Math.sin(tw * (0.5 + FQ[j] * 0.5) + PH[j]);
+          r = xb === 2 ? 0.34 : 1; g = xb === 3 ? 0.26 : xb === 2 ? 0.95 : xb === 1 ? 0.9 : 0.7; b = xb === 3 ? 0.22 : xb === 2 ? 0.5 : xb === 1 ? 0.72 : 0.24; sz *= 3.2; a = (0.4 + 0.6 * xt) * (0.5 + 0.5 * (1 - wxLight)) * 0.82; yo = 0;
+        }
+      }
+      buf[o] = X[j]; buf[o + 1] = Y[j] + yo; buf[o + 2] = z; buf[o + 3] = sz; buf[o + 4] = r; buf[o + 5] = g; buf[o + 6] = b; buf[o + 7] = a * ak * (QS === 2 ? 1.5 : 1) * (skyK !== 0 && !card && !gate ? skyG * (1 + skyK * wxDirK * ((X[j] - skyCx) * skyUx + (Y[j] - skyCy) * skyUy) * skyIw) : skyG) * (card ? 1 : wxGK * (wxFl > 0.002 ? 1 + wxFl * (0.45 + 1.1 * (1 - Math.min(1, Math.abs(X[j] - wxFlX) / (VW * 0.6)))) : 1)) / (1 + z * 0.03);
+    }
+    for (j = 0; j < NDV; j++) {
+      o = (N + j) * 8;
+      buf[o] = DX[j]; buf[o + 1] = DY[j]; buf[o + 2] = DZ[j]; buf[o + 3] = DS[j]; buf[o + 4] = 0.78; buf[o + 5] = 0.84; buf[o + 6] = 1;
+      buf[o + 7] = DA[j] * (0.55 + 0.45 * Math.sin(tw * DFQ[j] + DPH[j])) * ak * skyStar * wxStarK;
+    }
+    if (gl) renderGL(); else render2D();
+  }
+
+  /* ── 7. 장면 ── */
+  function seedStars() {
+    for (var j = 0; j < ND; j++) {
+      var z = Math.random() * 2 - 1, near = z > 0.86, bright = Math.random() < 0.09;
+      DX[j] = -OX + Math.random() * CW; DY[j] = -OY + Math.random() * CH; DZ[j] = z * 240;
+      DTH[j] = Math.random() * 6.2832; DOM[j] = (Math.random() - 0.5) * 0.01; DSP[j] = 0.04 + Math.pow(Math.random(), 2) * 0.42;
+      DS[j] = near ? 6 + Math.random() * 7 : bright ? 3.4 + Math.random() * 1.8 : 1.5 + Math.random() * 1.9;
+      DA[j] = near ? 0.03 + Math.random() * 0.04 : bright ? 0.75 + Math.random() * 0.25 : 0.16 + Math.random() * 0.36;
+      DPH[j] = Math.random() * 6.2832; DFQ[j] = 0.4 + Math.random() * 1.8;
+    }
+  }
+  function intro() {   // 등장 — 처음부터 모든 별이 저마다 떠돌고, 하나둘 서서히 이끌려 로고 · 센터명 · 조감도로 모인다
+    var now = T(), j;
+    mode = 0; body.classList.remove('dlg', 'arrived', 'wait', 'bad'); clearTimeout(gateTimer); clearTimeout(waitTimer); gate = 0; garr = false; gzk = 0; waiting = false; shk = 0; shakeT0 = 0; cardEl.style.transform = '';
+    for (j = 0; j < N; j++) {
+      X[j] = -OX + Math.random() * CW; Y[j] = -OY + Math.random() * CH; VX[j] = Math.cos(TH[j]) * SP[j]; VY[j] = Math.sin(TH[j]) * SP[j];
+      Z[j] = Math.random() < 0.28 ? Math.random() * 70 : Math.random() * 10; VZ[j] = 0; E[j] = 0; SPK[j] = 0; GV[j] = 0; M0[j] = 0; home(j);
+      var t0 = 40 + Math.pow(Math.random(), 1.3) * 420; ramp(j, 0, 1, now + t0, 2000 - t0 - Math.random() * 220);   // 출발은 조금씩 다르게, 도착은 2초 언저리에 함께
+    }
+    gEase = EIN; rings.length = 0; freeUntil = 0; morphUntil = 0; introEnd = now + 2100; focusBox = 0;
+    body.classList.remove('done', 'in', 'gone'); void body.offsetWidth; body.classList.add('in');
+    clearTimeout(doneTimer); doneTimer = setTimeout(function () { body.classList.add('done'); }, 2200);
+  }
+  function setMode(m) {   // 0 로고 · 조감도로 / 1 로그인 창으로 — 알갱이가 흩어졌다 새 모양으로 다시 모인다
+    var now = T(), j;
+    waiting = false; clearTimeout(waitTimer); shk = 0; shkPrev = 0; shakeT0 = 0; cardEl.style.transform = ''; body.classList.remove('wait', 'bad');
+    if (m === 0 && cardEl.contains(document.activeElement)) $('enter').focus({ preventScroll: true });   // 닫으면 초점을 로그인 버튼으로 돌려준다
+    mode = m; body.classList.toggle('dlg', m === 1); if (m === 0) focusBox = 0;
+    if (lite) return;
+    for (j = 0; j < N; j++) {   // 자리만 바꾼다 — 알갱이는 밝은 채로 새 자리까지 날아간다
+      home(j);
+      if (G0[j] !== 0 || GV[j] < 1) ramp(j, GV[j], 1, now, 450);
+      else { M0[j] = now + 1 + Math.random() * 90; MD[j] = 560 + Math.random() * 170; MP[j] = 0; }
+      TS[j] = m === 0 ? now + 700 : 0;
+    }
+    gEase = EMV;
+    morphUntil = now + 900; introEnd = now + 1000;
+  }
+  /* 진입 장면 — 알갱이가 넓어지는 네모 띠로 흘러 들어가(화면이 창 속으로 들어가듯), 끝에 다음 화면이 페이드로 뜬다 */
+  function perim(u, j) {   // 둥근 네모 둘레 위의 한 점(왼쪽 가운데에서 시계 방향으로 u = 0~1) — 가운데 기준 자리와 바깥쪽 방향
+    var w = gw, h = gh, r = 12, a = h / 2 - r, bq = 1.5708 * r, c = w - 2 * r, d = h - 2 * r, t = u * (2 * (c + d) + 4 * bq), th, px, py, nx, ny;
+    if (t < a) { px = -w / 2; py = -t; nx = -1; ny = 0; }
+    else if ((t -= a) < bq) { th = 3.14159 + t / r; nx = Math.cos(th); ny = Math.sin(th); px = -w / 2 + r + r * nx; py = -h / 2 + r + r * ny; }
+    else if ((t -= bq) < c) { px = -w / 2 + r + t; py = -h / 2; nx = 0; ny = -1; }
+    else if ((t -= c) < bq) { th = 4.71239 + t / r; nx = Math.cos(th); ny = Math.sin(th); px = w / 2 - r + r * nx; py = -h / 2 + r + r * ny; }
+    else if ((t -= bq) < d) { px = w / 2; py = -h / 2 + r + t; nx = 1; ny = 0; }
+    else if ((t -= d) < bq) { th = t / r; nx = Math.cos(th); ny = Math.sin(th); px = w / 2 - r + r * nx; py = h / 2 - r + r * ny; }
+    else if ((t -= bq) < c) { px = w / 2 - r - t; py = h / 2; nx = 0; ny = 1; }
+    else if ((t -= c) < bq) { th = 1.5708 + t / r; nx = Math.cos(th); ny = Math.sin(th); px = -w / 2 + r + r * nx; py = h / 2 - r + r * ny; }
+    else { t -= bq; px = -w / 2; py = h / 2 - r - t; nx = -1; ny = 0; }
+    QX[j] = px; QY[j] = py; QNX[j] = nx; QNY[j] = ny;
+  }
+  function gateStep(now) {   // 시점이 안으로 들어간 깊이 — 느리게 출발해 끝까지 점점 빠르게
+    var TT = gate === 1 ? 1300 : 1450, u, c0 = gcam;
+    gtg = now - gateT0; u = gtg / TT; if (u > 1.25) u = 1.25;
+    gcam = 1.06 * Math.pow(u, 2.2) - (u < 0.24 ? 0.03 * Math.sin(u / 0.24 * 3.14159) : 0);   // 출발 직전에 아주 살짝 물러났다가(움츠림) 들어간다
+    gspd = gcam - c0; gtr += ((gspd > 0.0222 ? 1 : gspd < 0 ? 0 : gspd * 45) - gtr) * 0.25;   // 들어가는 빠르기 → 빛 꼬리 길이
+    gzk = (gcam - c0) / (3.2 - gcam); if (gzk < 0) gzk = 0;   // 먼 배경 별은 천천히 스친다(가운데서 뭉쳐 터지지 않게)
+    if (!garr && u > 0.76) { garr = true; garrT = now; body.classList.add('arrived'); if (HOSTED) hostCall('reveal', gate); }   // 알갱이가 거의 다 스쳐 지나갈 즈음 다음 화면이 떠오르기 시작한다
+    if (gtg > TT + 2000) leaveGate();
+  }
+  function enterGate(kind) {   // 1 로그인(포털로) · 2 체험하기(체험관으로)
+    var now = T(), j;
+    if (gate || body.classList.contains('arrived')) return;
+    body.classList.toggle('booth', kind === 2); body.classList.add('gone'); focusBox = 0; clearTimeout(gateTimer);
+    $('nxcap').textContent = kind === 2 ? '체험관 화면 (임시 그림)' : '포털 화면 (임시 그림)';
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    if (lite) { body.classList.add('arrived'); if (HOSTED) { hostCall('reveal', kind); hostCall('done', kind); return; } gateTimer = setTimeout(leaveGate, 2300); return; }   // 휴대폰 — 알갱이 없이 바로 페이드
+    gcx = VW / 2; gcy = VH * 0.46; gw = CARD_W; gh = kind === 1 ? CARD_H : Math.round(CARD_W * VH / VW);
+    var gbr = $(kind === 1 ? 'go' : 'try').getBoundingClientRect(), go = toScene(gbr.left + gbr.width / 2, gbr.top + gbr.height / 2), gdd;   // 누른 버튼 자리 — 풀림이 여기서 시작된다
+    rings.push({ x: go[0], y: go[1], r: 6, life: 0.8 });
+    for (j = 0; j < N; j++) {
+      var ga = Math.random() * 6.2832, gv = 0.012 + Math.random() * 0.06;   // 옆으로 떠도는 방향 · 빠르기(px/ms) — 저마다 다르게
+      QX[j] = X[j] - gcx; QY[j] = Y[j] - gcy; QNX[j] = Math.cos(ga) * gv; QNY[j] = Math.sin(ga) * gv * 0.8;
+      QJ[j] = -0.72 * Math.pow(Math.random(), 0.85);   // 얼마나 앞으로 나오나 — 가까이 나온 것부터 먼저 스쳐 지나간다
+      gdd = Math.sqrt((X[j] - go[0]) * (X[j] - go[0]) + (Y[j] - go[1]) * (Y[j] - go[1])); QL[j] = (gdd > 520 ? 520 : gdd) * 0.72 + Math.random() * 90; MD[j] = 420 + Math.random() * 380;   // 버튼에서 가까운 것부터 차례로 풀린다 MP[j] = 0; EG[j] = 1; M0[j] = 0;   // 저마다 다른 때에, 다른 빠르기로 제자리를 떠난다
+      if (G0[j] !== 0 || GV[j] < 1) ramp(j, GV[j], 1, now, 300);
+      TS[j] = 0;
+    }
+    gcam = 0; gzk = 0; gspd = 0; gtr = 0;
+    gEase = EMV; gate = kind; gateT0 = now; garr = false; morphUntil = now + 4000; introEnd = now + 1e7; gateStep(now);
+  }
+  function leaveGate() {   // 시안(?lab)에서는 다음 화면을 잠깐 보여 주고 처음으로 돌아온다. 포털에서는 끝났다고만 알린다(포털이 이 화면을 걷는다)
+    if (HOSTED) { if (!gdone) { gdone = true; hostCall('done', gate); } return; }
+    gate = 0; garr = false; gzk = 0; body.classList.remove('arrived');
+    if (!lite) seedStars();
+    intro();
+  }
+  var ERRS = { fail: '사번 또는 비밀번호가 맞지 않습니다', pending: '가입 승인 대기 중입니다. 승인 뒤 로그인할 수 있어요', inactive: '비활성 계정입니다. 포털 관리자에게 문의하세요', network: '서버에 연결하지 못했어요. 네트워크를 확인해 주세요', error: '로그인 중 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요' };
+  function submit() {   // 로그인을 누르거나 Enter — 확인을 기다리는 동안 테두리에 빛이 돌고, 결과에 따라 들어가거나 흔들린다
+    if (waiting || gate || mode !== 1) return;
+    var h = host(), emp = $('f1').value.replace(/^\s+|\s+$/g, ''), pwv = $('f2').value;
+    if (h && (!emp || !pwv)) { $(emp ? 'f2' : 'f1').focus(); return; }   // 빈 칸이 있으면 묻지 않고 그 칸으로
+    waiting = true; waitT0 = T(); okAt = 0; loginRes = h ? null : (mockOk ? 'ok' : 'fail'); body.classList.add('wait'); body.classList.remove('bad'); $('err').textContent = '';
+    if (h) {   // 포털의 로그인 — 'ok' · 'fail' · 'pending' · 'inactive' · 'network' · 'error'
+      var settle = function (r) {
+        r = r === 'ok' || ERRS[r] ? r : 'error';
+        if (!waiting) { if (r === 'ok') { hostCall('reveal', 1); hostCall('done', 1); } return; }   // 기다리다 창을 닫았는데 로그인이 됐다 — 장면 없이 포털로
+        loginRes = r; okAt = T();
+        if (lite) { clearTimeout(waitTimer); waitTimer = setTimeout(resolveLogin, Math.max(0, 850 - (T() - waitT0))); }
+      };
+      try { h.login(emp, pwv).then(settle, function () { settle('error'); }); } catch (e2) { settle('error'); }
+    } else if (lite) waitTimer = setTimeout(resolveLogin, 850);
+  }
+  function resolveLogin() {   // 답을 받은 때 — 시안(?lab)에서는 조작 줄의 '로그인 결과'대로
+    if (!waiting || !loginRes) return;
+    var r = loginRes; waiting = false; loginRes = null; clearTimeout(waitTimer); body.classList.remove('wait');
+    if (r === 'ok') { enterGate(1); return; }
+    $('err').textContent = ERRS[r] || ERRS.error; body.classList.add('bad');
+    if (!lite) { shakeT0 = T(); shkPrev = 0; }
+    else if (cardEl.animate && !RM) cardEl.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-9px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }], { duration: 420 });
+    if (r === 'fail') { $('f2').focus(); $('f2').select(); }
+  }
+  /* ── 시간대 하늘 ── */
+  function sunTimes(d) {   // 그날 해 뜨는 때 · 지는 때(광주, 우리 시각) — 어림셈이면 충분하다
+    var n2 = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), B = 6.2832 * (n2 - 81) / 364, eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    var dec = -23.44 * Math.cos(6.2832 * (n2 + 10) / 365) * 0.0174533, lat = 35.23 * 0.0174533, c = (Math.sin(-0.01454) - Math.sin(lat) * Math.sin(dec)) / (Math.cos(lat) * Math.cos(dec));
+    var ha = Math.acos(c < -1 ? -1 : c > 1 ? 1 : c) * 57.2958 / 15, noon = 12 + (135 - 126.84) * 4 / 60 - eot / 60;
+    return [noon - ha, noon + ha];
+  }
+  //            위쪽 하늘        가운데           아래쪽           번지는 빛        세기  빛 자리 x · y(%)  크기  별   알갱이  해 쪽
+  var SKY = {
+    night:   [[10, 10, 10],   [10, 10, 11],   [11, 11, 14],   [60, 70, 120],   0,    50, 120,          60,   1,    1,     0],
+    predawn: [[8, 11, 22],    [16, 22, 42],   [40, 40, 66],   [130, 116, 156], 0.24, 16, 112,          72,   0.72, 1,     -0.08],
+    sunrise: [[15, 24, 48],   [62, 56, 90],   [200, 124, 96], [255, 178, 116], 0.62, 18, 104,          64,   0.3,  1.04,  -0.22],
+    morning: [[22, 48, 88],   [54, 100, 154], [122, 162, 202],[255, 238, 204], 0.4,  27, 34,           56,   0.05, 1.1,   -0.2],
+    noon:    [[28, 68, 118],  [60, 116, 174], [114, 166, 214],[255, 252, 240], 0.5,  50, -6,           60,   0,    1.16,  0],
+    after:   [[28, 62, 108],  [72, 112, 162], [152, 162, 182],[255, 234, 194], 0.42, 73, 36,           56,   0.02, 1.1,   0.2],
+    sunset:  [[22, 24, 64],   [98, 60, 106],  [224, 124, 76], [255, 152, 88],  0.7,  82, 103,          66,   0.22, 1.02,  0.24],
+    dusk:    [[10, 13, 32],   [32, 28, 58],   [72, 46, 72],   [192, 104, 112], 0.26, 84, 112,          72,   0.7,  1,     0.1]
+  };
+  function skyAt(h, d) {   // 그 시각의 하늘 — 앞뒤 두 장면을 섞는다
+    var st = sunTimes(d), sr = st[0], ss = st[1], K = [[0, SKY.night], [sr - 1.4, SKY.night], [sr - 0.6, SKY.predawn], [sr + 0.1, SKY.sunrise], [sr + 1.3, SKY.morning], [(sr + ss) / 2, SKY.noon], [ss - 1.7, SKY.after], [ss - 0.15, SKY.sunset], [ss + 0.7, SKY.dusk], [ss + 1.5, SKY.night], [24, SKY.night]];
+    var q = 0; while (q < K.length - 2 && h >= K[q + 1][0]) q++;
+    var a = K[q][1], b = K[q + 1][1], t = (h - K[q][0]) / (K[q + 1][0] - K[q][0] || 1), out = [], m; t = t < 0 ? 0 : t > 1 ? 1 : t; t = t * t * (3 - 2 * t);
+    for (m = 0; m < a.length; m++) out.push(a[m].length ? [a[m][0] + (b[m][0] - a[m][0]) * t, a[m][1] + (b[m][1] - a[m][1]) * t, a[m][2] + (b[m][2] - a[m][2]) * t] : a[m] + (b[m] - a[m]) * t);
+    return out;
+  }
+  /* ── 새 해 — 하늘과 해를 한 장의 그림으로 계산해 그린다 ── */
+  var SKYFS = [
+    'precision highp float;',
+    'uniform vec2 uRes, uSun;',
+    'uniform vec3 uTop, uMid, uBot, uCore, uLimb, uGlareCol, uInCol, uOutCol, uHzCol;',
+    'uniform float uR, uVis, uLow, uEve, uAurIn, uAurOut, uGlare, uGw, uGp, uVeil, uHz, uSoft, uMist, uWarm, uBand, uHalo, uHaloR, uSeed, uDayHaze, uDayDeep, uFar, uMoonR, uMoonPh, uMoonVis; uniform vec2 uMoon;',
+    'float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }',
+    'float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
+    '  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }',
+    'void main() {',
+    '  vec2 p = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y), q = p / uRes.y;',
+    '  float v = q.y;',
+    '  vec3 col = v < 0.52 ? mix(uTop, uMid, v / 0.52) : mix(uMid, uBot, (v - 0.52) / 0.48);',
+    '  vec2 d = p - uSun; float r = length(d), rn = r / uR;',
+    '  float hz2 = smoothstep(0.45, 1.05, v), sd = r / uRes.y;',
+    '  col = mix(col, vec3(0.74, 0.82, 0.88), uDayHaze * hz2 * hz2);',
+    '  col *= 1.0 - uDayDeep * smoothstep(0.15, 0.95, sd) * (1.0 - hz2);',
+    '  float far = smoothstep(0.15, 0.95, abs(p.x - uSun.x) / uRes.x);',
+    '  col = mix(col, col * vec3(0.90, 0.74, 1.02) + vec3(0.03, 0.0, 0.06), far * uFar);',
+    '  float nz = vnoise(q * 2.3 + uSeed) * 0.65 + vnoise(q * 5.3 - uSeed) * 0.35;',
+    '  float band = vnoise(vec2(q.x * 1.3 + uSeed, q.y * 12.0)) * 0.7 + vnoise(vec2(q.x * 2.9 - uSeed, q.y * 27.0)) * 0.3;',
+    '  float haze = mix(1.0, 0.68 + 0.64 * band, uBand) * (0.88 + 0.24 * nz);',
+    '  vec2 e = d / uRes.y; e.x *= mix(1.0, 0.5, uLow); e.y *= mix(1.0, e.y > 0.0 ? 0.8 : 1.25, uLow);',
+    '  float le = length(e);',
+    '  float hv = smoothstep(0.5, 1.03, v), hxn = (p.x - uSun.x) / uRes.x / mix(0.52, 0.4, uEve);',
+    '  float lum = dot(col, vec3(0.3, 0.59, 0.11));',
+    '  col = mix(col, vec3(lum) * 1.12 + vec3(0.02, 0.02, 0.03), hv * uMist);',
+    '  col *= mix(vec3(1.0), vec3(1.04, 0.94, 0.72), uWarm * exp(-le * 2.4));',
+    '  float rh = r / uHaloR, rd = rh - 1.0;',
+    '  col *= 1.0 - 0.028 * uHalo * smoothstep(0.45, 0.9, rh) * (1.0 - smoothstep(0.985, 1.0, rh));',
+    '  vec3 L = uOutCol * exp(-le * mix(4.4, 2.6, uLow)) * haze * uAurOut;',
+    '  L += uInCol * exp(-le * mix(11.0, 5.5, uLow)) * uAurIn;',
+    '  L += uHzCol * hv * hv * exp(-hxn * hxn) * haze * uHz;',
+    '  float ring = (rd < 0.0 ? exp(-rd * rd / 0.0005) : exp(-rd / 0.085)) * (0.92 + 0.08 * nz);',
+    '  L += mix(vec3(1.0, 0.86, 0.74), vec3(0.88, 0.94, 1.0), smoothstep(-0.02, 0.12, rd)) * ring * 0.085 * uHalo;',
+    '  L += uGlareCol * (uGlare / (1.0 + pow(rn / uGw, uGp)) + uVeil / (1.0 + pow(rn / 20.0, 1.5))) * uVis;',
+    '  col = 1.0 - (1.0 - col) * exp(-L);',
+    '  float disc = (1.0 - smoothstep(1.0 - uSoft, 1.0 + uSoft * 0.5, rn)) * uVis;',
+    '  vec3 dcol = mix(uCore, uLimb, pow(clamp(rn, 0.0, 1.0), 2.4));',
+    '  col = mix(col, max(col, dcol), disc);',
+    '  vec2 md = (p - uMoon) / uMoonR; float mr = length(md), mh = sqrt(max(0.0, 1.0 - md.y * md.y));',
+    '  float mt = uMoonPh < 3.14159 ? smoothstep(-0.07, 0.07, md.x - cos(uMoonPh) * mh) : smoothstep(-0.07, 0.07, -md.x - cos(6.28318 - uMoonPh) * mh);',
+    '  col += vec3(0.62, 0.68, 0.82) * exp(-mr * 0.55) * 0.07 * uMoonVis;',
+    '  col = mix(col, max(col, vec3(0.93, 0.94, 0.9) * (0.84 + 0.16 * vnoise(md * 1.7 + 9.0))), (1.0 - smoothstep(0.9, 1.0, mr)) * mt * uMoonVis);',
+    '  col += (hash(gl_FragCoord.xy + uSeed) - 0.5) / 255.0 * 1.6;',
+    '  gl_FragColor = vec4(col, 1.0);',
+    '}'
+  ].join('\n');
+  function initSky() {   // 하늘 그리는 판을 준비한다 — 안 되면 시안 29 방식(색 번짐)으로 간다
+    try {
+      sgl = skyc.getContext('webgl', { alpha: false, antialias: false, depth: false });
+      if (!sgl) throw new Error('webgl 없음');
+      var mk = function (type, src) { var o = sgl.createShader(type); sgl.shaderSource(o, src); sgl.compileShader(o); if (!sgl.getShaderParameter(o, sgl.COMPILE_STATUS)) throw new Error(sgl.getShaderInfoLog(o)); return o; };
+      sprog = sgl.createProgram(); sgl.attachShader(sprog, mk(sgl.VERTEX_SHADER, 'attribute vec2 aQ; void main(){ gl_Position = vec4(aQ, 0.0, 1.0); }')); sgl.attachShader(sprog, mk(sgl.FRAGMENT_SHADER, SKYFS)); sgl.linkProgram(sprog);
+      if (!sgl.getProgramParameter(sprog, sgl.LINK_STATUS)) throw new Error(sgl.getProgramInfoLog(sprog));
+      var qb = sgl.createBuffer(), aq = sgl.getAttribLocation(sprog, 'aQ'); sgl.bindBuffer(sgl.ARRAY_BUFFER, qb); sgl.bufferData(sgl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), sgl.STATIC_DRAW);
+      sgl.enableVertexAttribArray(aq); sgl.vertexAttribPointer(aq, 2, sgl.FLOAT, false, 0, 0);
+    } catch (err) { sgl = null; skyMode = 2; window.__skyErr = String(err); }
+  }
+  var SKY3 = [   // 해의 높이(도)에 따른 하늘 — 위 · 가운데 · 아래. 해 진 뒤에도 푸른빛 · 보랏빛이 오래 남는다(땅거미)
+    [-18, [8, 9, 13],    [9, 10, 16],    [12, 13, 21]],
+    [-12, [9, 12, 26],   [12, 17, 38],   [18, 23, 46]],
+    [-8,  [11, 17, 42],  [20, 30, 68],   [36, 42, 82]],
+    [-4,  [14, 24, 58],  [36, 50, 98],   [86, 78, 108]],
+    [0,   [18, 30, 64],  [52, 60, 98],   [146, 106, 96]],
+    [6,   [21, 38, 72],  [58, 82, 122],  [142, 134, 134]],
+    [15,  [22, 50, 92],  [52, 94, 142],  [104, 144, 180]],
+    [30,  [24, 58, 104], [50, 100, 154], [98, 146, 192]]
+  ];
+  function sky3(el) {
+    var q = 0, last = SKY3.length - 1, a, b, t, o, m;
+    if (el <= SKY3[0][0]) return SKY3[0]; if (el >= SKY3[last][0]) return SKY3[last];
+    while (el >= SKY3[q + 1][0]) q++;
+    a = SKY3[q]; b = SKY3[q + 1]; t = (el - a[0]) / (b[0] - a[0]); o = [el];
+    for (m = 1; m < 4; m++) o.push([a[m][0] + (b[m][0] - a[m][0]) * t, a[m][1] + (b[m][1] - a[m][1]) * t, a[m][2] + (b[m][2] - a[m][2]) * t]);
+    return o;
+  }
+  function applySkyGL() {   // 지금 시각의 해 높이 · 방향에 맞춰 하늘과 해를 그린다(시각이 바뀔 때만)
+    if (!sgl) { skyMode = 2; applySky(); return; }
+    var d = seaDate(), h = (todH >= 0 ? todH : d.getHours() + d.getMinutes() / 60) % 24, sp = sunPos(h, d), el = sp[0], eve = sp[1] > 180 ? 1 : 0, k = sky3(el), key, val, loc;
+    var W = window.innerWidth, H = window.innerHeight, pr = Math.min(window.devicePixelRatio || 1, todPlay ? 1 : 1.5), cw = Math.max(2, Math.round(W * pr)), ch = Math.max(2, Math.round(H * pr));
+    var doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), bq = 6.2832 * (doy - 81) / 364, dcl = -23.44 * Math.cos(6.2832 * (doy + 10) / 365) * 0.0174533, tn = 12 + (135 - 126.84) * 4 / 60 - (9.87 * Math.sin(2 * bq) - 7.53 * Math.cos(bq) - 1.5 * Math.sin(bq)) / 60, hs = Math.acos(-Math.tan(35.23 * 0.0174533) * Math.tan(dcl)) * 57.2958 / 15, th = 1.5708 * (1 - (h - tn) / hs); if (th > 4.4) th = 4.4; if (th < -1.26) th = -1.26;   /* 해 뜬 때 = 3.14 · 한낮 = 1.57 · 해 진 때 = 0 — 시간에 따라 한결같이 줄어든다 */ var sx = 50 + 38 * Math.cos(th), sy = 100 - 88 * Math.sin(th);   // 뜰 때는 왼쪽 아래, 한낮에는 로고 위쪽, 질 때는 오른쪽 아래
+    var lo = el < 0 ? 1 : el > 16 ? 0 : 1 - el / 16, t1 = el < 0 ? 0 : el > 6 ? 1 : el / 6, t2 = el < 6 ? 0 : el > 16 ? 1 : (el - 6) / 10;   // lo = 해가 낮은 정도
+    var hz = el < -11 ? 0 : el < -2 ? (el + 11) / 9 : el < 8 ? 1 - (el + 2) / 10 * 0.75 : el < 16 ? 0.25 * (16 - el) / 8 : 0, tw = el < -10 ? 0 : el < 0 ? 1 + el / 10 : 1, dayF = el < 4 ? 0 : el > 16 ? 1 : (el - 4) / 12;
+    var mx = function (a, b, t) { var o = [], i; for (i = 0; i < a.length; i++) o.push(a[i] + (b[i] - a[i]) * t); return o; };
+    var kf = function (a, b, c) { return el < 6 ? mx(a, b, t1) : mx(b, c, t2); };   // 지평선 · 낮게 뜬 해(6도) · 높이 뜬 해 사이를 잇는다
+    /* 눈부심 세기 · 폭 · 줄어드는 가파르기 · 넓은 빛막 · 안쪽 빛 · 바깥 빛 · 해 경계의 흐림 · 해 반지름 — 아침은 뽀얗고 넓게, 저녁은 해는 또렷하고 대기는 짙게 */
+    var HI = [6, 1.0, 1.7, 0.12, 0.16, 0.13, 0.3, 8.5];
+    var S = eve ? kf([0.15, 1.8, 2.2, 0.06, 0.42, 0.95, 0.07, 17], [0.35, 1.8, 2.2, 0.1, 0.62, 0.8, 0.09, 15], HI) : kf([0.9, 2.8, 1.9, 0.14, 0.3, 0.4, 0.55, 13], [1.7, 2.4, 1.9, 0.16, 0.26, 0.3, 0.5, 12], HI);
+    var top = mx(k[1], eve ? [28, 26, 62] : [42, 59, 114], 0.6 * hz), midc = mx(k[2], eve ? [108, 66, 110] : [111, 132, 178], 0.6 * hz * (el >= 0 ? 1 : el < -4 ? 0.5 : 1 + el / 8)), bot = mx(k[3], eve ? [236, 104, 44] : [255, 206, 166], (eve ? 0.8 : 0.7) * hz); var sea = seaNow(), SEA = [[[1.06, 1.05, 1], [1.08, 1.06, 1], [1.03, 1.02, 1], 0], [[0.8, 0.94, 1.1], [0.84, 0.98, 1.1], [0.92, 1, 1.06], 0], [[0.9, 0.97, 1.06], [0.97, 1, 1.03], [1.1, 1.02, 0.9], 0], [[0.98, 0.99, 0.97], [1.04, 1.02, 0.97], [1.02, 1.01, 0.98], 0.16]][sea.i]; [top, midc, bot].forEach(function (c, q) { var m = SEA[q], l, i2; for (i2 = 0; i2 < 3; i2++) c[i2] *= 1 + (m[i2] - 1) * dayF; l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; for (i2 = 0; i2 < 3; i2++) c[i2] += (l - c[i2]) * SEA[3] * dayF; });   /* 계절의 낮 하늘빛 — 봄 옅게 · 여름 짙푸르게 · 가을 높고 맑게(아래는 황금빛) · 겨울 창백하게 */   // 저녁 = 보랏빛 위 · 짙은 주황 아래 / 아침 = 맑은 푸른빛 위 · 옅은 살구빛 아래
+    var halo = haloMode === 1 || (haloMode === 0 && (doy * 7 + 3) % 9 === 0) ? (el < 16 ? 0 : el > 26 ? 1 : (el - 16) / 10) : 0;   // 햇무리는 해가 높을 때만
+    var sc = Math.min(W, H * 1.7) / 1440; if (sc < 0.5) sc = 0.5;
+    var mph = (d.getTime() / 864e5 + 2440587.5 - 2451550.26) / 29.530588853; mph = (mph - Math.floor(mph)) * 6.2832;   // 달의 모양 — 0 삭 · 1.57 상현 · 3.14 보름 · 4.71 하현
+    var mdh = h - (tn + mph / 6.2832 * 24); mdh -= 24 * Math.round(mdh / 24); var mth = 1.5708 * (1 - mdh / 6.2), mup = mth > 0.03 && mth < 3.11 ? 1 : 0;   // 달은 삭일 때 한낮에, 보름일 때 한밤에 가장 높다
+    var mvis = (el > -1 ? 0 : el < -8 ? 1 : (-1 - el) / 7) * mup * ((1 - Math.cos(mph)) / 2 < 0.03 ? 0 : 1);
+    var U = {
+      uMoon: [(50 + 38 * Math.cos(mth)) / 100 * cw, (100 - 88 * Math.sin(mth)) / 100 * ch], uMoonR: 14 * sc * pr, uMoonPh: mph, uMoonVis: mvis,
+      uRes: [cw, ch], uSun: [sx / 100 * cw, sy / 100 * ch], uTop: [top[0] / 255, top[1] / 255, top[2] / 255], uMid: [midc[0] / 255, midc[1] / 255, midc[2] / 255], uBot: [bot[0] / 255, bot[1] / 255, bot[2] / 255],
+      uCore: eve ? kf([1, 0.84, 0.44], [1, 0.95, 0.7], [1, 1, 0.98]) : kf([1, 0.92, 0.74], [1, 0.98, 0.9], [1, 1, 0.98]),   // 해 가운데 — 저녁은 노란빛, 아침은 옅은 살구빛, 높이 뜨면 흰빛
+      uLimb: eve ? kf([1, 0.76, 0.34], [1, 0.9, 0.56], [1, 0.99, 0.95]) : kf([1, 0.8, 0.6], [1, 0.95, 0.82], [1, 0.99, 0.95]),
+      uGlareCol: eve ? kf([1, 0.6, 0.2], [1, 0.78, 0.32], [1, 0.98, 0.94]) : kf([1, 0.84, 0.7], [1, 0.93, 0.82], [1, 0.98, 0.94]),
+      uInCol: eve ? kf([1, 0.62, 0.18], [1, 0.78, 0.3], [1, 0.98, 0.95]) : kf([1, 0.8, 0.64], [1, 0.91, 0.78], [1, 0.98, 0.95]),
+      uOutCol: eve ? kf([1, 0.28, 0.05], [1, 0.42, 0.1], [0.94, 0.96, 1]) : kf([1, 0.66, 0.56], [1, 0.76, 0.64], [0.94, 0.96, 1]),
+      uHzCol: eve ? [1, 0.3, 0.08] : [1, 0.72, 0.58],
+      uR: S[7] * sc * pr, uVis: el < -1.2 ? 0 : el > 0.4 ? 1 : (el + 1.2) / 1.6, uLow: lo, uEve: eve, uGlare: S[0], uGw: S[1], uGp: S[2], uVeil: S[3], uAurIn: S[4] * tw, uAurOut: S[5] * tw, uSoft: S[6],
+      uHz: hz * (eve ? 1.05 : 1.1), uMist: (el < -5 ? 0 : el < -2 ? (el + 5) / 3 : 1) * lo * (eve ? 0.05 : 0.21), uWarm: (eve ? 0.9 : 0.3) * lo * (el < -6 ? 0 : el < 0 ? (el + 6) / 6 : 1), uBand: lo * (eve ? 0.8 : 0.55),
+      uDayHaze: dayF * (0.38 + [0.14, -0.04, -0.14, 0.04][sea.i]), uDayDeep: dayF * 0.16, uFar: hz * (eve ? 0.8 : 0.35),
+      uHalo: halo, uHaloR: 0.21 * Math.min(ch, cw * 1.25), uSeed: doy * 0.37
+    };
+    for (key in SKO) U[key] = SKO[key];   // (시안 다듬기용) 값 덮어쓰기
+    skyLast = U;
+    if (skyc.width !== cw) skyc.width = cw; if (skyc.height !== ch) skyc.height = ch;
+    sgl.viewport(0, 0, cw, ch); sgl.useProgram(sprog);
+    for (key in U) {
+      val = U[key]; loc = sloc[key] || (sloc[key] = sgl.getUniformLocation(sprog, key));
+      if (val.length === 3) sgl.uniform3f(loc, val[0], val[1], val[2]); else if (val.length === 2) sgl.uniform2f(loc, val[0], val[1]); else sgl.uniform1f(loc, val);
+    }
+    sgl.drawArrays(sgl.TRIANGLE_STRIP, 0, 4);
+    viewEl.style.background = 'rgb(' + Math.round(midc[0]) + ',' + Math.round(midc[1]) + ',' + Math.round(midc[2]) + ')';
+    var day = (0.3 * midc[0] + 0.59 * midc[1] + 0.11 * midc[2] - 12) / 85; day = day < 0 ? 0 : day > 1 ? 1 : day;
+    body.style.setProperty('--day', day.toFixed(3)); body.classList.add('sky');
+    skyStar = el > -4 ? 0 : el < -14 ? 1 : (-4 - el) / 10; skyG = 1 + 0.12 * (el < 0 ? 0 : el > 28 ? 1 : el / 28); skyS = el > -6 ? (sx - 50) / 50 * 0.24 : 0;   // 별은 해가 4도 아래로 내려간 뒤부터 천천히 뜬다
+    var gy = sy > 130 ? 130 : sy, lx = sx / 100 * W - skyCx, ly = gy / 100 * H - skyCy, ll = Math.sqrt(lx * lx + ly * ly) || 1;   // 해가 있는 방향 — 그쪽을 향한 알갱이가 더 밝다
+    skyUx = lx / ll; skyUy = ly / ll; skyK = el > 0 ? 0.12 + 0.1 * lo : el > -6 ? 0.12 * (el + 6) / 6 : 0; wxSun = [sx, sy, el, eve]; skyDay0 = day; wxDayNow = -1; wxDirty = true;
+    var hh = Math.floor(h), mm = Math.round((h % 1) * 60); if (mm === 60) { mm = 0; hh = (hh + 1) % 24; }
+    $('todv').textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm; if (todH < 0) $('tod').value = Math.round(h * 4) / 4;
+    if (lite && started) drawStatic();
+  }
+  function sunPos(h, d) {   // 그 시각 해의 높이(도) · 방위(도, 남쪽 = 180) — 광주 기준 어림셈
+    var n2 = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), B = 6.2832 * (n2 - 81) / 364, eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    var dec = -23.44 * Math.cos(6.2832 * (n2 + 10) / 365) * 0.0174533, lat = 35.23 * 0.0174533, H = (h - (12 + (135 - 126.84) * 4 / 60 - eot / 60)) * 15 * 0.0174533;
+    return [Math.asin(Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(H)) * 57.2958, Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(lat) - Math.tan(dec) * Math.cos(lat)) * 57.2958 + 180];
+  }
+  var SKY2 = [   // 해의 높이(도)에 따른 하늘 — 위 · 가운데 · 아래. 채도를 낮추고, 밝기와 따뜻함의 변화로 시간대를 느끼게 한다
+    [-16, [8, 9, 13],    [9, 10, 16],    [12, 13, 21]],
+    [-9,  [9, 11, 22],   [15, 18, 34],   [29, 29, 46]],
+    [-4,  [12, 17, 34],  [31, 34, 57],   [84, 68, 76]],
+    [0,   [16, 24, 46],  [48, 50, 80],   [146, 104, 90]],
+    [6,   [21, 36, 66],  [58, 78, 114],  [142, 132, 130]],
+    [15,  [24, 48, 84],  [54, 90, 134],  [106, 140, 174]],
+    [30,  [27, 60, 102], [52, 100, 150], [100, 146, 190]]
+  ];
+  function sky2(el) {   // 높이 사이는 곧게 이어 섞는다 — 멈칫거리지 않는다
+    var q = 0, a, b, t, o, m;
+    if (el <= SKY2[0][0]) return SKY2[0]; if (el >= SKY2[6][0]) return SKY2[6];
+    while (el >= SKY2[q + 1][0]) q++;
+    a = SKY2[q]; b = SKY2[q + 1]; t = (el - a[0]) / (b[0] - a[0]); o = [el];
+    for (m = 1; m < 4; m++) o.push([a[m][0] + (b[m][0] - a[m][0]) * t, a[m][1] + (b[m][1] - a[m][1]) * t, a[m][2] + (b[m][2] - a[m][2]) * t]);
+    return o;
+  }
+  function applySky() {   // 지금 시각(시안에서는 막대로 고른 시각)의 '해 높이'에 맞춰 하늘빛 · 해 · 지평선 빛 · 별 · 알갱이 밝기를 한꺼번에 정한다
+    skyc.style.display = skyMode === 3 ? '' : 'none';
+    if (skyMode === 3) { applySkyGL(); return; }
+    if (skyMode === 1) { applySkyOld(); return; }
+    var d = new Date(), h = (todH >= 0 ? todH : d.getHours() + d.getMinutes() / 60) % 24, sp = sunPos(h, d), el = sp[0], k = sky2(el), L = [];
+    var rgb = function (c) { return Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]); };
+    var sx = 50 + (sp[1] - 180) / 130 * 50, sy = 100 - el / 32 * 100;   // 화면 = 남쪽 하늘의 낮은 부분. 해는 낮을 때만 화면 안에 있고, 높이 뜨면 위로 나간다
+    var sc = Math.min(window.innerWidth, window.innerHeight * 1.7) / 1440, lo = el < 0 ? 0 : el > 20 ? 1 : el / 20, r = (16 - 4 * lo) * (sc < 0.5 ? 0.5 : sc);   // 작고 단정한 해 — 낮을수록 조금 크다
+    var core = [255, 150 + 96 * lo, 96 + 130 * lo], warm = [255, 170 + 68 * lo, 122 + 106 * lo];   // 지평선 가까이 주황 → 높이 뜨면 흰빛
+    var hz = el < -9 ? 0 : el < -2 ? (el + 9) / 7 : el < 8 ? 1 - (el + 2) / 10 * 0.75 : el < 16 ? 0.25 * (16 - el) / 8 : 0, hx = sx < 18 ? 18 : sx > 82 ? 82 : sx;   // 지평선 빛 — 해가 지평선 언저리일 때 가장 짙다
+    var gx = sx < -10 ? -10 : sx > 110 ? 110 : sx, gy = sy < -20 ? -20 : sy, ga = el < -6 ? 0 : 0.13 * (el > 4 ? 1 : (el + 6) / 10);
+    if (el > -0.8 && sy > -6) {   // 해가 화면 안에 있을 때 — 둥근 해와 가까운 빛만
+      L.push('radial-gradient(circle at ' + sx.toFixed(2) + '% ' + sy.toFixed(2) + '%, rgba(' + rgb(core) + ',1) 0, rgba(' + rgb(core) + ',1) ' + (r * 0.76).toFixed(1) + 'px, rgba(' + rgb(core) + ',0) ' + r.toFixed(1) + 'px)');
+      L.push('radial-gradient(circle at ' + sx.toFixed(2) + '% ' + sy.toFixed(2) + '%, rgba(' + rgb(warm) + ',0.3) 0, rgba(' + rgb(warm) + ',0) ' + (r * 3.4).toFixed(1) + 'px)');
+    }
+    if (ga > 0.004) L.push('radial-gradient(ellipse 64% 56% at ' + gx.toFixed(2) + '% ' + gy.toFixed(2) + '%, rgba(' + rgb(warm) + ',' + ga.toFixed(3) + '), rgba(' + rgb(warm) + ',0) 72%)');   // 하늘 전체가 해 쪽으로 은은히 밝다(해가 화면 위로 나가도 위에서 비친다)
+    if (hz > 0.01) L.push('radial-gradient(ellipse 120% 17% at ' + hx.toFixed(2) + '% 103%, rgba(255,172,124,' + (0.3 * hz).toFixed(3) + '), rgba(255,172,124,0) 74%)');   // 지평선에 낮고 넓게 깔리는 빛
+    L.push('linear-gradient(180deg, rgb(' + rgb(k[1]) + ') 0%, rgb(' + rgb(k[2]) + ') 52%, rgb(' + rgb(k[3]) + ') 100%)');
+    viewEl.style.background = L.join(', ');
+    var day = (0.3 * k[2][0] + 0.59 * k[2][1] + 0.11 * k[2][2] - 12) / 85; day = day < 0 ? 0 : day > 1 ? 1 : day;
+    body.style.setProperty('--day', day.toFixed(3)); body.classList.add('sky');
+    skyStar = el > -3 ? 0 : el < -11 ? 1 : (-3 - el) / 8; skyG = 1 + 0.12 * (el < 0 ? 0 : el > 28 ? 1 : el / 28); skyS = el > -6 ? (sx - 50) / 50 * 0.24 : 0;
+    var lx = gx / 100 * window.innerWidth - skyCx, ly = gy / 100 * window.innerHeight - skyCy, ll = Math.sqrt(lx * lx + ly * ly) || 1;   // 해가 있는 방향 — 그쪽을 향한 알갱이가 더 밝다
+    skyUx = lx / ll; skyUy = ly / ll; skyK = el > 0 ? 0.12 + 0.1 * (1 - lo) : el > -6 ? 0.12 * (el + 6) / 6 : 0;
+    var hh = Math.floor(h), mm = Math.round((h % 1) * 60); if (mm === 60) { mm = 0; hh = (hh + 1) % 24; }
+    $('todv').textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm; if (todH < 0) $('tod').value = Math.round(h * 4) / 4;
+    if (lite && started) drawStatic();
+  }
+  function applySkyOld() {   // (비교용) 시안 28 의 하늘 — 시각별 장면을 섞고, 해가 화면을 크게 가로지른다
+    var d = new Date(), h = (todH >= 0 ? todH : d.getHours() + d.getMinutes() / 60) % 24, st = sunTimes(d), len = st[1] - st[0], k = skyAt(h, d);
+    var rgb = function (c) { return Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]); }, L = [];
+    var f = (h - st[0]) / len, up = f >= 0 && f <= 1, el = up ? Math.sin(3.14159 * f) : 0;   // 해가 떠 있는 동안의 높이 0(지평선) → 1(한낮) → 0
+    var sx = 14 + 72 * f, sy = up ? 100 - 90 * Math.pow(el, 0.55) : 100 + (f < 0 ? -f : f - 1) * len * 34;   // 왼쪽 아래에서 떠서 위 가운데를 지나 오른쪽 아래로(남쪽을 바라본 하늘)
+    var sc = Math.min(window.innerWidth, window.innerHeight * 1.7) / 1440, r = (27 - 12 * el) * (sc < 0.45 ? 0.45 : sc);   // 낮게 있을 때 더 크게 보인다
+    var e2 = el < 0.35 ? el / 0.35 : 1, e3 = el < 0.35 ? 0 : (el - 0.35) / 0.65;
+    var core = [255, 118 + 96 * e2 + 38 * e3, 58 + 92 * e2 + 88 * e3], cor = [255, 150 + 78 * e2 + 22 * e3, 92 + 88 * e2 + 62 * e3];   // 지평선 가까이 붉은 주황 → 높이 뜨면 흰빛
+    var tw = f < 0 ? 1 + f * len / 1.3 : f > 1 ? 1 - (f - 1) * len / 1.3 : 1 - el / 0.5, hx = sx < 8 ? 8 : sx > 92 ? 92 : sx, pos = ' at ' + sx.toFixed(2) + '% ' + sy.toFixed(2) + '%, rgba(';   // 지평선에 남는 빛 — 해가 낮을수록, 뜨기 전 · 진 뒤 1.3시간까지
+    if (tw < 0) tw = 0;
+    if (sy < 108) {   // 둥근 해 · 가까운 빛무리 · 넓게 번지는 빛
+      L.push('radial-gradient(circle' + pos + rgb(core) + ',1) 0, rgba(' + rgb(core) + ',1) ' + (r * 0.74).toFixed(1) + 'px, rgba(' + rgb(core) + ',0) ' + r.toFixed(1) + 'px)');
+      L.push('radial-gradient(circle' + pos + rgb(cor) + ',' + (0.5 + 0.12 * (1 - el)).toFixed(3) + ') 0, rgba(' + rgb(cor) + ',0) ' + (r * 5.5).toFixed(1) + 'px)');
+      L.push('radial-gradient(circle' + pos + rgb(cor) + ',' + (0.2 + 0.16 * (1 - el)).toFixed(3) + ') 0, rgba(' + rgb(cor) + ',0) ' + (r * 17).toFixed(1) + 'px)');
+    }
+    if (tw > 0.01) L.push('radial-gradient(ellipse 64% 30% at ' + hx.toFixed(2) + '% 104%, rgba(' + rgb(k[3]) + ',' + (0.6 * tw).toFixed(3) + '), rgba(' + rgb(k[3]) + ',0) 72%)');
+    L.push('linear-gradient(180deg, rgb(' + rgb(k[0]) + ') 0%, rgb(' + rgb(k[1]) + ') 52%, rgb(' + rgb(k[2]) + ') 100%)');
+    viewEl.style.background = L.join(', ');
+    var day = (0.3 * k[1][0] + 0.59 * k[1][1] + 0.11 * k[1][2] - 12) / 95; day = day < 0 ? 0 : day > 1 ? 1 : day;
+    body.style.setProperty('--day', day.toFixed(3)); body.classList.add('sky');
+    skyStar = k[8]; skyG = k[9]; skyS = up || tw > 0 ? (sx - 50) / 50 * 0.24 : 0;
+    var lx = sx / 100 * window.innerWidth - skyCx, ly = sy / 100 * window.innerHeight - skyCy, ll = Math.sqrt(lx * lx + ly * ly) || 1;   // 해가 있는 방향 — 그쪽을 향한 알갱이가 더 밝다
+    skyUx = lx / ll; skyUy = ly / ll; skyK = up ? 0.15 + 0.13 * (1 - el) : 0.1 * tw;
+    var hh = Math.floor(h), mm = Math.round((h % 1) * 60); if (mm === 60) { mm = 0; hh = (hh + 1) % 24; }
+    $('todv').textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm; if (todH < 0) $('tod').value = Math.round(h * 4) / 4;
+    if (lite && started) drawStatic();
+  }
+  function burst(sx, sy) {   // 빈 곳을 누르면 — 누른 자리에서 물결이 알갱이 사이로 번져 나간다
+    var p = toScene(sx, sy), j;
+    rings.push({ x: p[0], y: p[1], r: 6, life: 1 });
+    for (j = 0; j < N; j++) {
+      if (GV[j] < 1) continue;
+      var dx = X[j] - p[0], dy = Y[j] - p[1], d2 = dx * dx + dy * dy;
+      if (d2 < 19600) { var d = Math.sqrt(d2) + 0.5, f = 1 - d / 140; f *= f; VX[j] += dx / d * f * 9 * LT[j]; VY[j] += dy / d * f * 9 * LT[j]; VZ[j] += f * 2.5; }
+    }
+  }
+  function shiver() {   // 글자를 칠 때마다 — 입력 중인 칸의 틀이 톡 튕겼다가 0.1초 남짓에 제자리로 돌아온다
+    if (!focusBox) return;
+    snapT = T() + 200; snapBox = focusBox + 1;
+    for (var j = 0; j < N; j++) if (CK[j] === snapBox && GV[j] === 1) { VX[j] += (Math.random() - 0.5) * 3; VY[j] += (Math.random() - 0.5) * 3; E[j] = 0.9; }
+  }
+  function warp() {   // 로그인 — 알갱이가 화면 앞으로 쏟아져 나오며 넘어간다
+    var now = T(), j;
+    if (lite) { setMode(0); return; }
+    freeUntil = now + 1700;
+    for (j = 0; j < N; j++) {
+      var dx = X[j] - VW / 2, dy = Y[j] - VH * 0.46, d = Math.sqrt(dx * dx + dy * dy) + 1, sp = 5 + Math.random() * 16;
+      VX[j] += dx / d * sp + (Math.random() - 0.5) * 4; VY[j] += dy / d * sp * 0.8 + (Math.random() - 0.5) * 4; VZ[j] = 2 + Math.random() * 7; E[j] = 1;
+    }
+    rings.push({ x: VW / 2, y: VH * 0.46, r: 10, life: 1 });
+    body.classList.add('gone'); flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on');
+    setTimeout(intro, 1800);
+  }
+
+  /* ── 8. 조작 ── */
+  window.addEventListener('pointermove', function (ev) { SXp = ev.clientX; SYp = ev.clientY; lastMove = T(); });
+  function touchEnd(ev) { if (ev.pointerType === 'touch') lastMove = -1e9; }   // 손가락을 떼면 빈 구멍이 바로 잦아든다
+  window.addEventListener('pointerup', touchEnd); window.addEventListener('pointercancel', touchEnd);
+  window.addEventListener('pointerdown', function (ev) {
+    SXp = ev.clientX; SYp = ev.clientY; lastMove = T();
+    if (gate) return;
+    var ui = ev.target.closest && ev.target.closest('.card,.bar,.enter');
+    if (mode === 1) { if (!ui) setMode(0); return; }   // 로그인 창 — 창 바깥(배경)을 누르면 메인으로 돌아간다
+    if (lite || ui) return;
+    burst(ev.clientX, ev.clientY);
+  });
+  ['f1', 'f2'].forEach(function (id, n) {
+    $(id).addEventListener('input', function () { shiver(); body.classList.remove('bad'); });   // 다시 치기 시작하면 알림을 거둔다
+    $(id).addEventListener('focus', function () { focusBox = n + 1; });
+    $(id).addEventListener('blur', function () { if (focusBox === n + 1) focusBox = 0; });
+  });
+  $('go').addEventListener('click', submit);
+  $('go').addEventListener('pointerenter', function () { hotBtn = true; });
+  $('go').addEventListener('pointerleave', function () { hotBtn = false; });
+  $('go').addEventListener('focus', function () { focBtn = !this.matches || this.matches(':focus-visible'); });
+  $('go').addEventListener('blur', function () { focBtn = false; });
+  window.addEventListener('keydown', function (ev) {   // 로그인 창 — Enter 로 로그인, Esc 로 닫기
+    if (mode !== 1 || gate) return;
+    if (ev.key === 'Escape') { ev.preventDefault(); setMode(0); }
+    else if (ev.key === 'Enter' && !ev.isComposing && ev.target !== $('cancel')) { ev.preventDefault(); submit(); }
+  });
+  function applyPolish() { for (var pq1 = 1; pq1 <= 6; pq1++) body.classList.toggle('p' + pq1, POL[pq1] === 1); CLR1 = POL[5] ? C1B : C1; }
+  $('tod').addEventListener('input', function () { clearInterval(todPlay); todPlay = 0; todH = +this.value; applySky(); });   // (시안) 시간 막대
+  $('wxseg').addEventListener('click', function (ev) {   // (시안) 날씨 — 실제로는 광주 날씨를 받아 고른다(포털에 옮길 때)
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    var wv = +b.getAttribute('data-v'); clearInterval(wxLiveTimer); wxLiveTimer = 0;
+    if (wv === 6) { wxLiveFetch(); wxLiveTimer = setInterval(wxLiveFetch, 600000); } else { $('wxlive').textContent = ''; setWx(wv); }   // '실제' = 광주의 지금 날씨를 받아 맞춘다(10분마다 다시)
+  });
+  $('xmseg').addEventListener('click', function (ev) {   // (시안) 크리스마스 — 자동(12/20~25) / 켬
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    wxXm = +b.getAttribute('data-v'); wxDirty = true;
+  });
+  $('seaseg').addEventListener('click', function (ev) {   // (시안) 계절 — 자동(오늘 날짜) / 봄 · 여름 · 가을 · 겨울
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    wxSea = +b.getAttribute('data-v'); wxDirty = true; applySky();
+  });
+  $('hzseg').addEventListener('click', function (ev) {   // (시안) 미세먼지 — 좋음 / 나쁨 / 매우 나쁨
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    wxHzT = [0, 0.55, 1][+b.getAttribute('data-v')]; wxDirty = true;
+  });
+  $('haloseg').addEventListener('click', function (ev) {   // (시안) 햇무리 — 가끔(날짜로 정함) / 늘 켬 / 끔
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    haloMode = +b.getAttribute('data-v'); applySky();
+  });
+  $('todnow').addEventListener('click', function () { clearInterval(todPlay); todPlay = 0; todH = -1; applySky(); });
+  $('todplay').addEventListener('click', function () {   // (시안) 하루를 16초에 돌려 본다
+    clearInterval(todPlay); todH = 0; $('tod').value = 0;
+    todPlay = setInterval(function () {}, 1e6);   // '돌리는 중' 표시로만 쓴다 — 다른 단추들이 clearInterval(todPlay); todPlay = 0 으로 멈춘다
+    (function () {
+      var id = todPlay, lastT = performance.now();
+      var rate = function (e) { return e > -1.5 ? 0.757 : e > -5 ? 0.485 + 0.272 * (e + 5) / 3.5 : e > -12 ? 0.485 : e > -16 ? 0.485 + 3.155 * (-12 - e) / 4 : 3.64; };   // 1초에 흐르는 시간(시) — 해가 보이는 동안은 한결같다, 땅거미는 천천히, 깊은 밤은 빨리
+      (function step(nw) {
+        if (todPlay !== id) return;
+        var dt = (nw - lastT) / 1000; lastT = nw; if (dt < 0) dt = 0; if (dt > 0.1) dt = 0.1;   // 화면을 그릴 때마다 실제로 흐른 시간만큼만 넘긴다
+        todH += rate(sunPos(todH, seaDate())[0]) * dt;
+        if (todH >= 24) { clearInterval(todPlay); todPlay = 0; todH = -1; applySky(); return; }
+        $('tod').value = todH; applySky(); requestAnimationFrame(step);
+      })(lastT);
+    })();
+  });
+  setInterval(function () { if (todH < 0) applySky(); }, 60000);   // 실제로는 1분마다 하늘을 조금씩 바꾼다
+  $('mockres').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    mockOk = b.getAttribute('data-v') === '1';
+  });
+  $('mockrm').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    RM = b.getAttribute('data-v') === '1'; resize(); if (!lite) intro();
+  });
+  $('enter').addEventListener('click', function () { setMode(1); setTimeout(function () { if (mode === 1) $('f1').focus(); }, 650); });
+  $('cancel').addEventListener('click', function () { setMode(0); });
+  $('join').addEventListener('click', function () { hostCall('signup'); });   // 가입 신청 — 포털의 가입 신청 창을 연다
+  $('try').addEventListener('click', function () { enterGate(2); });
+   // 시안에서는 넘어가는 장면만 보여 주고 처음으로 돌아온다(실제로는 체험관으로 이동)
+  $('again').addEventListener('click', intro);
+
+  /* ── 8.5 날씨 — 구름(낮은 해상도 WebGL) · 비 · 눈 · 바람에 날리는 먼지 · 번개(2D) ── */
+  var WXP = [   // 날씨마다 — 구름 덮인 정도 · 어두운 정도 · 비 · 눈 · 바람 · 번개 · 지평선 틈 · 구름 흐르는 빠르기 · 구름의 짙기(1 = 하늘이 안 비침)
+    { cv: 0,    dk: 0,    rn: 0,   sn: 0, wd: 0.08, st: 0, gp: 1,   dr: 0.004, al: 1 },      // 0 맑음
+    { cv: 0.84, dk: 0.1,  rn: 0,   sn: 0, wd: 0.12, st: 0, gp: 0.7, dr: 0.006, al: 0.88 },   // 1 흐림 — 하늘이 군데군데 비친다
+    { cv: 1.12, dk: 0.42, rn: 1,   sn: 0, wd: 0.22, st: 0, gp: 0.3, dr: 0.009, al: 0.95 },   // 2 비
+    { cv: 1.05, dk: 0.1,  rn: 0,   sn: 1, wd: 0.14, st: 0, gp: 0.4, dr: 0.005, al: 0.9 },    // 3 눈 — 밝고 부드러운 구름
+    { cv: 0.46, dk: 0.05, rn: 0,   sn: 0, wd: 1,    st: 0, gp: 0.6, dr: 0.04,  al: 0.85 },   // 4 바람 — 조각구름이 빠르게 흐른다
+    { cv: 1.3,  dk: 0.72, rn: 1.3, sn: 0, wd: 0.42, st: 1, gp: 0.2, dr: 0.014, al: 0.97 },   // 5 천둥번개
+    { cv: 0, dk: 0, rn: 0, sn: 0, wd: 0.08, st: 0, gp: 1, dr: 0.004, al: 1 },     // 6 실제(광주) — 받아 온 값으로 채운다
+    { cv: 1.1, dk: 0.3, rn: 0.55, sn: 0.7, wd: 0.2, st: 0, gp: 0.3, dr: 0.008, al: 0.93, mx: 1 }   // 7 진눈깨비 — 비와 젖은 눈이 섞여 빠르게 내린다
+  ];
+  WXP.forEach(function (r) { if (r.mx === undefined) r.mx = 0; });
+  var wxMode = 0, wxP = { cv: 0, dk: 0, rn: 0, sn: 0, wd: 0.08, st: 0, gp: 1, dr: 0.004, al: 1, mx: 0 }, wxLast = 0, wxDirty = true, wxClean = false, wxOff = 0, wxGust = 0.6, wxBlow = 0, wxLean = 0, wxWF = 0, wxDust = 0, wxMs = 0;
+  var wxStarK = 1, wxDirK = 1, wxGK = 1, wxFl = 0, wxFlX = 0, wxNext = 0, wxStrike = null, wxLight = 1, wxSun = null, skyDay0 = 0, wxDayNow = -1, wxHold = 0;
+  var WBL = F(N), EDG = new Uint8Array(N), wxfc = $('wxf'), wxfx = wxfc.getContext('2d'), wxWob = 1, wxSpkN = 22, wxFirst = false, CLO = {}, DRP = F(N), wxFx = 2, wxHz = 0, wxHzT = 0, wxSea = -1, wxSeaI = 2, wxSeaPeak = false, wxSeaFl = 0.16, wxSeaUp = 0.025, wxSeaSp = 0, wxCap = 0, wLX = F(160), wLY = F(160), wLZ = F(160), wLS = F(160), fX = F(16), fY = F(16), fVX = F(16), fVY = F(16), fOf = F(16), fPr = F(16), fPX = F(16), fPY = F(16), fHX = F(16), fHY = F(16), wxXm = -1, wxXmOn = false, wxHzKey = '', dustEl = $('dust'), wxGate = false, wxLiveTxt = '', wxDustTxt = '', wxLiveTimer = 0, wxLiveLast = null, cldc = $('cld'), cgl = null, cprog = null, cloc = {}, wxc = $('wx'), wxx = wxc.getContext('2d'), wxPR = 1, wxRMax = 400, wxSMax = 200;
+  var WXN = 900, wRX = F(WXN), wRY = F(WXN), wRZ = F(WXN), wSX = F(400), wSY = F(400), wSZ = F(400), wSP = F(400), wDX = F(80), wDY = F(80), wDZ = F(80), wxSeeded = false;
+  var wxSeed = (Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 864e5) * 0.37) % 40;   // 날마다 구름 모양이 다르다
+  var wxFlake = (function () { var c3 = document.createElement('canvas'), x3 = c3.getContext('2d'), g3; c3.width = c3.height = 32; g3 = x3.createRadialGradient(16, 16, 0, 16, 16, 16); g3.addColorStop(0, 'rgba(255,255,255,1)'); g3.addColorStop(0.35, 'rgba(255,255,255,0.8)'); g3.addColorStop(1, 'rgba(255,255,255,0)'); x3.fillStyle = g3; x3.fillRect(0, 0, 32, 32); return c3; })();   // 눈송이 — 가장자리가 부드러운 점
+  var CLDFS = [
+    'precision highp float;',
+    'uniform vec2 uRes, uSun, uFl;',
+    'uniform vec3 uLit, uShd, uUnder, uGlow, uHero;',
+    'uniform float uCv, uGap, uOff, uFlash, uSeed, uAl, uSc, uLc; uniform vec2 uEd;',
+    'float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }',   // sin 없는 난수 — 좌표가 커져도 결이 깨지지 않는다
+    'float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
+    '  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }',
+    'float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * vn(p); p = mat2(1.6, 1.2, -1.2, 1.6) * p + vec2(3.1, 1.7); a *= 0.46; } return s * 1.095; }',
+    'void main() {',
+    '  vec2 fc = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);',
+    '  float v = fc.y / uRes.y, asp = uRes.x / uRes.y, hg = 1.75 - v;',
+    '  vec2 w = vec2((fc.x / uRes.y - asp * 0.5) / hg * 1.25, 1.9 / hg) * uSc + vec2(uOff, uSeed);',   // 하늘을 평면으로 펼친 자리 — 지평선 쪽 구름은 작고 납작하다
+    '  w += 0.34 * vec2(vn(w * 0.7 + 5.2), vn(w * 0.7 - 2.7)) - 0.17;',   // 모양을 조금 비틀어 줄 맞춘 듯한 결을 깬다
+    '  float n = fbm(w);',
+    '  vec2 sdir = normalize(uSun - fc + 0.001);',
+    '  float nl = fbm(w + sdir * 0.22);',   // 해 쪽으로 조금 옮긴 자리의 짙기 — 해 쪽이 옅으면 그쪽에서 빛이 든다
+    '  float hzf = smoothstep(0.55, 1.0, v);',
+    '  n = mix(n, 0.5 + (n - 0.5) * 0.22, hzf); nl = mix(nl, 0.5 + (nl - 0.5) * 0.22, hzf);',   // 지평선 쪽은 결이 흐려진다
+    '  float th = 0.6 - uCv * 0.3;',
+    '  float a = smoothstep(th - uEd.x, th + uEd.y, n);',
+    '  a = mix(a, 1.0, clamp((uCv - 0.95) * 4.0, 0.0, 1.0));',   // 다 덮이면 틈이 없다
+    '  float t = clamp((n - th) / 0.32, 0.0, 1.0);',   // 구름 두께
+    '  float lt = clamp(0.55 + (n - nl) * uLc, 0.0, 1.0);',
+    '  vec3 col = mix(uShd, uLit, lt * (1.0 - 0.3 * t));',
+    '  col *= mix(0.9, 1.05, v);',   // 하늘 꼭대기는 조금 어둡고 지평선 쪽은 밝다
+    '  col += uUnder * smoothstep(0.2, 1.0, v) * (0.4 + 0.6 * (1.0 - t));',   // 해가 낮으면 아랫면이 노을빛
+    '  float sd = length((fc - uSun) / uRes.y);',
+    '  col += uGlow * (exp(-sd * 4.0) * (0.3 + 0.7 * (1.0 - t)) + exp(-sd * 13.0) * 0.5);',   // 해가 구름 너머로 비친다 — 얇은 곳일수록
+    '  col += vec3(0.8, 0.83, 1.0) * uFlash * (exp(-length((fc - uFl) / uRes.y) * 2.2) * (0.35 + 0.65 * t) + 0.07);',   // 번개 — 구름 속이 번쩍
+    '  float hd = length((fc - uHero.xy) / vec2(uHero.z, uHero.z * 0.62)); col *= 1.0 - 0.17 * exp(-hd * hd);',   // 로고 · 조감도 뒤의 구름은 살짝 어둡게 — 흰 알갱이가 묻히지 않게
+    '  a *= (1.0 - smoothstep(0.8, 1.0, v) * uGap) * clamp(uCv * 5.0, 0.0, 1.0) * uAl;',   // 지평선 쪽 틈
+    '  col += (hash(fc + uSeed) - 0.5) / 255.0 * 2.0;',
+    '  gl_FragColor = vec4(col * a, a);',
+    '}'
+  ].join('\n');
+  function initCloud() {   // 구름 그리는 판 — 안 되면 구름 없이 비 · 눈만
+    try {
+      cgl = cldc.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
+      if (!cgl) throw new Error('webgl 없음');
+      var mk = function (type, src) { var o = cgl.createShader(type); cgl.shaderSource(o, src); cgl.compileShader(o); if (!cgl.getShaderParameter(o, cgl.COMPILE_STATUS)) throw new Error(cgl.getShaderInfoLog(o)); return o; };
+      cprog = cgl.createProgram(); cgl.attachShader(cprog, mk(cgl.VERTEX_SHADER, 'attribute vec2 aQ; void main(){ gl_Position = vec4(aQ, 0.0, 1.0); }')); cgl.attachShader(cprog, mk(cgl.FRAGMENT_SHADER, CLDFS)); cgl.linkProgram(cprog);
+      if (!cgl.getProgramParameter(cprog, cgl.LINK_STATUS)) throw new Error(cgl.getProgramInfoLog(cprog));
+      var qb = cgl.createBuffer(), aq = cgl.getAttribLocation(cprog, 'aQ'); cgl.bindBuffer(cgl.ARRAY_BUFFER, qb); cgl.bufferData(cgl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), cgl.STATIC_DRAW);
+      cgl.enableVertexAttribArray(aq); cgl.vertexAttribPointer(aq, 2, cgl.FLOAT, false, 0, 0); cgl.clearColor(0, 0, 0, 0);
+    } catch (err) { cgl = null; window.__cldErr = String(err); }
+  }
+  function wxLiveSet(o) {   // 받아 온 값 → 세기. 구름 양(0~1) · 비(mm/시) · 눈(cm/시) · 바람(m/초) · 천둥 여부
+    var lg = function (v) { return Math.log(1 + v) / 0.6931; }, rn = o.rain > 0.05 ? Math.min(1.3, 0.28 + 0.3 * lg(o.rain)) : 0, sn = o.snow > 0.02 ? Math.min(1.2, 0.3 + 0.45 * lg(o.snow * 2)) : 0;
+    var w = 0.6 * o.wind + 0.4 * Math.max(o.wind, o.gust), wd = Math.max(0.06, Math.min(1, 0.06 + (w - 1.5) / 11)), wet = Math.min(1, rn + sn), st = o.code >= 95 ? 1 : 0, mix = rn > 0 && sn > 0;
+    var cv = wet > 0 ? 1.05 + 0.2 * Math.min(1, rn) : o.cloud * 0.95; if (st) cv = 1.3;
+    WXP[6] = { cv: cv, dk: Math.min(0.75, 0.1 * o.cloud + 0.34 * Math.min(1, rn) + 0.06 * Math.min(1, sn) + 0.3 * st), rn: st ? Math.max(rn, 0.9) : rn, sn: sn, wd: wd, st: st, gp: wet > 0 ? 0.35 : 1 - 0.4 * o.cloud, dr: 0.004 + 0.04 * wd, al: 0.84 + 0.12 * wet, mx: mix ? 1 : 0 };
+    wxLiveLast = o;
+    wxLiveTxt = '광주 지금 · 구름 ' + Math.round(o.cloud * 100) + '% · 비 ' + (Math.round(o.rain * 10) / 10) + 'mm/시 · 눈 ' + (Math.round(o.snow * 10) / 10) + 'cm/시' + (mix ? '(진눈깨비)' : '') + ' · 바람 ' + (Math.round(o.wind * 10) / 10) + 'm/초' + (st ? ' · 천둥' : '');
+    $('wxlive').textContent = wxLiveTxt + wxDustTxt;
+    setWx(6);
+  }
+  function wxDustSet(p10, p25) {   // 미세먼지(PM10) · 초미세먼지(PM2.5) → 뿌연 정도. 등급은 우리나라 기준(좋음 · 보통 · 나쁨 · 매우 나쁨) 가운데 나쁜 쪽
+    var g = Math.max(p10 > 150 ? 3 : p10 > 80 ? 2 : p10 > 30 ? 1 : 0, p25 > 75 ? 3 : p25 > 35 ? 2 : p25 > 15 ? 1 : 0), hz = Math.max((p25 - 15) / 85, (p10 - 30) / 170);
+    wxHzT = hz < 0 ? 0 : hz > 1 ? 1 : hz; wxDirty = true;
+    wxDustTxt = ' · 미세먼지 ' + Math.round(p10) + ' · 초미세 ' + Math.round(p25) + '(' + ['좋음', '보통', '나쁨', '매우 나쁨'][g] + ')';
+    $('wxlive').textContent = wxLiveTxt + wxDustTxt;
+    Array.prototype.forEach.call($('hzseg').children, function (b) { b.setAttribute('aria-pressed', +b.getAttribute('data-v') === (g < 2 ? 0 : g - 1) ? 'true' : 'false'); });
+  }
+  function wxLiveFetch() {   // 오픈메테오 — 광주 좌표만 보낸다(열쇠 없음). 값은 예측 계산이라 창밖과 어긋날 수 있다
+    $('wxlive').textContent = '광주 날씨 받는 중';
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=35.23&longitude=126.84&current=weather_code,rain,showers,snowfall,cloud_cover,wind_speed_10m,wind_gusts_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul')
+      .then(function (r) { if (!r.ok) throw new Error('응답 ' + r.status); return r.json(); })
+      .then(function (d) {
+        var c = d.current || {}, hr = 3600 / (c.interval || 900);   // 비 · 눈은 지난 15분 동안의 양으로 온다 → 한 시간 양으로 바꾼다
+        wxLiveSet({ cloud: (c.cloud_cover || 0) / 100, rain: ((c.rain || 0) + (c.showers || 0)) * hr, snow: (c.snowfall || 0) * hr, wind: c.wind_speed_10m || 0, gust: c.wind_gusts_10m || 0, code: c.weather_code || 0 });
+      })
+      .catch(function (err) { $('wxlive').textContent = '날씨를 못 받았습니다 — 단추로 골라 주세요'; window.__wxErr = String(err); });
+    fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=35.23&longitude=126.84&current=pm10,pm2_5&timezone=Asia%2FSeoul')
+      .then(function (r) { if (!r.ok) throw new Error('응답 ' + r.status); return r.json(); })
+      .then(function (d) { var c = d.current || {}; wxDustSet(c.pm10 || 0, c.pm2_5 || 0); })
+      .catch(function (err) { window.__wxErr2 = String(err); });   // 미세먼지를 못 받으면 조작 줄에서 고른 대로 둔다
+  }
+  var wxGlowY = (function () { var c3 = document.createElement('canvas'), x3 = c3.getContext('2d'), g3; c3.width = c3.height = 32; g3 = x3.createRadialGradient(16, 16, 0, 16, 16, 16); g3.addColorStop(0, 'rgba(232,255,176,1)'); g3.addColorStop(0.25, 'rgba(206,248,140,0.7)'); g3.addColorStop(1, 'rgba(190,240,120,0)'); x3.fillStyle = g3; x3.fillRect(0, 0, 32, 32); return c3; })();   // 반딧불 — 옅은 연둣빛 점
+  function seaDate() {   // (시안) 계절을 고르면 그 계절의 대표 날짜로 본다 — 해 뜨고 지는 때 · 달 모양도 그날 것
+    var nw = new Date(); return wxSea < 0 ? nw : new Date(nw.getFullYear(), [3, 6, 10, 0][wxSea], [5, 15, 5, 15][wxSea], nw.getHours(), nw.getMinutes());
+  }
+  var wxPetal = [], wxPetalS = null, wxLeaf = [];
+  (function () {   // 벚꽃잎 · 단풍잎을 미리 그려 둔다(그릴 때마다 모양을 다시 만들지 않게)
+    function mk(sz, draw) { var c3 = document.createElement('canvas'), x3 = c3.getContext('2d'); c3.width = c3.height = sz; x3.translate(sz / 2, sz / 2); x3.scale(sz / 2.3, sz / 2.3); draw(x3); return c3; }
+    function petal(x3, c1, c2, soft) {   // 끝이 갈라진 벚꽃잎 — 밑동은 분홍, 가장자리로 갈수록 흰빛
+      var g3 = x3.createRadialGradient(0, 0.6, 0.05, 0, 0, 1.2); g3.addColorStop(0, c1); g3.addColorStop(1, c2); x3.fillStyle = g3;
+      x3.beginPath(); x3.moveTo(0, 1); x3.bezierCurveTo(0.66, 0.5, 0.7, -0.52, 0.22, -1); if (!soft) x3.quadraticCurveTo(0.08, -0.92, 0, -0.84); if (!soft) x3.quadraticCurveTo(-0.08, -0.92, -0.22, -1); else x3.quadraticCurveTo(0, -1.12, -0.22, -1); x3.bezierCurveTo(-0.7, -0.52, -0.66, 0.5, 0, 1); x3.fill();
+    }
+    wxPetal.push(mk(48, function (x3) { petal(x3, 'rgba(255,206,224,1)', 'rgba(255,244,248,0.96)'); }));
+    wxPetal.push(mk(48, function (x3) { petal(x3, 'rgba(255,184,208,1)', 'rgba(255,230,240,0.96)'); }));
+    wxPetalS = mk(64, function (x3) { x3.scale(0.7, 0.7); x3.shadowColor = 'rgba(255,224,236,0.9)'; x3.shadowBlur = 9; petal(x3, 'rgba(255,210,226,0.85)', 'rgba(255,240,246,0.8)', true); });   // 가까이 지나가는 꽃잎 — 초점이 나가 흐리다
+    var LP = [[0, -1], [0.14, -0.7], [0.3, -0.78], [0.24, -0.36], [0.52, -0.6], [0.58, -0.44], [0.9, -0.48], [0.8, -0.2], [0.94, -0.08], [0.52, 0.22], [0.6, 0.44], [0.1, 0.36], [0.05, 0.62]];
+    function leaf(x3, c1, c2) {   // 단풍나무 잎 — 다섯 갈래 + 잎자루
+      var g3 = x3.createLinearGradient(0, -1, 0, 0.7), q; g3.addColorStop(0, c1); g3.addColorStop(1, c2); x3.fillStyle = g3;
+      x3.beginPath(); x3.moveTo(0, -1); for (q = 1; q < LP.length; q++) x3.lineTo(LP[q][0], LP[q][1]); x3.lineTo(0.035, 1); x3.lineTo(-0.035, 1); for (q = LP.length - 1; q > 0; q--) x3.lineTo(-LP[q][0], LP[q][1]); x3.closePath(); x3.fill();
+    }
+    wxLeaf.push(mk(64, function (x3) { leaf(x3, 'rgb(208,68,48)', 'rgb(176,48,40)'); }));
+    wxLeaf.push(mk(64, function (x3) { leaf(x3, 'rgb(234,130,56)', 'rgb(206,92,44)'); }));
+    wxLeaf.push(mk(64, function (x3) { leaf(x3, 'rgb(238,178,80)', 'rgb(214,136,58)'); }));
+  })();
+  function seaNow() {   // 지금 계절(0 봄 · 1 여름 · 2 가을 · 3 겨울) · 꽃잎과 낙엽이 날리는 절정 때인지 · 크리스마스 무렵인지
+    var nw = new Date(), m = nw.getMonth() + 1, md = m * 100 + nw.getDate(), xm = md >= 1220 && md <= 1225;
+    if (wxSea >= 0) return { i: wxSea, peak: wxSea === 0 || wxSea === 2, xm: xm };
+    return { i: m >= 3 && m <= 5 ? 0 : m >= 6 && m <= 8 ? 1 : m >= 9 && m <= 11 ? 2 : 3, peak: (md >= 327 && md <= 409) || (md >= 1030 && md <= 1125), xm: xm };
+  }
+  function setWx(m) { wxMode = m; wxDirty = true; if (WXP[m].st > 0) { wxNext = T() + 1600; wxFirst = true; } }   // 천둥번개로 바꾸면 1.6초 뒤 첫 번개
+  function wxResize() {
+    var cs = 0.34 * Math.min(DPR, 1.5), q;
+    wxPR = Math.min(DPR, 1.5); wxc.width = Math.max(2, Math.round(VW * wxPR)); wxc.height = Math.max(2, Math.round(VH * wxPR)); wxfc.width = wxc.width; wxfc.height = wxc.height; wxClean = false;
+    cldc.width = Math.max(64, Math.round(VW * cs)); cldc.height = Math.max(40, Math.round(VH * cs));
+    wxRMax = Math.max(140, Math.min(WXN / 1.3, Math.round(VW * VH / 2100))); wxSMax = Math.max(80, Math.min(400, Math.round(VW * VH / 3400)));   // 빗줄기 · 눈송이 수는 화면 넓이에 맞춘다
+    if (!wxSeeded && VW > 0) {
+      wxSeeded = true;
+      for (q = 0; q < WXN; q++) { wRX[q] = Math.random() * VW; wRY[q] = Math.random() * VH; wRZ[q] = Math.random(); }
+      for (q = 0; q < 400; q++) { wSX[q] = Math.random() * VW; wSY[q] = Math.random() * VH; wSZ[q] = Math.pow(Math.random(), 2.3); wSP[q] = Math.random() * 6.2832; }
+      for (q = 0; q < 80; q++) { wDX[q] = Math.random() * VW; wDY[q] = Math.random() * VH; wDZ[q] = Math.random(); }
+      for (q = 0; q < 160; q++) { wLX[q] = Math.random() * VW; wLY[q] = Math.random() * VH; wLZ[q] = Math.random(); wLS[q] = Math.random() * 6.2832; }
+      for (q = 0; q < 16; q++) { var fz = q % 7 < 2 ? 0 : q % 7 < 4 ? 1 : 2; fHX[q] = fz === 0 ? 0.04 + 0.15 * Math.random() : fz === 1 ? 0.81 + 0.15 * Math.random() : 0.08 + 0.84 * Math.random(); fHY[q] = fz === 2 ? 0.77 + 0.15 * Math.random() : 0.54 + 0.36 * Math.random(); fX[q] = fPX[q] = fHX[q] * VW; fY[q] = fPY[q] = fHY[q] * VH; fOf[q] = Math.random() * 9; fPr[q] = 3.2 + Math.random() * 3.4; }
+    }
+    wxDirty = true;
+  }
+  function wxFlash(t) {   // 번개 밝기 — 확 번쩍, 잠깐 어두웠다가 한 번 더, 그리고 잦아든다(1초에 두 번을 넘지 않는다)
+    if (t < 0) return 0; if (t < 35) return t / 35; if (t < 90) return 1 - (t - 35) / 55 * 0.78; if (t < 125) return 0.22 + (t - 90) / 35 * 0.5; if (t < 650) return 0.72 * Math.exp(-(t - 125) / 120); return 0;
+  }
+  function wxBolt(x) {   // 번개 줄기 — 가운데를 조금씩 비틀어 가며 쪼갠다 + 곁가지 몇 개
+    var H = VH, pts = [[x, -10], [x + (Math.random() - 0.5) * VW * 0.12, H * (0.8 + Math.random() * 0.18)]], d = H * 0.16, q, k3, out, a3, b3, segs = [];
+    for (q = 0; q < 7; q++) { out = [pts[0]]; for (k3 = 1; k3 < pts.length; k3++) { a3 = pts[k3 - 1]; b3 = pts[k3]; out.push([(a3[0] + b3[0]) / 2 + (Math.random() - 0.5) * d, (a3[1] + b3[1]) / 2 + (Math.random() - 0.5) * d * 0.3], b3); } pts = out; d *= 0.55; }
+    segs.push({ p: pts, w: 1 });
+    for (q = 0; q < 3 + ((Math.random() * 3) | 0); q++) {
+      var i0 = (10 + Math.random() * pts.length * 0.6) | 0, s0 = pts[i0], len = H * (0.06 + Math.random() * 0.16), an = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.6), bp = [s0, [s0[0] + Math.sin(an) * len, s0[1] + Math.cos(an) * len]], dd = len * 0.3, r3;
+      for (r3 = 0; r3 < 5; r3++) { out = [bp[0]]; for (k3 = 1; k3 < bp.length; k3++) { a3 = bp[k3 - 1]; b3 = bp[k3]; out.push([(a3[0] + b3[0]) / 2 + (Math.random() - 0.5) * dd, (a3[1] + b3[1]) / 2 + (Math.random() - 0.5) * dd * 0.4], b3); } bp = out; dd *= 0.55; }
+      segs.push({ p: bp, w: 0.5 });
+    }
+    return segs;
+  }
+  function wxClouds() {   // 구름 색은 해의 높이로 — 낮엔 회색, 해가 낮으면 아랫면이 노을빛, 밤엔 어두운 잿빛. 하늘이 밝아지는 만큼 버튼 바탕도 받친다
+    var s3 = wxSun || [50, 12, 30, 0], el = s3[2], eve = s3[3], lt = el < -9 ? 0 : el > 10 ? 1 : (el + 9) / 19, dk = wxP.dk, c1 = wxP.cv > 1 ? 1 : wxP.cv;
+    lt = lt * lt * (3 - 2 * lt); wxLight = lt;
+    var mixc = function (a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; };
+    var lit = mixc([0.1, 0.095, 0.11], [0.6, 0.63, 0.68], lt), shd = mixc([0.06, 0.062, 0.078], [0.48, 0.51, 0.57], lt);
+    var warm = el > -9 && el < 9 ? 1 - Math.abs(el) / 9 : 0, wc = eve ? [1, 0.5, 0.28] : [1, 0.7, 0.56], kd = 1 - 0.5 * dk, ks = 1 - 0.56 * dk, ku = warm * (eve ? 0.5 : 0.3) * (1 - 0.65 * dk);
+    lit = [lit[0] * kd * (1 + 0.08 * warm), lit[1] * kd * (1 - 0.03 * warm), lit[2] * kd * (1 - 0.1 * warm)]; shd = [shd[0] * ks, shd[1] * ks, shd[2] * ks];
+    var su = el > -1 ? Math.min(1, (el + 1) / 4) : 0, gk = su * (0.3 - 0.2 * dk), gc = eve && el < 10 ? [1, 0.74, 0.46] : [1, 0.94, 0.84];
+    wxGK = 1 + 0.2 * c1 * lt + 0.18 * wxHz * lt;   // 뿌연 하늘에서도 알갱이가 묻히지 않게   // 밝은 회색 하늘에서 알갱이가 묻히지 않게 조금 밝힌다
+    var cd = ((0.3 * lit[0] + 0.59 * lit[1] + 0.11 * lit[2]) * 255 - 12) / 85, dy; cd = cd < 0 ? 0 : cd > 1 ? 1 : cd;
+    dy = skyDay0 + (cd - skyDay0) * c1 * 0.9; if (Math.abs(dy - wxDayNow) > 0.004) { wxDayNow = dy; body.style.setProperty('--day', dy.toFixed(3)); }
+    if (wxP.cv < 0.01 || !cgl) { if (cldc.style.display !== 'none') cldc.style.display = 'none'; return; }
+    if (cldc.style.display === 'none') cldc.style.display = '';
+    var cw = cldc.width, ch = cldc.height, key, val, loc, U = { uRes: [cw, ch], uSun: [s3[0] / 100 * cw, s3[1] / 100 * ch], uFl: [wxFlX / (VW || 1) * cw, 0.22 * ch], uLit: lit, uShd: shd, uUnder: [wc[0] * ku, wc[1] * ku, wc[2] * ku], uGlow: [gc[0] * gk, gc[1] * gk, gc[2] * gk], uCv: wxP.cv, uGap: wxP.gp, uAl: wxP.al, uSc: 2.0, uEd: [0.075, 0.125], uLc: 5.0, uOff: wxOff, uFlash: wxFl, uSeed: wxSeed, uHero: [mx / (VW || 1) * cw, my / (VH || 1) * ch, Math.max(BW, 200) * 0.78 / (VW || 1) * cw] };
+    cgl.viewport(0, 0, cw, ch); cgl.useProgram(cprog); for (key in CLO) U[key] = CLO[key];   // (다듬기용) 값 덮어쓰기
+    for (key in U) { val = U[key]; loc = cloc[key] || (cloc[key] = cgl.getUniformLocation(cprog, key)); if (val.length === 3) cgl.uniform3f(loc, val[0], val[1], val[2]); else if (val.length === 2) cgl.uniform2f(loc, val[0], val[1]); else cgl.uniform1f(loc, val); }
+    cgl.clear(cgl.COLOR_BUFFER_BIT); cgl.drawArrays(cgl.TRIANGLE_STRIP, 0, 4);
+  }
+  function wxDraw(dt, still, now) {   // 비 · 눈 · 바람 먼지 · 번개 줄기 — 뒤 판(#wx)에 그리고, 가까운 빗줄기 · 눈송이 열에 하나만 알갱이 앞 판(#wxf)에
+    var c = wxx, cf = wxfx, W = VW, H = VH, rn = wxP.rn, sn = wxP.sn, dw = wxP.wd > 0.35 ? (wxP.wd - 0.35) / 0.65 : 0, st = wxStrike, bolt = !!(st && st.bolt && wxFl > 0.03 && now - st.t0 < 260), pk = wxSeaPeak && (wxSeaI === 0 || wxSeaI === 2), ff = wxSeaI === 1 && wxLight < 0.25 && rn < 0.05;
+    if (wxXmOn && rn < 0.05 && sn < 0.45) sn = 0.45;   // 크리스마스 — 눈이 안 와도 성긴 눈이 내린다
+    if (rn < 0.01 && sn < 0.01 && dw < 0.01 && !bolt && !pk && !ff && !wxXmOn) { if (!wxClean) { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, wxc.width, wxc.height); cf.setTransform(1, 0, 0, 1, 0, 0); cf.clearRect(0, 0, wxfc.width, wxfc.height); wxClean = true; } return; }
+    wxClean = false; c.setTransform(wxPR, 0, 0, wxPR, 0, 0); c.clearRect(0, 0, W, H); cf.setTransform(wxPR, 0, 0, wxPR, 0, 0); cf.clearRect(0, 0, W, H);
+    var lt = wxLight, i, z, b, L, v, n2, ts = now * 0.001, g = wxGust, fr, cc;
+    if (rn > 0.01) {   // 비 — 가는 빗줄기, 가까운 것일수록 길고 밝다. 바람이 세면 비스듬하다
+      var sl = 0.06 + wxP.wd * 0.24 + g * 0.03, fa = (1 + wxFl * 2.2) * (rn > 1 ? 1 : rn), rc = Math.round(168 + 52 * lt) + ',' + Math.round(180 + 46 * lt) + ',' + Math.round(206 + 30 * lt);
+      n2 = Math.min(WXN, Math.round(wxRMax * rn)); c.lineCap = 'butt'; cf.lineCap = 'butt'; cf.beginPath();
+      for (b = 0; b < 3; b++) {
+        c.beginPath();
+        for (i = b; i < n2; i += 3) {
+          z = (b + wRZ[i]) / 3;
+          if (!still) { v = (980 + 760 * z) * dt; wRY[i] += v; wRX[i] += v * sl; if (wRY[i] > H + 30) { wRY[i] = -30 - Math.random() * 90; wRX[i] = Math.random() * (W + H * sl + 60) - H * sl - 30; } else if (wRX[i] > W + 40) wRX[i] -= W + 80; }
+          fr = b === 2 && i % 9 === 2;   // 가까운 빗줄기 셋에 하나(전체의 아홉에 하나)는 알갱이 앞을 지난다
+          L = (9 + 20 * z) * (fr ? 1.3 : 1); cc = fr ? cf : c; cc.moveTo(wRX[i], wRY[i]); cc.lineTo(wRX[i] - L * sl, wRY[i] - L);
+        }
+        c.strokeStyle = 'rgba(' + rc + ',' + Math.min(0.9, (0.06 + 0.085 * b) * fa).toFixed(3) + ')'; c.lineWidth = 0.65 + 0.35 * b; c.stroke();
+      }
+      cf.strokeStyle = 'rgba(' + rc + ',' + Math.min(0.9, 0.2 * fa).toFixed(3) + ')'; cf.lineWidth = 1.25; cf.stroke();
+    }
+    if (sn > 0.01) {   // 눈 — 작고 옅은 송이가 천천히 내려온다(로고 알갱이보다 눈에 띄지 않게). 큰 송이는 드물고, 그 일부만 알갱이 앞을 지난다
+      var sa = (sn > 1 ? 1 : sn) * (wxXmOn ? 0.8 + 0.2 * lt : 0.5 + 0.5 * lt) * (1 + wxFl);
+      n2 = Math.min(400, Math.round(wxSMax * sn));
+      for (i = 0; i < n2; i++) {
+        z = wSZ[i];
+        if (!still) { wSY[i] += (12 + 34 * z) * (1 + 3.2 * wxP.mx) * dt; wSX[i] += (Math.sin(ts * (0.5 + (i % 7) * 0.13) + wSP[i]) * (8 + 13 * z) + wxP.wd * g * (24 + 60 * z)) * dt; if (wSY[i] > H + 10) { wSY[i] = -10; wSX[i] = Math.random() * W; } if (wSX[i] > W + 10) wSX[i] -= W + 20; else if (wSX[i] < -10) wSX[i] += W + 20; }
+        L = (0.7 + 1.9 * z * z) * (1 - 0.3 * wxP.mx); cc = z > 0.8 ? cf : c; cc.globalAlpha = (0.18 + 0.46 * z) * sa; cc.drawImage(wxFlake, wSX[i] - L * 2, wSY[i] - L * 2, L * 4, L * 4);
+      }
+      c.globalAlpha = 1; cf.globalAlpha = 1;
+    }
+    if (dw > 0.01) {   // 바람 — 바람에 실린 먼지가 빠르게 스쳐 간다
+      n2 = Math.round(80 * dw);
+      c.strokeStyle = 'rgba(232,236,246,' + ((0.05 + 0.1 * lt) * dw).toFixed(3) + ')'; c.lineWidth = 0.8; c.beginPath();
+      for (i = 0; i < n2; i++) {
+        z = wDZ[i]; v = (240 + 560 * z) * (0.4 + 0.8 * g);
+        if (!still) { wDX[i] += v * dt; wDY[i] += Math.sin(ts * 1.7 + i) * 26 * dt; if (wDX[i] > W + 40) { wDX[i] = -40 - Math.random() * 300; wDY[i] = Math.random() * H; } }
+        L = v * 0.035; c.moveTo(wDX[i], wDY[i]); c.lineTo(wDX[i] - L, wDY[i] - L * 0.05);
+      }
+      c.stroke();
+    }
+    if (pk) {   // 봄 벚꽃 — 흐드러지게(46~80장, 먼 것은 작고 많게 · 가까운 것 몇 장은 크고 흐리게) / 가을 단풍잎 — 9~14장. 바람결을 따라 물결치듯 흘러가고, 다섯에 하나는 알갱이 앞
+      var spr = wxSeaI === 0, wk2 = Math.min(1, wxP.wd * 1.6), ln = spr ? Math.round(100 + 50 * wk2) : Math.round(9 + 5 * wk2), la = (0.5 + 0.5 * lt) * (1 - 0.5 * Math.min(1, rn)), sp2, nr;
+      for (i = 0; i < ln; i++) {
+        z = wLZ[i]; nr = spr && z > 0.8;
+        if (!still) {
+          wLS[i] += (spr ? 2.6 : 1.7) * (0.6 + z) * dt;
+          wLX[i] += ((spr ? 22 : 14) + 34 * z + wxP.wd * g * (90 + 130 * z) + Math.sin(ts * 0.5 + wLY[i] * 0.008 + z * 5) * (spr ? 30 : 16) + Math.sin(wLS[i] * 0.7) * 16) * dt;
+          wLY[i] += ((spr ? 22 : 30) + 26 * z + Math.cos(wLS[i]) * (spr ? 16 : 10) + Math.sin(ts * 0.37 + wLX[i] * 0.006) * (spr ? 12 : 6) + rn * 50) * dt;
+          if (wLY[i] > H + 24 || wLX[i] > W + 34) { if (Math.random() < 0.45) { wLX[i] = -24; wLY[i] = Math.random() * H * 0.8; } else { wLX[i] = Math.random() * W * 0.9; wLY[i] = -24; } }
+        }
+        cc = i % 5 === 0 ? cf : c; L = spr ? (nr ? 10 + 8 * z : 4.2 + 5.4 * z) : 8 + 7 * z; sp2 = spr ? (nr ? wxPetalS : wxPetal[i % 2]) : wxLeaf[i % 3];
+        cc.save(); cc.translate(wLX[i], wLY[i]); cc.rotate(wLS[i] * 0.6 + i); cc.scale(1, 0.3 + 0.7 * Math.abs(Math.cos(wLS[i] * 1.3)));   // 팔랑이며 뒤집힌다
+        cc.globalAlpha = (spr ? (nr ? 0.5 : 0.62 + 0.36 * z) : 0.62 + 0.3 * z) * la; cc.drawImage(sp2, -L, -L, L * 2, L * 2); cc.restore();
+      }
+      c.globalAlpha = 1; cf.globalAlpha = 1;
+    }
+    if (ff) {   // 여름밤 반딧불 — 저마다 머무는 자리(로고·건물 바깥) 둘레를 느릿하게 떠돈다. 머뭇거리다 다시 날고, 켜질 때 살짝 떠오른다(빠르게 켜져 잠깐 머물다 스르르 꺼짐). 먼 것은 작고 흐리다
+      var fd = 1 - wxLight * 4, fnr = W < 700, fn = fnr ? 8 : 14, ft2, fb, fs2, fa2, hv, hx, hy, fdx, fdy;
+      for (i = 0; i < fn; i++) {
+        ft2 = (ts + fOf[i]) % fPr[i]; fb = ft2 < 0.25 ? ft2 / 0.25 : ft2 < 0.75 ? 1 : ft2 < 1.8 ? 1 - (ft2 - 0.75) / 1.05 : 0; fb = fb * fb * (3 - 2 * fb);
+        if (!still) {
+          hx = (fnr ? 0.08 + 0.84 * ((i * 0.618) % 1) : fHX[i]) * W; hy = (fnr ? 0.77 + 0.15 * ((i * 0.377 + 0.2) % 1) : fHY[i]) * H;   // 머무는 자리 — 화면 비율(좁은 화면은 모두 아래 띠)
+          if (Math.abs(hx - fX[i]) > W * 0.3 || Math.abs(hy - fY[i]) > H * 0.3) { fX[i] = hx; fY[i] = hy; fVX[i] = fVY[i] = 0; }   // 창 크기가 바뀌었으면 제자리로
+          hv = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(ts * (0.31 + i * 0.023) + i * 2.3));
+          fVX[i] += ((Math.sin(ts * (0.21 + i * 0.037) + i * 1.9) * 15 + Math.sin(ts * 0.9 + i * 4.1) * 6) * hv + (hx - fX[i]) * 0.22 - fVX[i]) * dt * 1.4;
+          fVY[i] += ((Math.cos(ts * (0.17 + i * 0.041) + i * 2.7) * 8 + Math.sin(ts * 1.1 + i * 3.3) * 4) * hv + (hy - fY[i]) * 0.22 - fb * 16 - fVY[i]) * dt * 1.4;
+          fPX[i] = fX[i]; fPY[i] = fY[i]; fX[i] += fVX[i] * dt; fY[i] += fVY[i] * dt;
+          if (fX[i] < 20) fX[i] = 20; else if (fX[i] > W - 20) fX[i] = W - 20; if (fY[i] > H * 0.95) fY[i] = H * 0.95;
+        }
+        fs2 = 0.65 + 0.7 * ((i * 0.37) % 1); fa2 = 0.72 + 0.28 * (fs2 - 0.65) / 0.7;
+        fb *= fd * fa2 * (0.9 + 0.1 * Math.sin(ts * 21 + i * 5)); if (fb < 0.02) continue;
+        fdx = fVX[i] * 0.1; fdy = fVY[i] * 0.1;
+        c.globalAlpha = 0.46 * fb; c.drawImage(wxGlowY, fX[i] - 14 * fs2, fY[i] - 14 * fs2, 28 * fs2, 28 * fs2);   // 번지는 빛
+        c.globalAlpha = 0.3 * fb; c.drawImage(wxGlowY, fX[i] - fdx - 4 * fs2, fY[i] - fdy - 4 * fs2, 8 * fs2, 8 * fs2);   // 지나온 자리의 빛 꼬리(0.1초 · 0.2초 · 0.3초 전)
+        c.globalAlpha = 0.2 * fb; c.drawImage(wxGlowY, fX[i] - fdx * 2 - 3.2 * fs2, fY[i] - fdy * 2 - 3.2 * fs2, 6.4 * fs2, 6.4 * fs2);
+        c.globalAlpha = 0.12 * fb; c.drawImage(wxGlowY, fX[i] - fdx * 3 - 2.5 * fs2, fY[i] - fdy * 3 - 2.5 * fs2, 5 * fs2, 5 * fs2);
+        c.globalAlpha = 0.9 * fb; c.drawImage(wxGlowY, fX[i] - 5.5 * fs2, fY[i] - 5.5 * fs2, 11 * fs2, 11 * fs2);   // 또렷한 안쪽 빛
+        c.globalAlpha = fb; c.fillStyle = 'rgb(240,255,176)'; c.beginPath(); c.arc(fX[i], fY[i], 1.6 * fs2, 0, 6.2832); c.fill();   // 밝은 심
+      }
+      c.globalAlpha = 1;
+    }
+    if (wxXmOn) {   // 크리스마스 — 밤하늘의 큰 별 하나(가는 빛줄기 넷). 낮에는 안 보인다
+      var xs = (1 - lt) * (0.82 + 0.18 * Math.sin(ts * 1.3)), xx = W * 0.73, xy = H * 0.15, xr = 46 + 6 * Math.sin(ts * 0.7), xg;
+      if (xs > 0.03) {
+        c.globalAlpha = xs; c.drawImage(wxFlake, xx - 16, xy - 16, 32, 32); c.drawImage(wxFlake, xx - 5, xy - 5, 10, 10);
+        xg = c.createLinearGradient(xx - xr, xy, xx + xr, xy); xg.addColorStop(0, 'rgba(255,244,214,0)'); xg.addColorStop(0.5, 'rgba(255,248,226,0.9)'); xg.addColorStop(1, 'rgba(255,244,214,0)'); c.fillStyle = xg; c.fillRect(xx - xr, xy - 0.6, xr * 2, 1.2);
+        xg = c.createLinearGradient(xx, xy - xr * 1.5, xx, xy + xr * 1.5); xg.addColorStop(0, 'rgba(255,244,214,0)'); xg.addColorStop(0.5, 'rgba(255,248,226,0.9)'); xg.addColorStop(1, 'rgba(255,244,214,0)'); c.fillStyle = xg; c.fillRect(xx - 0.6, xy - xr * 1.5, 1.2, xr * 3);
+        c.globalAlpha = 1;
+      }
+    }
+    if (bolt) {   // 번개 줄기 — 두 번 번쩍이고 사라진다
+      var bf = Math.min(1, wxFl / st.amp * 1.25), sg, p, k4;
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      for (k4 = 0; k4 < st.bolt.length; k4++) {
+        sg = st.bolt[k4]; p = sg.p; c.beginPath(); c.moveTo(p[0][0], p[0][1]); for (i = 1; i < p.length; i++) c.lineTo(p[i][0], p[i][1]);
+        c.strokeStyle = 'rgba(186,192,255,' + (0.12 * bf * sg.w).toFixed(3) + ')'; c.lineWidth = 2 + 6 * sg.w; c.stroke();
+        c.strokeStyle = 'rgba(246,247,255,' + (0.92 * bf * sg.w).toFixed(3) + ')'; c.lineWidth = 0.5 + 1.2 * sg.w; c.stroke();
+      }
+    }
+  }
+  function wxDustDraw() {   // 미세먼지 — 하늘을 뿌옇게 덮는 막(지평선 쪽이 더 짙다). 낮에는 누르스름한 잿빛, 해가 낮으면 붉은 기, 밤에는 어둡게
+    var a = wxHz, lt = wxLight, s3 = wxSun || [50, 12, 30, 0], el = s3[2], warm = el > -9 && el < 9 ? 1 - Math.abs(el) / 9 : 0, r, g, b, key;
+    if (a < 0.01) { if (wxHzKey !== '') { wxHzKey = ''; dustEl.style.opacity = '0'; } return; }
+    r = Math.round(34 + 138 * lt + 14 * warm * lt); g = Math.round(32 + 126 * lt - 12 * warm * lt); b = Math.round(30 + 102 * lt - 36 * warm * lt);
+    key = r + ',' + g + ',' + b + ',' + a.toFixed(2);
+    if (key !== wxHzKey) { wxHzKey = key; dustEl.style.background = 'linear-gradient(180deg, rgba(' + key.slice(0, key.lastIndexOf(',')) + ',' + (0.26 * a).toFixed(3) + ') 0%, rgba(' + key.slice(0, key.lastIndexOf(',')) + ',' + (0.42 * a).toFixed(3) + ') 55%, rgba(' + key.slice(0, key.lastIndexOf(',')) + ',' + (0.62 * a).toFixed(3) + ') 100%)'; dustEl.style.opacity = '1'; }
+  }
+  function wxGateFx() {   // 진입 — 하늘 · 구름 · 미세먼지 막 · 비 · 눈도 함께 안으로 빨려 든다. 먼 것은 천천히, 가까운 것은 빠르게 커지며 스쳐 지나가고 사라진다(알갱이와 같은 가속)
+    if (gate && !lite) {
+      var gz = gcam < 0 ? 0 : gcam > 1.06 ? 1.06 : gcam, og = Math.round(gcx) + 'px ' + Math.round(gcy) + 'px', far = 1 / (1 - gz * 0.24), mid = 1 / (1 - gz * 0.6), near = 1 / (1 - Math.min(0.93, gz * 0.8)), front = 1 / (1 - Math.min(0.95, gz * 0.9)), fade = gz > 0.6 ? Math.max(0, 1 - (gz - 0.6) / 0.4) : 1;
+      skyc.style.transformOrigin = cldc.style.transformOrigin = dustEl.style.transformOrigin = wxc.style.transformOrigin = wxfc.style.transformOrigin = og;
+      skyc.style.transform = 'scale(' + far.toFixed(4) + ')'; cldc.style.transform = dustEl.style.transform = 'scale(' + mid.toFixed(4) + ')'; wxc.style.transform = 'scale(' + near.toFixed(4) + ')'; wxfc.style.transform = 'scale(' + front.toFixed(4) + ')';
+      wxc.style.opacity = fade.toFixed(3); wxfc.style.opacity = (fade * fade).toFixed(3); wxfc.style.transition = 'none';
+      wxGate = true;
+    } else if (wxGate) {
+      wxGate = false; skyc.style.transform = cldc.style.transform = dustEl.style.transform = wxc.style.transform = wxfc.style.transform = ''; wxc.style.opacity = wxfc.style.opacity = ''; wxfc.style.transition = '';
+    }
+  }
+  function wxFrame(now) {   // 화면을 그릴 때마다 — 날씨를 바꾸면 3초쯤에 걸쳐 서서히 바뀐다
+    if (!VW) return;
+    wxGateFx();
+    var sea0 = seaNow(); wxSeaI = sea0.i; wxSeaPeak = sea0.peak; wxXmOn = wxXm === 1 || (wxXm < 0 && sea0.xm); wxSeaFl = [0.24, 0.16, 0.2, 0.12][wxSeaI]; wxSeaUp = [-0.03, 0.025, -0.05, 0][wxSeaI]; wxSeaSp = wxSeaI === 2 ? 0.1 : 0;   // 바람에 날린 알갱이 — 봄엔 팔랑이며 내려앉고, 가을엔 빙글 돌며 떨어진다
+    var c0 = performance.now(), dt = wxLast ? (now - wxLast) / 1000 : 0, tg = WXP[wxMode], key, kk, ts = now * 0.001, c1, bw;
+    wxLast = now; if (dt > 0.1) dt = 0.1; else if (dt < 0) dt = 0;
+    kk = lite ? 1 : 1 - Math.exp(-dt / 0.9);
+    for (key in tg) wxP[key] += (tg[key] - wxP[key]) * kk;
+    wxHz += (wxHzT - wxHz) * kk;
+    var capOn = wxP.sn > 0.3 && wxP.mx < 0.5; wxCap += ((capOn ? 1 : 0) - wxCap) * (lite ? 1 : 1 - Math.exp(-dt / (capOn ? 7 : 3)));   // 눈이 오면 윗면에 눈이 쌓이듯 서서히 밝아지고, 그치면 녹는다
+    c1 = wxP.cv > 1 ? 1 : wxP.cv; bw = wxP.wd > 0.3 ? (wxP.wd - 0.3) / 0.7 : 0;
+    wxGust = 0.62 + 0.24 * Math.sin(ts * 0.71) + 0.2 * Math.sin(ts * 1.9 + 1.7) + 0.12 * Math.sin(ts * 4.3 + 0.4); if (wxGust < 0.15) wxGust = 0.15;   // 바람은 세졌다 약해졌다 한다
+    wxStarK = (1 - c1 * 0.97) * (1 - 0.7 * wxHz); wxDirK = 1 - c1 * 0.8; wxWob = 1 - 0.7 * (wxP.sn > 1 ? 1 : wxP.sn) * (1 - wxP.mx); wxSpkN = 22 * (1 - 0.6 * (wxP.sn > 1 ? 1 : wxP.sn) * (1 - wxP.mx)); if (wxXmOn) wxSpkN *= 1.8;   // 눈이 오면 알갱이의 흔들림 · 반짝임이 잦아든다   // 흐리면 별이 가려지고, 해 쪽이 밝던 빛 방향이 사라진다
+    wxBlow = lite ? 0 : bw * wxGust; wxLean = mode === 0 && !gate ? (wxFx === 2 ? 3.6 : 2.6) * wxBlow : 0; wxWF = (wxFx === 2 ? 0.23 : 0.2) * wxBlow; wxDust = lite ? 0 : 0.9 * wxP.wd * wxGust;
+    wxOff += wxP.dr * dt * (0.55 + 0.45 * wxGust);
+    if (wxP.st > 0.5 && !lite && now > wxNext) {   // 번개 — 5~13초에 한 번, 로고에서 비켜난 왼쪽이나 오른쪽에. 열에 넷은 구름 속에서만 번쩍
+      wxNext = now + 4500 + Math.random() * 7000;
+      var bx = (Math.random() < 0.5 ? 0.05 + Math.random() * 0.19 : 0.76 + Math.random() * 0.19) * VW;
+      wxStrike = { t0: now, x: bx, bolt: wxFirst || Math.random() < 0.36 ? wxBolt(bx) : null, amp: 1 - 0.42 * wxLight }; wxFirst = false;
+    }
+    if (wxHold) { if (!wxStrike) { var hx = 0.15 * VW; wxStrike = { t0: now, x: hx, bolt: wxBolt(hx), amp: 1 - 0.42 * wxLight }; } wxStrike.t0 = now - 30; }   // (점검용) 번개를 잡아 둔다
+    wxFl = wxStrike ? wxFlash(now - wxStrike.t0) * wxStrike.amp : 0; if (wxStrike) { wxFlX = wxStrike.x; if (now - wxStrike.t0 > 700) wxStrike = null; }
+    if (lite) { if (wxDirty) { wxDirty = false; wxClouds(); wxDustDraw(); wxDraw(0, true, now); } return; }
+    wxClouds(); wxDustDraw(); wxDraw(dt, false, now);
+    wxMs += (performance.now() - c0 - wxMs) * 0.05;
+  }
+
+  /* ── 9. 돌리기 ── */
+  var last = T(), acc = 0;
+  function start() { if (!started && VW > 0 && LW > 0) { started = true; seedStars(); intro(); } }
+  function frame(now) {
+    requestAnimationFrame(frame); now = T();
+    if (document.hidden) { last = now; return; }
+    if (window.innerWidth !== VW || window.innerHeight !== VH) { resize(); start(); }
+    wxFrame(now);
+    if (!started || lite) { last = now; return; }   // 휴대폰은 한 번 그린 그림 그대로 — 움직임 계산을 하지 않는다
+    acc += Math.min(now - last, 60); last = now;
+    var n = 0, c0 = performance.now();
+    while (acc >= 15.5 && n < 3) { step(now); acc -= 16.667; n++; }
+    if (n) draw(now);
+    if (n === 1 && !gate) {   // 느린 PC — 한 장을 계산해 그리는 데 드는 시간으로 잰다(창이 가려져 잠깐 느려진 것과 구별된다). 12ms 를 넘기면 알갱이를 절반으로, 절반으로도 14ms 를 넘기면 정지 그림으로
+      ft += (performance.now() - c0 - ft) * 0.05; fcount++;
+      if (fcount > 150) {
+        if (QS === 1 && ft > 12) { QS = 2; QSL = 2; fcount = 0; ft *= 0.55; for (var qz = 1; qz < N; qz += 2) buf[qz * 8 + 7] = 0; }
+        else if (QS === 2 && ft > 14) { forceLite = true; resize(); }
+      }
+    }
+  }
+  window.__grain = { xmas: function (v) { if (v !== undefined) { wxXm = v; wxDirty = true; } return wxXm; }, season: function (v) { if (v !== undefined) { wxSea = v; wxDirty = true; applySky(); } return seaNow(); }, dust: function (v) { if (v !== undefined) { wxHzT = v; wxDirty = true; } return { hz: Math.round(wxHz * 100) / 100, bg: dustEl.style.background.slice(0, 70), op: dustEl.style.opacity, txt: wxDustTxt, err: window.__wxErr2 || '' }; }, gateFx: function () { return { on: wxGate, sky: skyc.style.transform, cld: cldc.style.transform, wx: wxc.style.transform, wxf: wxfc.style.transform, op: wxc.style.opacity, cam: Math.round(gcam * 100) / 100, gate: gate }; }, live: function (o) { if (o) wxLiveSet(o); return { last: wxLiveLast, row: WXP[6], err: window.__wxErr || '' }; }, fx: function (v) { if (v) wxFx = v; return wxFx; }, cldTune: function (o) { CLO = o || {}; }, wxSet: function (o) { for (var k9 in o) WXP[wxMode][k9] = o[k9]; }, wx: function (m) { setWx(m); return wxMode; }, strike: function () { wxNext = 0; }, hold: function (v) { wxHold = v ? 1 : 0; if (!v) wxStrike = null; }, wxInfo: function () { var r2 = function (v) { return Math.round(v * 100) / 100; }; return { mode: wxMode, cv: r2(wxP.cv), rn: r2(wxP.rn), sn: r2(wxP.sn), wd: r2(wxP.wd), fl: r2(wxFl), cloud: !!cgl, err: window.__cldErr || '', cld: cldc.width + 'x' + cldc.height + ':' + cldc.style.display, wxc: wxc.width + 'x' + wxc.height, light: r2(wxLight), blow: r2(wxBlow), ms: r2(wxMs), starK: r2(wxStarK), dirK: r2(wxDirK), day: r2(wxDayNow), rmax: wxRMax, smax: wxSMax, edge: (function () { var a = 0, b = 0, q; for (q = 0; q < N; q++) { if (EDG[q] & 1) a++; if (EDG[q] & 2) b++; } return [a, b]; })(), blown: (function () { var a = 0, q, t = T(); for (q = 0; q < N; q++) if (t - WBL[q] < 900) a++; return a; })(), mx: r2(wxP.mx), hz: r2(wxHz), sea: wxSeaI, peak: wxSeaPeak, xm: wxXmOn, top4: (function () { var a = 0, q; for (q = 0; q < N; q++) if (EDG[q] & 4) a++; return a; })(), cap: r2(wxCap), moon: skyLast ? { ph: r2(skyLast.uMoonPh), vis: r2(skyLast.uMoonVis), x: Math.round(skyLast.uMoon[0] / skyLast.uRes[0] * 100), y: Math.round(skyLast.uMoon[1] / skyLast.uRes[1] * 100) } : null, drip: (function () { var a = 0, q, t = T(); for (q = 0; q < N; q++) if (t - DRP[q] < 900) a++; return a; })(), wob: r2(wxWob), spk: r2(wxSpkN) }; }, halo: function (m) { haloMode = m; applySky(); }, skyTune: function (o) { SKO = o || {}; applySky(); return skyLast; }, skyInfo: function () { return { mode: skyMode, gl: !!sgl, err: window.__skyErr || '', w: skyc.width, h: skyc.height }; }, sky: function (m) { skyMode = m; applySky(); }, pos: function (h) { return sunPos(h, new Date()); }, tod: function (h) { todH = h; applySky(); }, sun: function () { return sunTimes(new Date()); }, slow: function (v) { ft = v; fcount = 999; }, tick: function (k2) { if (window.innerWidth !== VW || window.innerHeight !== VH) { resize(); start(); } if (!started || lite) return 0; for (var q = 0; q < k2; q++) { skew += 16.667; step(T()); } draw(T()); wxFrame(T()); last = T(); return k2; }, state: function () { var st = 0, hm = 0, off = 0, gs = 0, mv = 0, egs = 0, rmax = 0, rsum = 0; for (var j = 0; j < N; j++) { egs += EG[j]; if (gate && EG[j] > 30) mv++; var rr2 = Math.max(Math.abs(X[j] - gcx) / (gw / 2), Math.abs(Y[j] - gcy) / (gh / 2)); rsum += rr2; if (rr2 > rmax) rmax = rr2; gs += GV[j]; if (M0[j] !== 0) mv++; if (GV[j] === 0) st++; else if (GV[j] === 1) { hm++; off += Math.sqrt((X[j] - HX[j]) * (X[j] - HX[j]) + (Y[j] - HY[j]) * (Y[j] - HY[j])); } }
+    return { skyK: Math.round(skyK * 100) / 100, skyU: [Math.round(skyUx * 100) / 100, Math.round(skyUy * 100) / 100], tod: todH, day: +getComputedStyle(body).getPropertyValue('--day'), skyStar: Math.round(skyStar * 100) / 100, skyG: Math.round(skyG * 100) / 100, skyS: Math.round(skyS * 100) / 100, pol: POL.slice(1).join(''), sheen: shOn, focBtn: focBtn, glow: Math.round(btnGlow * 100) / 100, cs: Math.round(KCS * 1000) / 1000, stars: NDV, waiting: waiting, bad: body.classList.contains('bad'), shk: Math.round(shk * 10) / 10, qs: QS, ft: Math.round(ft * 10) / 10, rm: RM, gate: gate, fk: Math.round(gfk * 100) / 100, cam: Math.round(gcam * 100) / 100, tg: Math.round(gtg), eg: Math.round(egs / N * 100) / 100, spread: Math.round(rsum / N * 100) / 100, spreadMax: Math.round(rmax * 100) / 100, arrived: body.classList.contains('arrived'), g: Math.round(gs / N * 1000) / 1000, moving: mv, off: hm ? Math.round(off / hm * 10) / 10 : -1, pw: Math.round(pw * 100) / 100, n: N, logo: NL, building: NB, card: NC, wandering: st, settled: hm, mode: mode, vw: VW, vh: VH, lite: lite, logoW: Math.round(LW), buildingW: Math.round(BW), webgl: !!gl, started: started }; } };
+  applyPolish(); initSky(); initCloud(); applySky(); initGL(); resize(); start(); requestAnimationFrame(frame);
+  if (HOSTED) { wxLiveFetch(); wxLiveTimer = setInterval(wxLiveFetch, 600000); }   // 포털에서는 광주의 지금 날씨 · 미세먼지로(10분마다 다시). 못 받으면 맑음 그대로
+})();
+</script>
+</body>
+</html>
