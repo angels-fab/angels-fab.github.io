@@ -220,7 +220,7 @@
 </section>
 <div class="flash" id="flash"></div>
 
-<div class="bar" id="bar"><span class="tag">시안 조작</span><span class="grp">로그인 결과<div class="seg" id="mockres"><button data-v="1" aria-pressed="true">성공</button><button data-v="0">틀림</button></div></span><span class="grp">움직임 줄이기<div class="seg" id="mockrm"><button data-v="0" aria-pressed="true">끔</button><button data-v="1">켬</button></div></span><span class="grp">햇무리<div class="seg" id="haloseg"><button data-v="0" aria-pressed="true">가끔</button><button data-v="1">켬</button><button data-v="2">끔</button></div></span><span class="grp">계절<div class="seg" id="seaseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="0">봄</button><button data-v="1">여름</button><button data-v="2">가을</button><button data-v="3">겨울</button></div></span><span class="grp">크리스마스<div class="seg" id="xmseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="1">켬</button></div></span><span class="grp">날씨<div class="seg" id="wxseg"><button data-v="0" aria-pressed="true">맑음</button><button data-v="1">흐림</button><button data-v="2">비</button><button data-v="3">눈</button><button data-v="7">진눈깨비</button><button data-v="4">바람</button><button data-v="5">천둥번개</button><button data-v="6">실제</button></div></span><span class="grp">미세먼지<div class="seg" id="hzseg"><button data-v="0" aria-pressed="true">좋음</button><button data-v="1">나쁨</button><button data-v="2">매우 나쁨</button></div></span><span class="wxlive" id="wxlive"></span><span class="grp">시간<input type="range" id="tod" min="0" max="24" step="0.25" value="12" aria-label="시간"><span class="todv" id="todv">--:--</span><button class="again" id="todnow" type="button">지금</button><button class="again" id="todplay" type="button">하루 돌려 보기</button></span><button class="again" id="again" type="button">처음부터 다시</button></div>
+<div class="bar" id="bar"><span class="tag">시안 조작</span><span class="grp">로그인 결과<div class="seg" id="mockres"><button data-v="1" aria-pressed="true">성공</button><button data-v="0">틀림</button></div></span><span class="grp">창 바탕<div class="seg" id="plseg"><button data-v="0">없음</button><button data-v="0.36" aria-pressed="true">옅게</button><button data-v="0.5">진하게</button></div></span><span class="grp">움직임 줄이기<div class="seg" id="mockrm"><button data-v="0" aria-pressed="true">끔</button><button data-v="1">켬</button></div></span><span class="grp">햇무리<div class="seg" id="haloseg"><button data-v="0" aria-pressed="true">가끔</button><button data-v="1">켬</button><button data-v="2">끔</button></div></span><span class="grp">계절<div class="seg" id="seaseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="0">봄</button><button data-v="1">여름</button><button data-v="2">가을</button><button data-v="3">겨울</button></div></span><span class="grp">크리스마스<div class="seg" id="xmseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="1">켬</button></div></span><span class="grp">날씨<div class="seg" id="wxseg"><button data-v="0" aria-pressed="true">맑음</button><button data-v="1">흐림</button><button data-v="2">비</button><button data-v="3">눈</button><button data-v="7">진눈깨비</button><button data-v="4">바람</button><button data-v="5">천둥번개</button><button data-v="6">실제</button></div></span><span class="grp">미세먼지<div class="seg" id="hzseg"><button data-v="0" aria-pressed="true">좋음</button><button data-v="1">나쁨</button><button data-v="2">매우 나쁨</button></div></span><span class="wxlive" id="wxlive"></span><span class="grp">시간<input type="range" id="tod" min="0" max="24" step="0.25" value="12" aria-label="시간"><span class="todv" id="todv">--:--</span><button class="again" id="todnow" type="button">지금</button><button class="again" id="todplay" type="button">하루 돌려 보기</button></span><button class="again" id="again" type="button">처음부터 다시</button></div>
 
 <script>
 (function () {
@@ -352,7 +352,8 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     }
   })();
   var NL = LX.length, NB = BU.length, N = NL + NB, NC = N, ND = 2600, NT = N + ND;
-  // 로그인 창 — 알갱이 전부가 옮겨 가 만든다. 0 테두리 · 1 사번 칸 · 2 비밀번호 칸 · 3 로그인 버튼 · 4 창 안에 깔리는 먼지 · 5 테두리 밖 빛무리
+  // 로그인 창 — 알갱이 전부가 옮겨 가 만든다. 0 테두리 · 1 사번 칸 · 2 비밀번호 칸 · 3 로그인 버튼 · 5 테두리에 붙은 고운 가루
+  // 다 모인 뒤에는 차분한 창이어야 한다(사용자: 알갱이 느낌이 강하면 가벼워 보인다) — 선마다 알갱이를 고르게 겹겹이 놓아 점점이 끊기지 않게 하고, 창 안과 둘레에 흩뿌리지 않는다
   var CU = new Float32Array(N), CV = new Float32Array(N), CT = new Uint8Array(N), cn = 0;
   function cells(paint) {   // 그림에서 칠해진 칸들을 뽑는다(1칸 = 창의 1px)
     var c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
@@ -360,27 +361,22 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     for (var q = 0; q < CARD_W * CARD_H; q++) if (d[q * 4 + 3] > 110) out.push(q);
     return out;
   }
-  function fill(list, count, id) {   // 그 칸들에 알갱이 자리를 count 개 고루 뿌린다 — 선은 여러 겹 쌓여 또렷해진다
-    for (var q = 0; q < count && cn < N; q++) { var c2 = list[(Math.random() * list.length) | 0]; CU[cn] = (c2 % CARD_W + Math.random()) / CARD_W; CV[cn] = ((c2 / CARD_W | 0) + Math.random()) / CARD_H; CT[cn++] = id; }
+  function fill(list, count, id) {   // 그 칸들에 알갱이 자리를 count 개 놓는다 — 칸마다 같은 수씩 돌아가며 놓아(남는 몫만 아무 칸에) 선이 얼룩 없이 고르게 이어진다
+    var even = Math.floor(count / list.length) * list.length;
+    for (var q = 0; q < count && cn < N; q++) { var c2 = list[q < even ? q % list.length : (Math.random() * list.length) | 0]; CU[cn] = (c2 % CARD_W + Math.random()) / CARD_W; CV[cn] = ((c2 / CARD_W | 0) + Math.random()) / CARD_H; CT[cn++] = id; }
   }
   function stroke(w) { return function (x) { x.lineWidth = w; x.strokeStyle = '#fff'; x.stroke(); }; }
-  fill(cells(function (x) { rr(x, 2, 2, CARD_W - 4, CARD_H - 4, 12); stroke(3)(x); }), Math.round(N * 0.24), 0);
-  fill(cells(function (x) { rr(x, 24.5, 82.5, 331, 37, 7); stroke(2.2)(x); }), Math.round(N * 0.09), 1);
-  fill(cells(function (x) { rr(x, 24.5, 152.5, 331, 37, 7); stroke(2.2)(x); }), Math.round(N * 0.09), 2);
-  fill(cells(function (x) { rr(x, 25, 221, 330, 38, 19); stroke(3)(x); }), Math.round(N * 0.11), 3);
-  fill(cells(function (x) { rr(x, 25, 221, 330, 38, 19); stroke(17)(x); x.globalCompositeOperation = 'destination-out'; rr(x, 23.5, 219.5, 333, 41, 20.5); x.fillStyle = '#000'; x.fill(); }), Math.round(N * 0.05), 6);
-  (function () {   // 테두리 밖으로 번지는 옅은 빛무리 — 바깥으로 갈수록 성기게
-    var per = 2 * (CARD_W + CARD_H), cnt = Math.round(N * 0.36);
-    for (var q = 0; q < cnt && cn < N; q++) {
-      var t = Math.random() * per, o = 3 - Math.log(1 - Math.random() * 0.97) * 13, X2, Y2;
-      if (t < CARD_W) { X2 = t; Y2 = -o; } else if (t < CARD_W + CARD_H) { X2 = CARD_W + o; Y2 = t - CARD_W; } else if (t < 2 * CARD_W + CARD_H) { X2 = t - CARD_W - CARD_H; Y2 = CARD_H + o; } else { X2 = -o; Y2 = t - 2 * CARD_W - CARD_H; }
-      CU[cn] = X2 / CARD_W; CV[cn] = Y2 / CARD_H; CT[cn++] = 5;
-    }
+  fill(cells(function (x) { rr(x, 2, 2, CARD_W - 4, CARD_H - 4, 12); stroke(2)(x); }), Math.round(N * 0.44), 0);
+  fill(cells(function (x) { rr(x, 24.5, 82.5, 331, 37, 7); stroke(1.2)(x); }), Math.round(N * 0.12), 1);
+  fill(cells(function (x) { rr(x, 24.5, 152.5, 331, 37, 7); stroke(1.2)(x); }), Math.round(N * 0.12), 2);
+  fill(cells(function (x) { rr(x, 25, 221, 330, 38, 19); stroke(2)(x); }), Math.round(N * 0.2), 3);
+  (function () {   // 남은 알갱이 — 테두리 선에 바짝 붙은 고운 가루(선에서 멀어질수록 성기게, 몇 px 안에서 끝난다)
+    var m = 16, w = CARD_W + m * 2, h = CARD_H + m * 2, c = document.createElement('canvas'), x, d, q;
+    c.width = w; c.height = h; x = c.getContext('2d'); x.translate(m, m); x.shadowColor = '#fff'; x.shadowBlur = 4; rr(x, 2, 2, CARD_W - 4, CARD_H - 4, 12); stroke(2)(x);
+    d = x.getImageData(0, 0, w, h).data;
+    while (cn < N) { q = (Math.random() * w * h) | 0; if (Math.random() * 255 < d[q * 4 + 3]) { CU[cn] = (q % w - m + Math.random()) / CARD_W; CV[cn] = ((q / w | 0) - m + Math.random()) / CARD_H; CT[cn++] = 5; } }
   })();
-  fill(cells(function (x) {   // 창 안쪽 — 입력 칸과 버튼 속은 비워 글자가 또렷하게
-    rr(x, 5, 5, CARD_W - 10, CARD_H - 10, 9); x.fillStyle = '#fff'; x.fill(); x.globalCompositeOperation = 'destination-out';
-    rr(x, 26, 84, 328, 34, 6); x.fill(); rr(x, 26, 154, 328, 34, 6); x.fill(); rr(x, 15, 211, 350, 58, 29); x.fill();
-  }), N - cn, 4);
+  var CAL = [0.037, 0.029, 0.029, 0.05, 0, 0.035], CSZ = [2.3, 2, 2, 2.4, 1, 1.6];   // 창을 이룬 알갱이의 밝기 · 굵기 — 맡은 자리마다 하나로(제각각이면 선이 자글자글해 보인다)
   var GX = F(NL), GY = F(NL), H0X = F(N), H0Y = F(N), HX = F(N), HY = F(N), X = F(N), Y = F(N), Z = F(N), VX = F(N), VY = F(N), VZ = F(N);
   var KS = F(N), S0 = F(N), LT = F(N), TN = F(N), PH = F(N), E = F(N), BA = F(N), SA = F(N), GS = F(N), AS = F(N), AM = F(N), CS = F(N), SPK = F(N);
   var TH = F(N), OM = F(N), SP = F(N), FQ = F(N), GV = F(N), GF = F(N), GT = F(N), GD = F(N), CAF = F(N), CZ = F(N);   // 떠돌 때의 방향 · 굽이 · 빠르기 / 모인 정도(0 별 ~ 1 제자리)와 그 변화
@@ -403,7 +399,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     var gi = [], ci = [], q;
     for (q = 0; q < N; q++) { gi.push([(q < NL ? 0.5 + (GX[q] / M.w - 0.5) * 0.8 : BU[q - NL]) + Math.random() * 0.3, q]); ci.push([CU[q] + Math.random() * 0.3, q]); }
     gi.sort(function (a, b) { return a[0] - b[0]; }); ci.sort(function (a, b) { return a[0] - b[0]; });
-    for (q = 0; q < N; q++) { var j2 = gi[q][1], c3 = ci[q][1], t4 = CT[c3]; CIX[j2] = c3; CK[j2] = t4 + 1; CAF[j2] = t4 === 4 ? 0.2 : t4 === 5 ? 0.13 : t4 === 6 ? 0.34 : t4 === 3 ? 1.35 : 1.2; CZ[j2] = t4 === 3 ? 0.92 : t4 < 4 ? 0.82 : 0.95; WA[j2] = Math.atan2((CV[c3] - 0.5) * CARD_H, (CU[c3] - 0.5) * CARD_W); }
+    for (q = 0; q < N; q++) { var j2 = gi[q][1], c3 = ci[q][1], t4 = CT[c3]; CIX[j2] = c3; CK[j2] = t4 + 1; CAF[j2] = CAL[t4]; CZ[j2] = CSZ[t4]; WA[j2] = Math.atan2((CV[c3] - 0.5) * CARD_H, (CU[c3] - 0.5) * CARD_W); }
   })();
   // 끝까지 하늘에 남는 별 — 이것도 저마다 떠돈다
   var DX = F(ND), DY = F(ND), DZ = F(ND), DTH = F(ND), DOM = F(ND), DSP = F(ND), DS = F(ND), DA = F(ND), DPH = F(ND), DFQ = F(ND);
@@ -517,7 +513,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   var gate = 0, gateT0 = 0, gateTimer = 0, garr = false, gcx = 0, gcy = 0, gw = CARD_W, gh = CARD_H, gtg = 0, gcam = 0, gzk = 0, gspd = 0, gtr = 0, gfk = 0.5, garrT = 0;
   var viewEl = document.querySelector('.view'), skyStar = 1, skyG = 1, skyS = 0, skyCx = 0, skyCy = 0, skyIw = 0, skyUx = 0, skyUy = 0, skyK = 0, todH = -1, todPlay = 0, skyMode = 3, skyc = $('sky'), sgl = null, sprog = null, sloc = {}, haloMode = 0, SKO = {}, skyLast = null;   // 하늘 그리는 판 · (시안) 햇무리 0 가끔 / 1 켬 / 2 끔   // 시간대 하늘 — 별이 보이는 정도 · 알갱이 밝기 · 해가 있는 쪽(- 왼쪽 ~ + 오른쪽) · (시안) 막대로 고른 시각
   var POL = [0, 1, 0, 1, 1, 1, 1], C1B = [0.76, 0.74, 1.0], CLR1 = C1, shOn = false, shPos = 0;   // 다듬기 여섯(1~6 켬 · 끔) · 5 옅은 보라 · 3 지나가는 빛
-  var KCS = 1, QSL = 1, NDV = ND, cardEl = $('card'), waiting = false, waitT0 = 0, waitTimer = 0, shk = 0, shkPrev = 0, shakeT0 = 0, hotBtn = false, focBtn = false, btnGlow = 0, snapT = 0, snapBox = 0, mockOk = true, loginRes = null, okAt = 0, gdone = false;   // 로그인 확인을 기다리는 중 · 틀렸을 때 흔들림 · 버튼에 올린 마우스 · (시안) 결과
+  var KCS = 1, QSL = 1, NDV = ND, cardEl = $('card'), waiting = false, waitT0 = 0, waitTimer = 0, shk = 0, shkPrev = 0, shakeT0 = 0, hotBtn = false, focBtn = false, btnGlow = 0, snapT = 0, snapBox = 0, mockOk = true, loginRes = null, okAt = 0, gdone = false, calm = 0, plate = 0.36, plk = 0, plateAt = 0;   // calm = 로그인 창으로 가라앉은 정도(0 날아오는 중 ~ 1 다 가라앉음) · plate = 창 안 옅은 어두운 바탕의 짙기(사용자가 고름 — 시안 0.5 보다 조금 옅게)   // 로그인 확인을 기다리는 중 · 틀렸을 때 흔들림 · 버튼에 올린 마우스 · (시안) 결과
   var RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches), forceLite = false, QS = 1, ft = 4, fcount = 0;   // 움직임 줄이기 · 느린 PC(알갱이 절반 → 정지 그림)   // 진입 장면 — 1 로그인 · 2 체험하기 / 지난 시간 · 시점이 들어간 깊이 · 먼 별이 스치는 빠르기   // 색 포인트 없음 — 알갱이는 모두 무채색(사용자 확정)
   function fwd(x, y) {   // 무대 좌표 → 화면 좌표(기울기 반영)
     var a = rx * 0.0174533, b = ry * 0.0174533, u = x - VW / 2, v = y - VH / 2;
@@ -550,7 +546,9 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     PX += (p[0] - PX) * 0.32; PY += (p[1] - PY) * 0.32; PVX = PX - ox; PVY = PY - oy;
     for (q = rings.length - 1; q >= 0; q--) { rings[q].r += 13; rings[q].life *= 0.955; if (rings[q].life < 0.06) rings.splice(q, 1); }
     var nr = rings.length, rg; for (q = 0; q < nr; q++) { rg = rings[q]; rg.o2 = (rg.r + 30) * (rg.r + 30); rg.i2 = rg.r > 30 ? (rg.r - 30) * (rg.r - 30) : 0; }   // 물결이 지나는 띠(반지름 ±30px)
-    if (now > introEnd) for (q = 0; q < wxSpkN; q++) SPK[(Math.random() * N) | 0] = 1;   // 다 모인 뒤 — 몇 알씩 별처럼 반짝인다(색 없이 밝기만)
+    calm += ((mode === 1 && !gate ? 1 : 0) - calm) * 0.06;   // 로그인 창 — 밝게 날아와서, 자리에 앉으며 차분히 가라앉는다(돌아갈 때 · 들어갈 때는 다시 밝아진다)
+    plk += ((mode === 1 && !gate && now > plateAt ? 1 : 0) - plk) * (mode === 1 && !gate ? 0.085 : 0.06);   // 창 바탕 — 알갱이가 선으로 모일 즈음부터 뜬다(사용자: 너무 일찍 나타난다). 사라질 때는 예전대로
+    if (now > introEnd && mode === 0) for (q = 0; q < wxSpkN; q++) SPK[(Math.random() * N) | 0] = 1;   // 다 모인 뒤 — 몇 알씩 별처럼 반짝인다(색 없이 밝기만). 로그인 창에서는 반짝이지 않는다
     if (now > introEnd && !gate && mode === 0) {   // 날씨가 로고 · 조감도에 닿는 방식 — 윤곽은 지키고, 가장자리 알갱이 조금만 반응한다
       var wn = wxP.rn * 42, wk = wxFx === 2;   // 비 — 윗면(빗물이 맺히는 곳) 알갱이가 물방울처럼 반짝인다
       for (q = 0; q < wn; q++) { j = (Math.random() * N) | 0; if ((EDG[j] & 1) && SPK[j] < 0.4) SPK[j] = 0.4 + Math.random() * 0.45; }
@@ -567,7 +565,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
 
     if (gate) gateStep(now);
     var RH = mode === 1 ? 2.5 : 50, R = mode === 1 ? 26 : 130, R2 = R * R, free = now < freeUntil, morph = now < morphUntil;   // 마우스 둘레 빈 구멍 — 지름 100px(로그인 창에서는 5px)
-    var dsh = 0, wph = waiting ? (now - waitT0) * 0.0075 : 0, shp = (now % 8000) / 1500;
+    var dsh = 0, wph = waiting ? (now - waitT0) * 0.0075 : 0, shp = (now % 8000) / 1500, wob = 0.45 * wxWob * (1 - 0.8 * calm), lean = mode === 1 ? 0 : wxLean, mpu = 1 - 0.55 * calm, msw = 1 - 0.6 * calm;   // 로그인 창에서는 숨 쉬는 흔들림을 거의 재우고, 바람에 기울지도 않는다 · 마우스에 밀리는 힘(mpu)과 휘돌고 끌려가는 힘(msw)도 재운다
     shOn = POL[3] === 1 && mode === 0 && !gate && now > introEnd && shp < 1; if (shOn) shPos = skyS > 0.05 ? bx0 + BW + 170 - shp * (BW + 340) : bx0 - 170 + shp * (BW + 340);   // 스치는 빛은 해가 있는 쪽에서 들어온다
     btnGlow = focBtn ? 0.5 + 0.14 * Math.sin(now * 0.0055) : hotBtn ? 0.45 : 0;   // 로그인 버튼 — 키보드 초점이면 은은하게 숨 쉬듯, 마우스를 올리면 고르게 밝아진다
     if (shakeT0) {   // 틀렸을 때 — 창이 통째로(알갱이 틀과 글자가 같이) 좌우로 세 번 흔들리다 잦아든다
@@ -600,7 +598,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
       if (waiting && CK[j] === 1) {   // 기다리는 동안 — 테두리를 따라 빛 두 줄기가 꼬리를 끌며 돈다
         u = WA[j] - wph; u -= Math.floor(u / 3.14159 + 0.5) * 3.14159;
         if (u > -0.6 && u < 0.1) { u = u < 0 ? 1 + u / 0.6 : 1 - u / 0.1; if (u > SPK[j]) SPK[j] = u; }
-      } else if (btnGlow > 0 && (CK[j] === 4 || CK[j] === 7) && SPK[j] < btnGlow) SPK[j] = btnGlow;
+      } else if (btnGlow > 0 && CK[j] === 4 && SPK[j] < btnGlow) SPK[j] = btnGlow;
       if (free) fr = 0.985;
       else {
         var dxh = HX[j] + shk - x, dyh = HY[j] - y, ax, ay, am, cap;
@@ -621,7 +619,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
             x += dxh * mk - dyh / dm * cm; y += dyh * mk + dxh / dm * cm;
           }
         } else {   // 제자리 — 아주 조금 숨 쉬듯 흔들린다
-          ax = (dxh + Math.sin(w1 + PH[j]) * 0.45 * wxWob + (EDG[j] ? wxLean * (0.5 + 0.5 * Math.sin(now * 0.0021 - H0X[j] * 0.006)) : 0)) * KS[j]; ay = (dyh + Math.cos(w2 + PH[j]) * 0.45 * wxWob) * KS[j]; am = ax * ax + ay * ay;
+          ax = (dxh + Math.sin(w1 + PH[j]) * wob + (EDG[j] ? lean * (0.5 + 0.5 * Math.sin(now * 0.0021 - H0X[j] * 0.006)) : 0)) * KS[j]; ay = (dyh + Math.cos(w2 + PH[j]) * wob) * KS[j]; am = ax * ax + ay * ay;
           cap = dxh * dxh + dyh * dyh > 8100 ? AM[j] * 1.4 : 1.7;   // 아직 멀리 있으면 서두르지 않는다
           if (am > cap * cap) { am = cap / Math.sqrt(am); ax *= am; ay *= am; }
           if (WBL[j] > now && mode === 0) { ax = ax * 0.1 + wxWF * (0.6 + 0.5 * LT[j]) + Math.cos(tn * 5.3 + PH[j] * 7) * wxSeaSp; ay = ay * 0.1 + Math.sin(tn * 5.3 + PH[j] * 7) * wxSeaFl - wxSeaUp; } else if (DRP[j] > now && mode === 0) { ax = ax * 0.15 + 0.008; ay = ay * 0.15 + 0.042; }   // 비를 맞은 알갱이 — 살짝 내려앉는다   // 바람에 들린 알갱이 — 바람 따라 날리다가 제자리로 돌아온다
@@ -632,12 +630,12 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
           var dx = x - PX, dy = y - PY, d2 = dx * dx + dy * dy;
           if (d2 < R2) {
             var d = Math.sqrt(d2) + 0.001, ux = dx / d, uy = dy / d, f = 1 - d / R, push, gw; f = f * f * pw;
-            push = (d < RH ? 1.1 + 2.9 * (1 - d / RH) : 1.1 * (1 - (d - RH) / (R - RH))) * pw * (0.75 + LT[j] * 0.25);
-            vx += ux * push - uy * f * 0.55 + PVX * f * 0.16; vy += uy * push + ux * f * 0.55 + PVY * f * 0.16;
-            VZ[j] += f * 0.9; gw = d < RH ? pw : f * 1.5; if (gw > e) e = gw > 1 ? 1 : gw;
+            push = (d < RH ? 1.1 + 2.9 * (1 - d / RH) : 1.1 * (1 - (d - RH) / (R - RH))) * pw * (0.75 + LT[j] * 0.25) * mpu;
+            vx += ux * push + (PVX * f * 0.16 - uy * f * 0.55) * msw; vy += uy * push + (PVY * f * 0.16 + ux * f * 0.55) * msw;   // 로그인 창에서는 절반쯤만 흩날린다(사용자: 마우스에 흩날리는 알갱이도 차분하게 → 1/5 로 줄였더니 "너무 차분, 좀 더 흩날리게 · 이전보다는 차분하게")
+            VZ[j] += f * 0.9 * mpu; gw = (d < RH ? pw : f * 1.5) * (1 - 0.3 * calm); if (gw > e) e = gw > 1 ? 1 : gw;
           }
         }
-        if (focusBox && CK[j] === focusBox + 1 && gg === 1 && e < 0.8) e = 0.8;   // 입력 중인 칸의 틀이 UV 빛으로 달아오른다
+        if (focusBox && CK[j] === focusBox + 1 && gg === 1) { if (e < 0.8) e = 0.8; if (SPK[j] < 0.45) SPK[j] = 0.45; }   // 입력 중인 칸의 틀이 UV 빛으로 달아오른다 — 차분해진 다른 선들 사이에서 어느 칸인지 또렷하게
       }
       vx *= fr; vy *= fr; x += vx; y += vy;
       if (gg === 0 && GT[j] === 0) { if (x < x0) x = x1; else if (x > x1) x = x0; if (y < y0) y = y1; else if (y > y1) y = y0; }   // 별로 떠도는 알갱이는 화면 밖으로 나가면 반대편에서 들어온다
@@ -662,6 +660,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   function drawFx() {
     var c = fxx, g, q, gr = mode === 1 ? 42 : 180;
     c.setTransform(DPR, 0, 0, DPR, 0, 0); c.clearRect(0, 0, CW, CH); c.setTransform(DPR, 0, 0, DPR, OX * DPR, OY * DPR);
+    if (plate && plk > 0.01) { rr(c, cardL + shk + 3, cardT + 3, CARD_W * KCS - 6, CARD_H * KCS - 6, 11 * KCS); c.fillStyle = 'rgba(8,10,17,' + (plate * plk).toFixed(3) + ')'; c.fill(); }   // 창 안 옅은 어두운 바탕 — 알갱이 아래에 깔린다(창이 가벼워 보이지 않게)
     if (pw > 0.02) {   // 마우스 빛
       g = c.createRadialGradient(PX, PY, 0, PX, PY, gr);
       var gpc = POL[5] ? '198,202,255' : '126,120,255';
@@ -681,7 +680,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     gfk = gate ? 0.56 + 0.24 * gtr : 0.5; ak = Math.pow((1 - gfk) * 2, 0.35);   // 빛 꼬리가 길어지는 만큼 한 점의 밝기는 낮춘다(가만히 있는 별이 번쩍 밝아지지 않게)
     for (j = 0; j < N; j += QS) {
       o = j * 8;
-      var e = E[j], t = TN[j], z = Z[j], gg = GV[j], g2 = gg * gg, ek = 0, hot = 1, u = SPK[j] * 0.6, r = 0.84 * t, g = 0.89 * t, b = t, a, sz;
+      var e = E[j], t = TN[j] + (1 - TN[j]) * calm, z = Z[j], gg = GV[j], g2 = gg * gg, ek = 0, hot = 1, u = SPK[j] * 0.6, r = 0.84 * t, g = 0.89 * t, b = t, a, sz;
       r += (1.1 - r) * u; g += (1.1 - g) * u; b += (1.15 - b) * u;
       if (!card && gg === 1 && TY[j] === 2 && accent && TS[j] > 0) {   // 붉은빛은 지붕 선 한 곳 — 제자리에 다 모인 뒤에야 켜진다
         ek = (now - TS[j] - 150) / 900; ek = ek < 0 ? 0 : ek > 1 ? 1 : ek;
@@ -693,10 +692,10 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
       }
       var gk = gate ? MP[j] : 0, eg = gate ? EG[j] : 1, gz2 = eg < 1 ? 1 : eg > 14.3 ? 7 : 1 + (eg - 1) * 0.45, ga2 = eg < 1 ? 1 : (eg > 30 ? 0 : eg > 16 ? (30 - eg) / 14 : 1) * (eg > 2 ? 1.5 : 1 + (eg - 1) * 0.5) / (1 + (gz2 - 1) * 0.25);   // 제자리를 떠난 정도 · 가까워진 배율 · 알 크기(가까울수록 크게) · 밝기(커진 만큼 옅게 — 초점이 나간 빛망울)
       if (gate === 2 && gk > 0) { r += (0.45 * t - r) * gk; g += (0.68 * t - g) * gk; b += (1.02 * t - b) * gk; }   // 체험하기 — 떠나는 알갱이부터 푸르게 물든다
-      a = BA[j] * AS[j] * (card ? CAF[j] + (0.85 - CAF[j]) * gk : 1) * ga2 * (1 + e * 0.36) * hot * (1 + SPK[j] * 1.3) * g2;
+      a = (BA[j] * AS[j] * (1 - calm) + CAF[j] * calm) * ga2 * (1 + e * 0.36) * hot * (1 + SPK[j] * 1.3) * g2;   // 로그인 창에 가라앉은 만큼 — 제각각이던 밝기 · 굵기 · 빛깔이 맡은 자리의 값 하나로 모인다
       if (gk > 0) a *= 1 - gk * (0.16 - 0.16 * Math.sin(tw * FQ[j] * 2 + PH[j]));   // 떠난 알갱이는 별처럼 깜빡인다
       if (g2 < 1) a += SA[j] * (0.55 + 0.45 * Math.sin(tw * FQ[j] + PH[j])) * (1 - g2);   // 별일 때 — 저마다 다른 박자로 깜빡인다
-      sz = S0[j] * GS[j] * (card ? CZ[j] + (1 - CZ[j]) * gk : 1) * gz2 * (0.85 + 0.15 * g2) * (1 + e * 0.2) * (1 + z * 0.012) * (1 + ek * 0.35 + SPK[j] * 0.3); if (POL[6] && card && !gate && CK[j] > 0 && CK[j] < 4) { a *= 0.74; sz *= 0.84; } if (sz > 48) sz = 48;
+      sz = (S0[j] * GS[j] * (1 - calm) + CZ[j] * (QS === 2 ? 1.2 : 1) * calm) * gz2 * (0.85 + 0.15 * g2) * (1 + e * 0.2) * (1 + z * 0.012) * (1 + ek * 0.35 + SPK[j] * 0.3); if (sz > 48) sz = 48;
       var yo = 0;
       if (!card && !gate && (EDG[j] & 4)) {
         if (wxCap > 0.01) { var ck = wxCap * (j < NL ? 0.45 : 1); sz *= 1 + 1.3 * ck; a *= 1 + 1.7 * ck; r += (1.12 - r) * ck; g += (1.12 - g) * ck; b += (1.14 - b) * ck; yo = -1.6 * ck; }   // 눈 — 맨 윗줄 알갱이가 크고 희게, 살짝 위로: 지붕과 글자 위에 눈이 얹힌다
@@ -742,7 +741,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     var now = T(), j;
     waiting = false; clearTimeout(waitTimer); shk = 0; shkPrev = 0; shakeT0 = 0; cardEl.style.transform = ''; body.classList.remove('wait', 'bad');
     if (m === 0 && cardEl.contains(document.activeElement)) $('enter').focus({ preventScroll: true });   // 닫으면 초점을 로그인 버튼으로 돌려준다
-    mode = m; body.classList.toggle('dlg', m === 1); if (m === 0) focusBox = 0;
+    mode = m; body.classList.toggle('dlg', m === 1); if (m === 0) focusBox = 0; else plateAt = now + 550;   // 창 바탕은 선이 모일 즈음(0.55초 뒤)부터
     if (lite) return;
     for (j = 0; j < N; j++) {   // 자리만 바꾼다 — 알갱이는 밝은 채로 새 자리까지 날아간다
       home(j);
@@ -1161,6 +1160,11 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     var b = ev.target.closest('button'); if (!b) return;
     Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
     mockOk = b.getAttribute('data-v') === '1';
+  });
+  $('plseg').addEventListener('click', function (ev) {   // (시안) 로그인 창 안 어두운 바탕 — 없음 / 옅게(기본) / 진하게(처음 보여 준 짙기)
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    plate = +b.getAttribute('data-v');
   });
   $('mockrm').addEventListener('click', function (ev) {
     var b = ev.target.closest('button'); if (!b) return;
