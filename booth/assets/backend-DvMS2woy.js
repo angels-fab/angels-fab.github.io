@@ -1,16 +1,16 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-DjrzuzDu.js","assets/chunk-ZSOCVAT7-CUb-ofjX.js","assets/index-Clf2XLwc.js","assets/index-DIFRpv-r.css","assets/pgcrypto-DvQ-zBrc.js","assets/uuid_ossp-B-isMaqZ.js"])))=>i.map(i=>d[i]);
-import{_ as P,g as z}from"./index-Clf2XLwc.js";const un=`-- 체험관 가상 부서 데이터 — 실제 직원·업무와 무관한 지어낸 내용이다.
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-B_EP2HS0.js","assets/chunk-ZSOCVAT7-CUb-ofjX.js","assets/index-BZgn6-Zo.js","assets/index-_pV-qqwN.css","assets/pgcrypto-DvQ-zBrc.js","assets/uuid_ossp-B-isMaqZ.js"])))=>i.map(i=>d[i]);
+import{_ as P,g as z}from"./index-BZgn6-Zo.js";const un=`-- 체험관 가상 부서 데이터 — 실제 직원·업무와 무관한 지어낸 내용이다.
 -- 날짜는 '채우는 날(서울 기준 오늘)'에 맞춰 상대값으로 넣는다 → 언제 열어도 이번 주 일정이 보인다.
 -- 사람 이름·uid 는 booth/people.ts 와 같아야 한다.
 
 insert into auth.users(id, email, raw_user_meta_data) values
-  ('00000000-0000-4000-8000-00000000b007', 'guest@booth.invalid', '{"name":"김지원"}'),
+  ('00000000-0000-4000-8000-00000000b007', 'guest@booth.invalid', '{"name":"김지스트"}'),
   ('00000000-0000-4000-8000-0000000000a1', 'a1@booth.invalid', '{"name":"이서준"}'),
   ('00000000-0000-4000-8000-0000000000a2', 'a2@booth.invalid', '{"name":"박하은"}'),
   ('00000000-0000-4000-8000-0000000000a3', 'a3@booth.invalid', '{"name":"최도윤"}');
 
 insert into public.profiles(id, auth_user_id, name, emp_no, role, status, position) values
-  ('00000000-0000-4000-8000-00000000b007', '00000000-0000-4000-8000-00000000b007', '김지원', 'guest', 'admin', 'active', 'member'),
+  ('00000000-0000-4000-8000-00000000b007', '00000000-0000-4000-8000-00000000b007', '김지스트', 'guest', 'admin', 'active', 'member'),
   ('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000a1', '이서준', 'a1', 'admin', 'active', 'lead'),
   ('00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a2', '박하은', 'a2', 'member', 'active', 'member'),
   ('00000000-0000-4000-8000-0000000000a3', '00000000-0000-4000-8000-0000000000a3', '최도윤', 'a3', 'member', 'active', 'member');
@@ -36,7 +36,7 @@ $$;
 -- 업무 본문은 아래 작은 약식(src)으로 쓰고, 함수가 works.task(평문) 와 works.content_fmt(서식 JSON) 로 바꾼다.
 --   첫 줄 = 제목 / ○ 할 일 · ◐ 진행 · ✓ 완료 · · 메모 · ※ 참고 / '# ' 묶음 제목 / 표시 없는 줄 = 본문
 --   들여쓰기 2칸 = 한 단계 / 줄 끝 '[-3]' = 완료일(오늘 기준) / 줄 끝 '@이름' = 세부업무 담당자 칩
--- 사람: 김지원 J(방문자) · 이서준 S(팀장) · 박하은 H · 최도윤 D
+-- 사람: 김지스트 J(방문자) · 이서준 S(팀장) · 박하은 H · 최도윤 D
 
 -- ── 도우미 함수 ─────────────────────────────────────────
 create or replace function booth.w_uid(k text) returns uuid language sql immutable as $$
@@ -44,7 +44,7 @@ create or replace function booth.w_uid(k text) returns uuid language sql immutab
                  when 'H' then '00000000-0000-4000-8000-0000000000a2' else '00000000-0000-4000-8000-0000000000a3' end)::uuid
 $$;
 create or replace function booth.w_name(k text) returns text language sql immutable as $$
-  select case k when 'J' then '김지원' when 'S' then '이서준' when 'H' then '박하은' else '최도윤' end
+  select case k when 'J' then '김지스트' when 'S' then '이서준' when 'H' then '박하은' else '최도윤' end
 $$;
 
 create or replace function booth.w_lines(src text) returns jsonb language plpgsql stable as $$
@@ -166,10 +166,10 @@ from (values
 (1, '예산', '2026년 3분기 연구비 정산 점검
 # 정산 점검 범위
 ✓ 과제별 집행 내역 취합 [-12]
-◐ 증빙 누락 건 보완 요청 (14건 중 9건 회수) @김지원
+◐ 증빙 누락 건 보완 요청 (14건 중 9건 회수) @김지스트
   ○ 미회수 5건은 연구실별 담당자에게 재안내
 ○ 점검 결과 요약표 작성 후 팀장 검토
-※ 재무회계팀 제출 전 사전 확인 필요', '재무회계팀', -40, 3, null, null, '김지원', '진행중', null, null, null, null, null, 2, 'at_risk', 1, 1, 'S', -1, false, false, null),
+※ 재무회계팀 제출 전 사전 확인 필요', '재무회계팀', -40, 3, null, null, '김지스트', '진행중', null, null, null, null, null, 2, 'at_risk', 1, 1, 'S', -1, false, false, null),
 (2, '예산', '2027년도 팀 운영예산 편성안 작성
 # 편성 방향
 ✓ 올해 집행 실적 분석 [-9]
@@ -189,10 +189,10 @@ from (values
 (5, '행정', '연차평가 보고서 취합 (6개 과제)
 ✓ 작성 양식·일정 안내 메일 발송 [-18]
 ◐ 과제별 보고서 취합 (4/6 제출)
-  ○ 미제출 2건 독촉 @김지원
+  ○ 미제출 2건 독촉 @김지스트
   ○ 작성 오류 항목 회신
 ○ 종합 의견서 작성 @이서준
-※ 제출처 시스템 마감 17시 기준', '연구처', -20, 6, null, null, '김지원, 이서준', '진행중', null, null, null, null, null, 1, 'at_risk', 2, 4, 'S', -1, true, false, null),
+※ 제출처 시스템 마감 17시 기준', '연구처', -20, 6, null, null, '김지스트, 이서준', '진행중', null, null, null, null, null, 1, 'at_risk', 2, 4, 'S', -1, true, false, null),
 (6, '교육세미나', '연구윤리·연구비 관리 교육 운영
 ✓ 강사 섭외 완료 [-10]
 ✓ 장소(대강당) 가예약 [-8]
@@ -207,8 +207,8 @@ from (values
 ○ 사전 안내문 발송', '연구처', -22, 21, '15:00', '본관 세미나실', '최도윤, 박하은', '진행중', null, null, null, null, null, 3, 'on_track', 3, 5, 'D', -5, false, false, null),
 (8, '교육세미나', '신입 연구원 안전·보안 교육 계획
 ○ 교육 대상자 명단 확인
-◐ 교육 자료 갱신 (최신 지침 반영) @김지원
-○ 이수 확인 방식 정하기', '안전관리팀', -10, 17, null, null, '김지원, 박하은', '진행중', null, null, null, null, null, 3, null, 3, 6, 'H', -4, false, false, null),
+◐ 교육 자료 갱신 (최신 지침 반영) @김지스트
+○ 이수 확인 방식 정하기', '안전관리팀', -10, 17, null, null, '김지스트, 박하은', '진행중', null, null, null, null, null, 3, null, 3, 6, 'H', -4, false, false, null),
 (9, '행정', '연구실 안전관리 규정 개정(안)
 ✓ 현행 규정 문제점 정리 [-20]
 ◐ 개정안 조문 작성 (3장 중 2장)
@@ -235,19 +235,19 @@ from (values
 ○ 이용료 정산 방식 확인', '시설관리팀', -45, 30, null, null, '박하은', '진행중', null, null, null, null, null, 3, 'on_track', 4, 9, 'H', -3, false, false, null),
 (14, '장비', '고가 연구장비 도입 타당성 검토 (진공 증착기)
 ✓ 연구실 수요조사 [-14]
-◐ 견적 3사 비교표 작성 @김지원
+◐ 견적 3사 비교표 작성 @김지스트
 ○ 도입 타당성 보고서 초안
 ○ 장비심의 상정 여부 판단
-※ 예산 확보 방안에 따라 도입 시기가 달라질 수 있음', '연구처', -26, 11, null, null, '이서준, 김지원', '진행중', null, null, null, null, null, 2, 'at_risk', 4, 9, 'S', -1, true, false, null),
+※ 예산 확보 방안에 따라 도입 시기가 달라질 수 있음', '연구처', -26, 11, null, null, '이서준, 김지스트', '진행중', null, null, null, null, null, 2, 'at_risk', 4, 9, 'S', -1, true, false, null),
 (15, '장비', '공용 회의실 예약 시스템 개선 요청 정리
 ✓ 이용자 불편 사항 수집 [-4]
 ○ 개선 요청 항목 우선순위 정하기
 ○ 시설관리팀에 요청서 전달', '시설관리팀', -8, 14, null, null, '최도윤', '진행중', null, null, null, null, null, 4, null, 4, 9, 'D', -4, false, false, null),
 (16, '행정', '협약 대학 방문 일정 조율 및 방문 준비
 ✓ 방문 목적·의제 정리 [-4]
-◐ 면담 일정 조율 @김지원
+◐ 면담 일정 조율 @김지스트
 ○ 방문 자료집 인쇄 @박하은
-○ 차량·방문증 신청', '연구처', -9, 5, '10:30', '가상 A대학교 연구협력관', '김지원, 박하은', '진행중', null, null, null, null, null, 3, 'on_track', 2, 3, 'S', -3, false, false, null),
+○ 차량·방문증 신청', '연구처', -9, 5, '10:30', '가상 A대학교 연구협력관', '김지스트, 박하은', '진행중', null, null, null, null, null, 3, 'on_track', 2, 3, 'S', -3, false, false, null),
 (17, '예산', '11월 연구비 카드 사용 내역 월간 점검
 ✓ 카드 사용 내역 다운로드 [-2]
 ◐ 비목 부적합 의심 건 확인 (5건)
@@ -268,7 +268,7 @@ from (values
 (21, '행정', '위탁 용역 계약 변경 검토 (복합기 유지보수)
 ✓ 현행 계약 조건 확인 [-3]
 ○ 변경 계약서 초안 작성
-○ 재무회계팀 결재 상신', '재무회계팀', -6, 19, null, null, '김지원', '진행중', null, null, null, null, null, 4, null, 1, 2, 'J', -3, false, false, null),
+○ 재무회계팀 결재 상신', '재무회계팀', -6, 19, null, null, '김지스트', '진행중', null, null, null, null, null, 4, null, 1, 2, 'J', -3, false, false, null),
 (22, '행정', '연말 결산 대비 팀 자산 실사
 ○ 실사 대상 목록 출력
 ○ 현장 확인 및 라벨 부착
@@ -291,8 +291,8 @@ from (values
 ○ 팀장 검토 후 공문 시행', '재무회계팀', -11, 6, null, null, '최도윤', '진행중', null, null, null, null, null, 3, 'on_track', 1, 1, 'D', -2, false, false, null),
 (27, '장비', '연구장비 이용료 분기 정산 (3분기)
 ✓ 장비별 이용 내역 취합 [-6]
-◐ 이용료 산정표 작성 @김지원
-○ 연구실별 청구서 발송 @박하은', '시설관리팀', -10, 0, null, null, '김지원, 박하은', '진행중', null, null, null, null, null, 2, 'on_track', 1, 1, 'J', -1, false, false, null),
+◐ 이용료 산정표 작성 @김지스트
+○ 연구실별 청구서 발송 @박하은', '시설관리팀', -10, 0, null, null, '김지스트, 박하은', '진행중', null, null, null, null, null, 2, 'on_track', 1, 1, 'J', -1, false, false, null),
 (28, '행정', '방문 연구자 출입 등록 절차 정비
 ✓ 현행 절차 흐름도 작성 [-5]
 ○ 보안 서약 양식 개정
@@ -303,8 +303,8 @@ from (values
 ○ 미제출자 개별 안내', '연구처', -14, 8, null, null, '최도윤', '진행중', null, null, null, null, null, 3, 'on_track', 3, 5, 'D', -2, false, false, null),
 (30, '행정', '정보보안 점검표 제출
 ✓ 연구실별 점검표 수합 [-3]
-◐ 전수 확인 및 오류 정정 @김지원
-○ 최종본 제출', '정보보안팀', -7, 1, null, null, '김지원', '진행중', null, null, null, null, null, 1, 'on_track', 4, 7, 'S', -1, false, false, null),
+◐ 전수 확인 및 오류 정정 @김지스트
+○ 최종본 제출', '정보보안팀', -7, 1, null, null, '김지스트', '진행중', null, null, null, null, null, 1, 'on_track', 4, 7, 'S', -1, false, false, null),
 -- ===== 보류 (31~34) =====
 (31, '장비', '신규 연구동 공용 공간 배정 협의
 ✓ 공간 수요 조사 [-30]
@@ -317,7 +317,7 @@ from (values
 (33, '예산', '미집행 잔액 반납 승인 대기
 ✓ 반납 대상 과제 확정 [-14]
 ◐ 상위기관 승인 대기
-○ 승인 후 잔액 반납 처리', '재무회계팀', -18, null, null, null, '김지원', '보류', null, null, 'parent_org', -12, -5, 2, null, 1, 2, 'J', -5, false, false, null),
+○ 승인 후 잔액 반납 처리', '재무회계팀', -18, null, null, null, '김지스트', '보류', null, null, 'parent_org', -12, -5, 2, null, 1, 2, 'J', -5, false, false, null),
 (34, '인사', '복무 규정 해석 질의
 ✓ 질의서 작성 [-8]
 ◐ 내부 검토 중 (인사팀 회신 전)
@@ -386,24 +386,24 @@ from (values
 (52, '행정', '공동연구 협약 대학 현장 방문
 ✓ 방문 자료집 인쇄 [-10]
 ✓ 면담 진행 및 면담록 작성 [-8]
-· 후속 협의는 다음 달 초 예정', '연구처', -20, -8, '10:30', '가상 B대학교', '김지원, 이서준', '완료', -8, 'done', null, null, null, 2, null, 2, 3, 'J', -8, false, true, 10),
+· 후속 협의는 다음 달 초 예정', '연구처', -20, -8, '10:30', '가상 B대학교', '김지스트, 이서준', '완료', -8, 'done', null, null, null, 2, null, 2, 3, 'J', -8, false, true, 10),
 (53, '인사', '인사 발령 반영 및 조직 연락망 갱신
 ✓ 발령 내용 확인 [-8]
 ✓ 연락망·권한 정리 [-6]', '인사팀', -12, -6, null, null, '이서준', '완료', -6, 'done', null, null, null, 4, null, 4, 8, 'S', -6, false, false, null),
 (54, '장비', '장비 이용료 단가표 개정 안내
 ✓ 단가표 개정안 작성 [-9]
-✓ 이용자 안내 [-5]', '시설관리팀', -14, -5, null, null, '김지원', '완료', -5, 'done', null, null, null, 3, null, 4, 9, 'J', -5, false, false, null),
+✓ 이용자 안내 [-5]', '시설관리팀', -14, -5, null, null, '김지스트', '완료', -5, 'done', null, null, null, 3, null, 4, 9, 'J', -5, false, false, null),
 (55, '행정', '2026 연구과제 종료보고서 제출
 ✓ 보고서 작성 양식 확인 [-14]
 ✓ 최종본 검토 [-5]
 ✓ 제출처 시스템 등록 [-3]', '연구처', -28, -3, null, null, '이서준, 최도윤', '완료', -3, 'done', null, null, null, 2, null, 2, 4, 'S', -3, false, false, null),
 (56, '교육세미나', '외부 기관 벤치마킹 방문 결과 공유
 ✓ 방문 결과 정리 [-4]
-✓ 팀 내 공유 [-2]', '연구지원팀', -12, -2, null, null, '김지원', '완료', -2, 'done', null, null, null, 4, null, 3, 5, 'J', -2, false, false, null),
+✓ 팀 내 공유 [-2]', '연구지원팀', -12, -2, null, null, '김지스트', '완료', -2, 'done', null, null, null, 4, null, 3, 5, 'J', -2, false, false, null),
 (57, '행정', '정보보안 점검표 1차 제출
 ✓ 점검표 작성 [-6]
 ✓ 1차 제출 [-1]
-· 지적사항은 2차 점검 때 반영', '정보보안팀', -9, -1, null, null, '김지원', '완료', -1, 'done', null, null, null, 3, null, 4, 7, 'J', -1, false, true, 14),
+· 지적사항은 2차 점검 때 반영', '정보보안팀', -9, -1, null, null, '김지스트', '완료', -1, 'done', null, null, null, 3, null, 4, 7, 'J', -1, false, true, 14),
 (58, '장비', '10월 장비 이용료 청구 발송
 ✓ 청구서 작성 [-7]
 ✓ 연구실별 발송 [-4]', '시설관리팀', -10, -4, null, null, '박하은', '완료', -4, 'done', null, null, null, 3, null, 1, 1, 'H', -4, false, false, null)
@@ -449,13 +449,13 @@ delete from public.work_link_log where target_type = 'work';
 insert into public.work_mentions (work_num, person, line, by_name, by_uid, created_at)
 select m.n, m.person, m.line, booth.w_name(m.by), booth.w_uid(m.by), booth.ts(m.off, m.hm)
 from (values
-  (1,  '김지원', '증빙 누락 건 보완 요청 (14건 중 9건 회수)', 'S', -2, '10:05'),
-  (5,  '김지원', '미제출 2건 독촉', 'S', -1, '09:40'),
-  (8,  '김지원', '교육 자료 갱신 (최신 지침 반영)', 'H', -4, '11:50'),
-  (14, '김지원', '견적 3사 비교표 작성', 'H', -2, '14:05'),
-  (16, '김지원', '면담 일정 조율', 'S', -3, '16:20'),
-  (27, '김지원', '이용료 산정표 작성', 'H', -1, '13:15'),
-  (30, '김지원', '전수 확인 및 오류 정정', 'S', -1, '17:20'),
+  (1,  '김지스트', '증빙 누락 건 보완 요청 (14건 중 9건 회수)', 'S', -2, '10:05'),
+  (5,  '김지스트', '미제출 2건 독촉', 'S', -1, '09:40'),
+  (8,  '김지스트', '교육 자료 갱신 (최신 지침 반영)', 'H', -4, '11:50'),
+  (14, '김지스트', '견적 3사 비교표 작성', 'H', -2, '14:05'),
+  (16, '김지스트', '면담 일정 조율', 'S', -3, '16:20'),
+  (27, '김지스트', '이용료 산정표 작성', 'H', -1, '13:15'),
+  (30, '김지스트', '전수 확인 및 오류 정정', 'S', -1, '17:20'),
   (2,  '박하은', '사업별 소요액 산출 (세미나·장비·인건비)', 'S', -6, '10:30'),
   (2,  '이서준', '증액 요청 항목 근거 자료 정리', 'S', -6, '10:31'),
   (3,  '최도윤', '12월 초까지 집행 가능한 항목 선별', 'S', -5, '15:10'),
@@ -549,23 +549,23 @@ select h.n,
        case when h.q like 'd:%' then booth.d(substr(h.q, 3)::int) else h.q end,
        h.a, booth.ts(h.off, h.hm)
 from (values
-  -- 이번 주 — 김지원 담당 업무를 다른 사람이 바꾼 것(벨 알림)
+  -- 이번 주 — 김지스트 담당 업무를 다른 사람이 바꾼 것(벨 알림)
   (1,  '예정일', 'd:-4', 'd:3', '최도윤', -2, '16:40'),
   (1,  '긴급도', '', '높음', '이서준', -9, '10:15'),
-  (1,  '담당자', '박하은', '김지원', '이서준', -21, '09:50'),
+  (1,  '담당자', '박하은', '김지스트', '이서준', -21, '09:50'),
   (5,  '긴급도', '높음', '긴급', '이서준', -1, '15:30'),
   (5,  '예정일', 'd:3', 'd:6', '이서준', -1, '15:31'),
   (5,  '건강도', '정상', '주의', '이서준', -7, '11:20'),
-  (5,  '담당자', '박하은', '김지원', '이서준', -12, '09:40'),
-  (14, '담당자', '이서준', '이서준, 김지원', '박하은', -2, '14:05'),
+  (5,  '담당자', '박하은', '김지스트', '이서준', -12, '09:40'),
+  (14, '담당자', '이서준', '이서준, 김지스트', '박하은', -2, '14:05'),
   (14, '건강도', '정상', '주의', '이서준', -6, '10:00'),
   (14, '예정일', 'd:6', 'd:11', '이서준', -6, '10:02'),
   (16, '예정일', 'd:2', 'd:5', '박하은', -3, '13:25'),
-  (30, '내용', E'정보보안 점검표 제출\\n- 연구실별 점검표 수합', E'정보보안 점검표 제출\\n- 연구실별 점검표 수합\\n- 전수 확인 및 오류 정정 (김지원)', '이서준', -1, '17:25'),
-  (8,  '세부담당', '', '김지원 · 교육 자료 갱신 (최신 지침 반영)', '박하은', -4, '11:50'),
-  (27, '세부담당', '', '김지원 · 이용료 산정표 작성', '박하은', -1, '13:15'),
-  (33, '대기처', '', '상위기관', '김지원', -12, '10:20'),
-  (33, '상태', '진행중', '보류', '김지원', -12, '10:20'),
+  (30, '내용', E'정보보안 점검표 제출\\n- 연구실별 점검표 수합', E'정보보안 점검표 제출\\n- 연구실별 점검표 수합\\n- 전수 확인 및 오류 정정 (김지스트)', '이서준', -1, '17:25'),
+  (8,  '세부담당', '', '김지스트 · 교육 자료 갱신 (최신 지침 반영)', '박하은', -4, '11:50'),
+  (27, '세부담당', '', '김지스트 · 이용료 산정표 작성', '박하은', -1, '13:15'),
+  (33, '대기처', '', '상위기관', '김지스트', -12, '10:20'),
+  (33, '상태', '진행중', '보류', '김지스트', -12, '10:20'),
   (12, '예정일', 'd:2', 'd:7', '이서준', -5, '09:30'),
   (12, '긴급도', '', '높음', '이서준', -5, '09:31'),
   (3,  '건강도', '정상', '주의', '최도윤', -6, '11:15'),
@@ -604,14 +604,14 @@ from (values
   (46, '상태', '진행중', '완료', '박하은', -22, '16:30'),
   (49, '예정일', 'd:-18', 'd:-15', '박하은', -19, '10:50'),
   (49, '상태', '진행중', '완료', '박하은', -15, '17:20'),
-  (52, '예정일', 'd:-12', 'd:-8', '김지원', -11, '11:00'),
-  (52, '담당자', '김지원', '김지원, 이서준', '김지원', -11, '11:02'),
-  (52, '상태', '진행중', '완료', '김지원', -8, '17:10'),
+  (52, '예정일', 'd:-12', 'd:-8', '김지스트', -11, '11:00'),
+  (52, '담당자', '김지스트', '김지스트, 이서준', '김지스트', -11, '11:02'),
+  (52, '상태', '진행중', '완료', '김지스트', -8, '17:10'),
   (55, '담당자', '이서준', '이서준, 최도윤', '이서준', -20, '09:30'),
   (55, '예정일', 'd:-6', 'd:-3', '이서준', -8, '15:00'),
   (55, '상태', '진행중', '완료', '이서준', -3, '14:50'),
-  (57, '예정일', 'd:-3', 'd:-1', '김지원', -4, '09:40'),
-  (57, '상태', '진행중', '완료', '김지원', -1, '10:10')
+  (57, '예정일', 'd:-3', 'd:-1', '김지스트', -4, '09:40'),
+  (57, '상태', '진행중', '완료', '김지스트', -1, '10:10')
 ) as h(n, f, p, q, a, off, hm);
 
 -- ── 회의 메모(주간회의 — 이번 주 화요일 전후 3회) ───────
@@ -666,15 +666,15 @@ begin
  "mode":"train",
  "place":{"q":"대전 연구지원협력센터 대강당","name":"대전 연구지원협력센터","addr":"대전광역시 서구 둔산로 100 (가상 주소)","lat":36.3504,"lng":127.3845},
  "legs":[
-  {"id":"t1-go-1","dir":"go","mode":"car","seq":0,"by":"김지원","from":"GIST","fromTime":"06:40","to":"광주송정역"},
-  {"id":"t1-go-2","dir":"go","mode":"train","seq":1,"by":"김지원","no":"KTX 408","from":"광주송정","fromTime":"07:40","to":"대전","toTime":"09:02","seat":"5호차 7A·7B","gate":"3번 승강장"},
-  {"id":"t1-back-1","dir":"back","mode":"train","seq":0,"by":"김지원","no":"KTX 421","from":"대전","fromTime":"17:48","to":"광주송정","toTime":"19:10","seat":"5호차 8A·8B","gate":"5번 승강장"},
-  {"id":"t1-back-2","dir":"back","mode":"car","seq":1,"by":"김지원","from":"광주송정역","fromTime":"19:25","to":"GIST"}
+  {"id":"t1-go-1","dir":"go","mode":"car","seq":0,"by":"김지스트","from":"GIST","fromTime":"06:40","to":"광주송정역"},
+  {"id":"t1-go-2","dir":"go","mode":"train","seq":1,"by":"김지스트","no":"KTX 408","from":"광주송정","fromTime":"07:40","to":"대전","toTime":"09:02","seat":"5호차 7A·7B","gate":"3번 승강장"},
+  {"id":"t1-back-1","dir":"back","mode":"train","seq":0,"by":"김지스트","no":"KTX 421","from":"대전","fromTime":"17:48","to":"광주송정","toTime":"19:10","seat":"5호차 8A·8B","gate":"5번 승강장"},
+  {"id":"t1-back-2","dir":"back","mode":"car","seq":1,"by":"김지스트","from":"광주송정역","fromTime":"19:25","to":"GIST"}
  ],
  "places":[
-  {"id":"pl-dj0","name":"대전 연구지원협력센터","addr":"대전광역시 서구 둔산로 100 (가상 주소)","lat":36.3504,"lng":127.3845,"rep":true,"by":"김지원"},
-  {"id":"pl-dj1","name":"대전역","addr":"대전광역시 동구 중앙로 215","lat":36.3326,"lng":127.4344,"by":"김지원"},
-  {"id":"pl-dj2","name":"둔산동 한식당 (점심)","addr":"대전광역시 서구 둔산동 (가상 주소)","lat":36.3518,"lng":127.3862,"by":"김지원"}
+  {"id":"pl-dj0","name":"대전 연구지원협력센터","addr":"대전광역시 서구 둔산로 100 (가상 주소)","lat":36.3504,"lng":127.3845,"rep":true,"by":"김지스트"},
+  {"id":"pl-dj1","name":"대전역","addr":"대전광역시 동구 중앙로 215","lat":36.3326,"lng":127.4344,"by":"김지스트"},
+  {"id":"pl-dj2","name":"둔산동 한식당 (점심)","addr":"대전광역시 서구 둔산동 (가상 주소)","lat":36.3518,"lng":127.3862,"by":"김지스트"}
  ],
  "days":[
   {"date":"@A0@","summary":"연구협약 설명회 참석","placeIds":["main"],"items":[
@@ -704,9 +704,9 @@ $j$;
   tj := replace(tj, '@A0@', booth.d(t1));
 
   insert into public.calendar_events(id, title, loc, all_day, start_at, end_at, repeat, repeat_until, created_by, series_id, gcal_id, note, travel, updated_at)
-  values (1001, '[출장] 국내(대전)-연구협약 설명회 참석 @김지원, 박하은', '대전 연구지원협력센터 대강당', false,
-          booth.dt(t1, '07:00'), booth.dt(t1, '19:30'), 'none', '', '김지원', '', 'booth-gcal-1001',
-          '설명회 자료집·협약 변경 양식 출력해서 지참. 법인카드는 박하은 님이 챙기기.', tj::jsonb || jsonb_build_object('daysUnofficial', tj::jsonb->'days', 'remindBy', $r$ {"김지원":[{"anchor":"go","kind":"dayBefore","time":"18:00"},{"anchor":"go","kind":"before","minutes":60}],"박하은":[{"anchor":"go","kind":"before","minutes":45}]} $r$::jsonb), booth.ts(-5, '10:00'));
+  values (1001, '[출장] 국내(대전)-연구협약 설명회 참석 @김지스트, 박하은', '대전 연구지원협력센터 대강당', false,
+          booth.dt(t1, '07:00'), booth.dt(t1, '19:30'), 'none', '', '김지스트', '', 'booth-gcal-1001',
+          '설명회 자료집·협약 변경 양식 출력해서 지참. 법인카드는 박하은 님이 챙기기.', tj::jsonb || jsonb_build_object('daysUnofficial', tj::jsonb->'days', 'remindBy', $r$ {"김지스트":[{"anchor":"go","kind":"dayBefore","time":"18:00"},{"anchor":"go","kind":"before","minutes":60}],"박하은":[{"anchor":"go","kind":"before","minutes":45}]} $r$::jsonb), booth.ts(-5, '10:00'));
 
   ------------------------------------------------------------------ 출장 1002 : 서울 1박 2일 (열차)
   tj := $j$
@@ -772,20 +772,20 @@ $j$;
  "tz":{"label":"JST","offset":0},
  "place":{"q":"일본 도쿄 도쿄대학 혼고 캠퍼스 외","name":"도쿄대학 혼고 캠퍼스","addr":"7 Chome-3-1 Hongo, Bunkyo City, Tokyo","lat":35.7126,"lng":139.7620},
  "legs":[
-  {"id":"t3-go-1","dir":"go","mode":"express","seq":0,"by":"김지원","no":"프리미엄 고속버스","from":"광주 유스퀘어","fromTime":"06:30","to":"인천공항 T2","toTime":"10:15","seat":"2A·2B"},
-  {"id":"t3-go-2","dir":"go","mode":"flight","seq":1,"by":"김지원","no":"KE2109","from":"인천 ICN","fromTime":"13:05","to":"도쿄 하네다 HND","toTime":"15:25","seat":"31A·31B","terminal":"T2","gate":"246번 게이트","board":"12:35"},
-  {"id":"t3-back-1","dir":"back","mode":"flight","seq":0,"by":"김지원","no":"KE2112","from":"도쿄 하네다 HND","fromTime":"11:20","to":"인천 ICN","toTime":"13:50","seat":"30C·30D","terminal":"국제선 3터미널","gate":"112번 게이트","board":"10:50"},
-  {"id":"t3-back-2","dir":"back","mode":"express","seq":1,"by":"김지원","no":"프리미엄 고속버스","from":"인천공항 T2","fromTime":"15:30","to":"광주 유스퀘어","toTime":"19:25","seat":"3A·3B"}
+  {"id":"t3-go-1","dir":"go","mode":"express","seq":0,"by":"김지스트","no":"프리미엄 고속버스","from":"광주 유스퀘어","fromTime":"06:30","to":"인천공항 T2","toTime":"10:15","seat":"2A·2B"},
+  {"id":"t3-go-2","dir":"go","mode":"flight","seq":1,"by":"김지스트","no":"KE2109","from":"인천 ICN","fromTime":"13:05","to":"도쿄 하네다 HND","toTime":"15:25","seat":"31A·31B","terminal":"T2","gate":"246번 게이트","board":"12:35"},
+  {"id":"t3-back-1","dir":"back","mode":"flight","seq":0,"by":"김지스트","no":"KE2112","from":"도쿄 하네다 HND","fromTime":"11:20","to":"인천 ICN","toTime":"13:50","seat":"30C·30D","terminal":"국제선 3터미널","gate":"112번 게이트","board":"10:50"},
+  {"id":"t3-back-2","dir":"back","mode":"express","seq":1,"by":"김지스트","no":"프리미엄 고속버스","from":"인천공항 T2","fromTime":"15:30","to":"광주 유스퀘어","toTime":"19:25","seat":"3A·3B"}
  ],
  "stays":[
-  {"name":"신주쿠 시티 호텔","addr":"Shinjuku, Tokyo (가상 숙소)","lat":35.6938,"lng":139.7034,"inDate":"@B0@","inTime":"17:30","outDate":"@B3@","outTime":"08:30","note":"조식 포함 (06:30~09:30). 2인 각 1실, 예약자 김지원.","outNote":"체크아웃 후 짐 보관 가능"}
+  {"name":"신주쿠 시티 호텔","addr":"Shinjuku, Tokyo (가상 숙소)","lat":35.6938,"lng":139.7034,"inDate":"@B0@","inTime":"17:30","outDate":"@B3@","outTime":"08:30","note":"조식 포함 (06:30~09:30). 2인 각 1실, 예약자 김지스트.","outNote":"체크아웃 후 짐 보관 가능"}
  ],
  "places":[
-  {"id":"pl-jp1","name":"하네다공항 국제선","addr":"3 Chome-3-2 Hanedakuko, Ota City, Tokyo","lat":35.5494,"lng":139.7798,"by":"김지원"},
-  {"id":"pl-jp2","name":"신주쿠 시티 호텔","addr":"Shinjuku, Tokyo (가상 숙소)","lat":35.6938,"lng":139.7034,"by":"김지원"},
-  {"id":"pl-jp3","name":"도쿄대학 혼고 캠퍼스 연구지원부","addr":"7 Chome-3-1 Hongo, Bunkyo City, Tokyo","lat":35.7126,"lng":139.7620,"rep":true,"by":"김지원"},
-  {"id":"pl-jp4","name":"과학미래관","addr":"2 Chome-3-6 Aomi, Koto City, Tokyo","lat":35.6195,"lng":139.7767,"by":"김지원"},
-  {"id":"pl-jp5","name":"아사쿠사 센소지 주변 식당가","addr":"2 Chome-3-1 Asakusa, Taito City, Tokyo","lat":35.7148,"lng":139.7967,"by":"김지원"}
+  {"id":"pl-jp1","name":"하네다공항 국제선","addr":"3 Chome-3-2 Hanedakuko, Ota City, Tokyo","lat":35.5494,"lng":139.7798,"by":"김지스트"},
+  {"id":"pl-jp2","name":"신주쿠 시티 호텔","addr":"Shinjuku, Tokyo (가상 숙소)","lat":35.6938,"lng":139.7034,"by":"김지스트"},
+  {"id":"pl-jp3","name":"도쿄대학 혼고 캠퍼스 연구지원부","addr":"7 Chome-3-1 Hongo, Bunkyo City, Tokyo","lat":35.7126,"lng":139.7620,"rep":true,"by":"김지스트"},
+  {"id":"pl-jp4","name":"과학미래관","addr":"2 Chome-3-6 Aomi, Koto City, Tokyo","lat":35.6195,"lng":139.7767,"by":"김지스트"},
+  {"id":"pl-jp5","name":"아사쿠사 센소지 주변 식당가","addr":"2 Chome-3-1 Asakusa, Taito City, Tokyo","lat":35.7148,"lng":139.7967,"by":"김지스트"}
  ],
  "days":[
   {"date":"@B0@","summary":"출국 · 도쿄 도착","placeIds":["pl-jp2"],"items":[
@@ -804,7 +804,7 @@ $j$;
   {"date":"@B2@","summary":"공용장비센터·과학관 견학","placeIds":["pl-jp4"],"items":[
    {"id":"t3-i10","time":"10:00","endTime":"12:00","title":"과학미래관 견학 - 연구시설 공개·교육 프로그램 운영 사례","placeIds":["pl-jp4"],"move":{"at":"09:10","mins":50,"how":"지하철·유리카모메"}},
    {"id":"t3-i11","time":"13:30","endTime":"16:00","title":"공용장비센터 견학 (현지 파트너 안내)","body":"장비 예약 시스템과 이용료 정산 방식을 확인합니다.\\n사진 촬영은 담당자 허락 후.","placeIds":["main"],"placeNote":"센터 안내 데스크 앞 집합"},
-   {"id":"t3-i12","time":"17:00","title":"자유 시간","body":"기념품 구입 등","personal":"김지원","placeIds":["pl-jp5"]},
+   {"id":"t3-i12","time":"17:00","title":"자유 시간","body":"기념품 구입 등","personal":"김지스트","placeIds":["pl-jp5"]},
    {"id":"t3-i13","time":"18:30","title":"저녁 - 아사쿠사 인근","placeIds":["pl-jp5"],"move":{"at":"17:50","mins":40,"how":"지하철"}}
   ]},
   {"date":"@B3@","summary":"귀국","placeIds":["pl-jp1"],"items":[
@@ -822,7 +822,7 @@ $j$;
   "region":"가",
   "items":[
    {"id":"c3-stay","label":"숙박","kind":"stay","people":2,"amount":900000},
-   {"id":"c3-fl","label":"항공권","kind":"flight","each":{"이서준":432000,"김지원":432000}},
+   {"id":"c3-fl","label":"항공권","kind":"flight","each":{"이서준":432000,"김지스트":432000}},
    {"id":"c3-go","label":"가는 국내편","kind":"leg","legId":"t3-go-1","people":2,"amount":66000,"detail":"고속버스(프리미엄)","route":"광주(유스퀘어) → 인천공항T2"},
    {"id":"c3-back","label":"오는 국내편","kind":"leg","legId":"t3-back-2","people":2,"amount":66000,"detail":"고속버스(프리미엄)","route":"인천공항T2 → 광주(유스퀘어)"},
    {"id":"c3-local","label":"현지 교통(지하철)","people":2,"amount":84000,"planned":true}
@@ -838,14 +838,14 @@ $j$;
   tj := replace(replace(replace(replace(tj, '@B0@', booth.d(t3)), '@B1@', booth.d(t3 + 1)), '@B2@', booth.d(t3 + 2)), '@B3@', booth.d(t3 + 3));
 
   insert into public.calendar_events(id, title, loc, all_day, start_at, end_at, repeat, repeat_until, created_by, series_id, gcal_id, note, travel, updated_at)
-  values (1003, '[출장] 국외(일본 도쿄)-대학 연구지원 체계 벤치마킹 방문 @이서준, 김지원', '일본 도쿄 도쿄대학 혼고 캠퍼스 외', true,
+  values (1003, '[출장] 국외(일본 도쿄)-대학 연구지원 체계 벤치마킹 방문 @이서준, 김지스트', '일본 도쿄 도쿄대학 혼고 캠퍼스 외', true,
           booth.d(t3), booth.d(t3 + 3), 'none', '', '이서준', '', 'booth-gcal-1003',
-          '국외출장 계획서 결재 완료. 여비는 귀국 후 7일 이내 정산.', tj::jsonb || jsonb_build_object('daysUnofficial', tj::jsonb->'days', 'remindBy', $r$ {"김지원":[{"anchor":"go","kind":"dayBefore","time":"20:00"},{"anchor":"go","kind":"before","minutes":120},{"anchor":"stayIn","kind":"before","minutes":30},{"anchor":"back","kind":"before","minutes":150}],"이서준":[{"anchor":"go","kind":"before","minutes":150}]} $r$::jsonb), booth.ts(-10, '11:30'));
+          '국외출장 계획서 결재 완료. 여비는 귀국 후 7일 이내 정산.', tj::jsonb || jsonb_build_object('daysUnofficial', tj::jsonb->'days', 'remindBy', $r$ {"김지스트":[{"anchor":"go","kind":"dayBefore","time":"20:00"},{"anchor":"go","kind":"before","minutes":120},{"anchor":"stayIn","kind":"before","minutes":30},{"anchor":"back","kind":"before","minutes":150}],"이서준":[{"anchor":"go","kind":"before","minutes":150}]} $r$::jsonb), booth.ts(-10, '11:30'));
 
   ------------------------------------------------------------------ 출장 1004 : 지난 출장(간단)
   insert into public.calendar_events(id, title, loc, all_day, start_at, end_at, created_by, gcal_id, note, updated_at)
-  values (1004, '[출장] 국내(세종)-연구비 관리 우수사례 방문 @김지원', '세종 정부청사 인근', false,
-          booth.dt(booth.cal_wd(-15), '08:30'), booth.dt(booth.cal_wd(-15), '18:00'), '김지원', 'booth-gcal-1004',
+  values (1004, '[출장] 국내(세종)-연구비 관리 우수사례 방문 @김지스트', '세종 정부청사 인근', false,
+          booth.dt(booth.cal_wd(-15), '08:30'), booth.dt(booth.cal_wd(-15), '18:00'), '김지스트', 'booth-gcal-1004',
           '방문 결과는 팀 주간회의에서 공유 완료.', booth.ts(-16, '09:00'));
 
   ------------------------------------------------------------------ 반복 시리즈 : 센터 주간업무회의(매주 월 10:00) / 연구비 집행 점검(매주 금 15:00)
@@ -873,41 +873,41 @@ $j$;
          booth.ts(least(s, 0) - 3, '09:00')
   from (values
     -- 지난 일정
-    (1,  '[행사] 연구개발 성과 공유회 @이서준, 김지원, 박하은, 최도윤', '원내 국제관 대강당', '발표 자료 취합: 각 담당 3일 전까지.', false, booth.cal_wd(-40), booth.cal_wd(-40), '14:00', '17:00', '이서준', true),
+    (1,  '[행사] 연구개발 성과 공유회 @이서준, 김지스트, 박하은, 최도윤', '원내 국제관 대강당', '발표 자료 취합: 각 담당 3일 전까지.', false, booth.cal_wd(-40), booth.cal_wd(-40), '14:00', '17:00', '이서준', true),
     (2,  '[회의] 연구과제 협약 변경 협의 @박하은, 최도윤', '원내 행정동 소회의실', '', false, booth.cal_wd(-34), booth.cal_wd(-34), '14:00', '15:30', '박하은', true),
-    (3,  '[업무] 상반기 연구비 집행 실적 보고 @센터', '', '보고서 제출처: 연구처 연구관리팀.', true, booth.cal_wd(-30), booth.cal_wd(-30), '', '', '김지원', true),
-    (4,  '[교육] 연구윤리·청렴 교육 @이서준, 김지원, 박하은, 최도윤', '원내 국제관 세미나실', '온라인 수강 인정 불가 - 현장 참석.', false, booth.cal_wd(-22), booth.cal_wd(-22), '10:00', '12:00', '김지원', true),
+    (3,  '[업무] 상반기 연구비 집행 실적 보고 @센터', '', '보고서 제출처: 연구처 연구관리팀.', true, booth.cal_wd(-30), booth.cal_wd(-30), '', '', '김지스트', true),
+    (4,  '[교육] 연구윤리·청렴 교육 @이서준, 김지스트, 박하은, 최도윤', '원내 국제관 세미나실', '온라인 수강 인정 불가 - 현장 참석.', false, booth.cal_wd(-22), booth.cal_wd(-22), '10:00', '12:00', '김지스트', true),
     (5,  '[회의] 내부 규정 개정 TF 1차 @이서준, 박하은, 최도윤', '원내 행정동 소회의실', '개정 대상: 연구비 관리 지침, 장비 공동활용 운영 규정.', false, booth.cal_wd(-19), booth.cal_wd(-19), '15:00', '16:30', '이서준', true),
     (6,  '[업무] 연구장비 공동활용 현황 점검 @최도윤', '원내 중앙기기연구소', '', false, booth.cal_wd(-12), booth.cal_wd(-12), '10:00', '12:00', '최도윤', true),
-    (7,  '[행사] 신입 연구원 오리엔테이션 지원 @박하은, 김지원', '원내 국제관 대강당', '', false, booth.cal_wd(-9), booth.cal_wd(-9), '13:30', '16:30', '박하은', true),
-    (8,  '[회의] 연구재단 담당자 화상회의 @이서준, 김지원', '화상 (Zoom)', '협약 변경 건 사전 협의.', false, booth.cal_wd(-6), booth.cal_wd(-6), '11:00', '12:00', '김지원', true),
+    (7,  '[행사] 신입 연구원 오리엔테이션 지원 @박하은, 김지스트', '원내 국제관 대강당', '', false, booth.cal_wd(-9), booth.cal_wd(-9), '13:30', '16:30', '박하은', true),
+    (8,  '[회의] 연구재단 담당자 화상회의 @이서준, 김지스트', '화상 (Zoom)', '협약 변경 건 사전 협의.', false, booth.cal_wd(-6), booth.cal_wd(-6), '11:00', '12:00', '김지스트', true),
     (9,  '[업무] 연구실 안전 점검 사전 안내 발송 @최도윤', '', '', false, booth.cal_wd(-4), booth.cal_wd(-4), '09:30', '10:30', '최도윤', false),
-    (10, '[회의] 팀 점심 간담회 @이서준, 김지원, 박하은, 최도윤', '원내 학생회관 식당', '', false, booth.cal_wd(-3), booth.cal_wd(-3), '12:00', '13:30', '이서준', true),
+    (10, '[회의] 팀 점심 간담회 @이서준, 김지스트, 박하은, 최도윤', '원내 학생회관 식당', '', false, booth.cal_wd(-3), booth.cal_wd(-3), '12:00', '13:30', '이서준', true),
     (11, '[업무] 월간 연구비 정산 마감 @센터', '', '마감 후 미정산 건은 담당자별로 개별 안내.', true, booth.cal_wd(-2), booth.cal_wd(-2), '', '', '박하은', true),
     -- 이번 주 · 오늘
     (12, '[회의] 협약 서류 점검 @박하은, 최도윤', '원내 행정동 소회의실', '제출 서류 체크리스트 대조.', false, w + 1, w + 1, '14:00', '15:00', '박하은', true),
     (13, '[업무] 연구비 카드 사용 내역 확인 @최도윤', '', '', false, w + 2, w + 2, '10:30', '11:30', '최도윤', true),
-    (14, '[업무] 협약 변경 서류 제출 (연구관리시스템) @김지원', '', '제출 마감 17시.', false, 0, 0, '09:30', '10:30', '김지원', true),
-    (15, '[회의] 연구과제 평가위원회 일정 조율 @이서준, 김지원', '원내 행정동 대회의실', '위원 5명 일정 취합 결과 공유.', false, 0, 0, '13:30', '14:30', '이서준', true),
-    (16, '[행사] 연구지원 시스템 사용자 설명회 @이서준, 김지원, 박하은, 최도윤', '원내 국제관 세미나실', '신규 메뉴 시연. 질문은 사전 접수.', false, 0, 0, '16:00', '17:30', '김지원', true),
+    (14, '[업무] 협약 변경 서류 제출 (연구관리시스템) @김지스트', '', '제출 마감 17시.', false, 0, 0, '09:30', '10:30', '김지스트', true),
+    (15, '[회의] 연구과제 평가위원회 일정 조율 @이서준, 김지스트', '원내 행정동 대회의실', '위원 5명 일정 취합 결과 공유.', false, 0, 0, '13:30', '14:30', '이서준', true),
+    (16, '[행사] 연구지원 시스템 사용자 설명회 @이서준, 김지스트, 박하은, 최도윤', '원내 국제관 세미나실', '신규 메뉴 시연. 질문은 사전 접수.', false, 0, 0, '16:00', '17:30', '김지스트', true),
     (17, '[반차] 최도윤', '', '', false, 0, 0, '13:00', '18:00', '최도윤', true),
     (18, '[회의] 장비 공동활용 이용 현황 보고 @이서준, 최도윤', '원내 행정동 중회의실', '', false, booth.cal_wd(1), booth.cal_wd(1), '15:00', '16:00', '최도윤', true),
     (19, '[업무] 월말 연구비 정산 마감 안내 메일 @박하은', '', '', false, booth.cal_wd(2), booth.cal_wd(2), '09:30', '10:00', '박하은', true),
     (20, '[연차] 이서준', '', '', true, booth.cal_wd(3), booth.cal_wd(3), '', '', '이서준', true),
     -- 앞으로
-    (21, '[업무] 연구협약 서류 제출 마감 (연구관리시스템) @센터', '', '제출 누락 건 없도록 전날 최종 점검.', true, booth.cal_wd(5), booth.cal_wd(5), '', '', '김지원', true),
+    (21, '[업무] 연구협약 서류 제출 마감 (연구관리시스템) @센터', '', '제출 누락 건 없도록 전날 최종 점검.', true, booth.cal_wd(5), booth.cal_wd(5), '', '', '김지스트', true),
     (22, '[회의] 내부 규정 개정 TF 2차 @이서준, 박하은, 최도윤', '원내 행정동 소회의실', '1차 의견 반영본 검토.', false, booth.cal_wd(7), booth.cal_wd(7), '15:00', '16:30', '이서준', true),
     (23, '[교육] 연구실 안전관리 교육 @센터', '원내 국제관 세미나실', '연구실 안전관리자 대상.', false, booth.cal_wd(8), booth.cal_wd(8), '14:00', '16:00', '최도윤', true),
-    (24, '[업무] 연구실 안전 점검 현장 확인 @최도윤, 김지원', '원내 자연과학동', '', false, booth.cal_wd(10), booth.cal_wd(10), '10:00', '12:00', '최도윤', true),
+    (24, '[업무] 연구실 안전 점검 현장 확인 @최도윤, 김지스트', '원내 자연과학동', '', false, booth.cal_wd(10), booth.cal_wd(10), '10:00', '12:00', '최도윤', true),
     (25, '[회의] 외부 회의 - 협약기관 협의 @이서준', '광주 북구 (협약기관 사무실)', '자료: 협약 변경안 3부.', false, booth.cal_wd(12), booth.cal_wd(12), '14:00', '16:00', '이서준', true),
-    (26, '[연차] 김지원', '', '', true, booth.cal_wd(14), booth.cal_wd(15), '', '', '김지원', true),
-    (27, '[행사] 연구지원 합동 워크숍 @이서준, 김지원, 박하은, 최도윤', '원내 국제관 대강당', '타 부서 연구지원 담당자 참석 - 약 30명.', false, booth.cal_wd(16), booth.cal_wd(16), '13:00', '17:00', '이서준', true),
+    (26, '[연차] 김지스트', '', '', true, booth.cal_wd(14), booth.cal_wd(15), '', '', '김지스트', true),
+    (27, '[행사] 연구지원 합동 워크숍 @이서준, 김지스트, 박하은, 최도윤', '원내 국제관 대강당', '타 부서 연구지원 담당자 참석 - 약 30명.', false, booth.cal_wd(16), booth.cal_wd(16), '13:00', '17:00', '이서준', true),
     (28, '[업무] 연말 예산 집행 마감 점검 @센터', '', '', true, booth.cal_wd(18), booth.cal_wd(18), '', '', '박하은', true),
-    (29, '[회의] 평가 결과 보고 사전 검토 @이서준, 김지원', '원내 행정동 중회의실', '', false, booth.cal_wd(19), booth.cal_wd(19), '11:00', '12:00', '김지원', true),
-    (30, '[업무] 출장 결과 보고서 작성 (일본 출장) @이서준, 김지원', '', '', false, booth.cal_wd(t3 + 6), booth.cal_wd(t3 + 6), '10:00', '12:00', '김지원', false),
+    (29, '[회의] 평가 결과 보고 사전 검토 @이서준, 김지스트', '원내 행정동 중회의실', '', false, booth.cal_wd(19), booth.cal_wd(19), '11:00', '12:00', '김지스트', true),
+    (30, '[업무] 출장 결과 보고서 작성 (일본 출장) @이서준, 김지스트', '', '', false, booth.cal_wd(t3 + 6), booth.cal_wd(t3 + 6), '10:00', '12:00', '김지스트', false),
     (31, '[업무] 감사 대비 서류 정비 @박하은', '', '', false, booth.cal_wd(t3 + 8), booth.cal_wd(t3 + 8), '13:00', '17:00', '박하은', true),
     (32, '[연차] 박하은', '', '', true, booth.cal_wd(t3 + 10), booth.cal_wd(t3 + 10), '', '', '박하은', true),
-    (33, '[교육] 연구윤리 심화 교육 @이서준, 김지원, 박하은, 최도윤', '원내 국제관 세미나실', '', false, booth.cal_wd(t3 + 12), booth.cal_wd(t3 + 12), '10:00', '12:00', '김지원', true),
+    (33, '[교육] 연구윤리 심화 교육 @이서준, 김지스트, 박하은, 최도윤', '원내 국제관 세미나실', '', false, booth.cal_wd(t3 + 12), booth.cal_wd(t3 + 12), '10:00', '12:00', '김지스트', true),
     (34, '[업무] 장비 공동활용 이용료 정산 @최도윤', '', '', false, booth.cal_wd(t3 + 14), booth.cal_wd(t3 + 14), '14:00', '16:00', '최도윤', true),
     (35, '[회의] 연구과제 종합 성과 보고회 준비 @이서준, 박하은', '원내 행정동 소회의실', '', false, booth.cal_wd(t3 + 16), booth.cal_wd(t3 + 16), '15:00', '16:00', '이서준', true),
     (36, '[행사] 팀 송년 간담회 @센터', '원내 학생회관 식당', '', false, booth.cal_wd(t3 + 20), booth.cal_wd(t3 + 20), '17:30', '19:30', '이서준', false)
@@ -979,10 +979,10 @@ $j$;
  "mode":"car",
  "place":{"q":"광주 서구 연구행정교육센터 (가상)","name":"연구행정교육센터 (가상)","addr":"광주광역시 서구 상무중앙로 (가상 주소)","lat":35.1527,"lng":126.8514},
  "legs":[
-  {"id":"e1-go","dir":"go","mode":"car","seq":0,"by":"김지원","from":"GIST","fromTime":"08:40","to":"연구행정교육센터"},
-  {"id":"e1-back","dir":"back","mode":"car","seq":0,"by":"김지원","from":"연구행정교육센터","fromTime":"17:40","to":"GIST"}
+  {"id":"e1-go","dir":"go","mode":"car","seq":0,"by":"김지스트","from":"GIST","fromTime":"08:40","to":"연구행정교육센터"},
+  {"id":"e1-back","dir":"back","mode":"car","seq":0,"by":"김지스트","from":"연구행정교육센터","fromTime":"17:40","to":"GIST"}
  ],
- "places":[{"id":"pl-e1","name":"연구행정교육센터 (가상)","addr":"광주광역시 서구 상무중앙로 (가상 주소)","lat":35.1527,"lng":126.8514,"rep":true,"by":"김지원"}],
+ "places":[{"id":"pl-e1","name":"연구행정교육센터 (가상)","addr":"광주광역시 서구 상무중앙로 (가상 주소)","lat":35.1527,"lng":126.8514,"rep":true,"by":"김지스트"}],
  "days":[{"date":"@D@","summary":"외부 교육 수강","placeIds":["pl-e1"],"items":[
    {"id":"e1-i1","time":"09:30","title":"등록 및 교재 수령","placeIds":["pl-e1"]},
    {"id":"e1-i2","time":"10:00","endTime":"12:00","title":"연구행정 실무 역량 - 협약·정산 사례","placeIds":["pl-e1"],"placeNote":"4층 강의실"},
@@ -990,13 +990,13 @@ $j$;
    {"id":"e1-i4","time":"13:00","endTime":"17:00","title":"실습 및 수료 평가","body":"개인 노트북 지참","placeIds":["pl-e1"],"placeNote":"4층 강의실"}
  ]}],
  "guide":{"prep":"교육 신청 확인서\\n개인 노트북","notes":"주차 지원 없음 - 인근 공영주차장 이용"},
- "remindBy":{"김지원":[{"anchor":"go","kind":"before","minutes":30}]}
+ "remindBy":{"김지스트":[{"anchor":"go","kind":"before","minutes":30}]}
 }
 $j$;
   insert into public.calendar_events(id, title, loc, note, all_day, start_at, end_at, created_by, gcal_id, travel, updated_at)
-  values (1029 + 37, '[교육] 연구행정 실무 역량 교육 (외부) @김지원, 최도윤', '광주 서구 연구행정교육센터 (가상)',
+  values (1029 + 37, '[교육] 연구행정 실무 역량 교육 (외부) @김지스트, 최도윤', '광주 서구 연구행정교육센터 (가상)',
           E'외부 위탁 교육. 수강료는 교육훈련비로 집행하고 수료증을 제출합니다.\\n점심은 각자 해결.', false,
-          booth.dt(booth.cal_wd(11), '09:30'), booth.dt(booth.cal_wd(11), '17:30'), '김지원', 'booth-gcal-' || (1029 + 37),
+          booth.dt(booth.cal_wd(11), '09:30'), booth.dt(booth.cal_wd(11), '17:30'), '김지스트', 'booth-gcal-' || (1029 + 37),
           replace(tj, '@D@', booth.d(booth.cal_wd(11)))::jsonb, booth.ts(-2, '10:00'));
 
   -- 협약 대학 방문 면담 (원외)
@@ -1005,27 +1005,27 @@ $j$;
  "mode":"car",
  "place":{"q":"가상 A대학교 연구협력관","name":"가상 A대학교 연구협력관","addr":"광주광역시 북구 (가상 주소)","lat":35.1760,"lng":126.9070},
  "legs":[
-  {"id":"v1-go","dir":"go","mode":"car","seq":0,"by":"김지원","from":"GIST","fromTime":"09:40","to":"가상 A대학교"},
-  {"id":"v1-back","dir":"back","mode":"car","seq":0,"by":"김지원","from":"가상 A대학교","fromTime":"13:00","to":"GIST"}
+  {"id":"v1-go","dir":"go","mode":"car","seq":0,"by":"김지스트","from":"GIST","fromTime":"09:40","to":"가상 A대학교"},
+  {"id":"v1-back","dir":"back","mode":"car","seq":0,"by":"김지스트","from":"가상 A대학교","fromTime":"13:00","to":"GIST"}
  ],
- "places":[{"id":"pl-v1","name":"가상 A대학교 연구협력관","addr":"광주광역시 북구 (가상 주소)","lat":35.1760,"lng":126.9070,"rep":true,"by":"김지원"}],
+ "places":[{"id":"pl-v1","name":"가상 A대학교 연구협력관","addr":"광주광역시 북구 (가상 주소)","lat":35.1760,"lng":126.9070,"rep":true,"by":"김지스트"}],
  "days":[{"date":"@D@","summary":"협약 대학 방문","placeIds":["pl-v1"],"items":[
    {"id":"v1-i1","time":"10:30","endTime":"11:30","title":"공동연구 협약 이행 면담","body":"- 방문 목적·의제: 협약 이행 점검, 연구비 정산 일정\\n- 방문 자료집 지참","placeIds":["pl-v1"],"placeNote":"연구협력관 2층"},
    {"id":"v1-i2","time":"11:30","endTime":"12:00","title":"공용 연구시설 안내","placeIds":["pl-v1"],"status":"ifneeded"}
  ]}],
  "guide":{"prep":"방문증 신청 확인\\n방문 자료집 3부","notes":"방문증은 정문 경비실에서 수령"},
- "remindBy":{"김지원":[{"anchor":"go","kind":"before","minutes":30}]}
+ "remindBy":{"김지스트":[{"anchor":"go","kind":"before","minutes":30}]}
 }
 $j$;
   insert into public.calendar_events(id, title, loc, note, all_day, start_at, end_at, created_by, gcal_id, travel, updated_at)
-  values (1029 + 38, '[회의] 협약 대학 방문 면담 @김지원, 박하은', '가상 A대학교 연구협력관',
+  values (1029 + 38, '[회의] 협약 대학 방문 면담 @김지스트, 박하은', '가상 A대학교 연구협력관',
           E'안건\\n1. 공동연구 협약 이행 현황 점검\\n2. 연구비 정산 일정 협의\\n3. 차기 협약 갱신 의견 청취', false,
-          booth.dt(booth.cal_wd(9), '10:30'), booth.dt(booth.cal_wd(9), '12:00'), '김지원', 'booth-gcal-' || (1029 + 38),
+          booth.dt(booth.cal_wd(9), '10:30'), booth.dt(booth.cal_wd(9), '12:00'), '김지스트', 'booth-gcal-' || (1029 + 38),
           replace(tj, '@D@', booth.d(booth.cal_wd(9)))::jsonb, booth.ts(-2, '11:00'));
 
   -- 미리알림(내 것): 일정 시작 N분 전 — 원내 회의·행사
   update public.calendar_events
-     set travel = coalesce(travel, '{}'::jsonb) || '{"remindBy":{"김지원":[{"anchor":"start","kind":"before","minutes":10}]}}'::jsonb
+     set travel = coalesce(travel, '{}'::jsonb) || '{"remindBy":{"김지스트":[{"anchor":"start","kind":"before","minutes":10}]}}'::jsonb
    where id in (1029 + 15, 1029 + 16, 1029 + 18, 1029 + 22, 1029 + 29);
 
   -- 관련 업무(work_events) — 일정 ↔ 업무현황
@@ -1049,9 +1049,9 @@ drop function booth.cal_wd(int);
 -- 토큰은 insert 때 서버 트리거가 새로 뽑아 덮어쓴다 — 정해 둔 32자 토큰을 넣으려고 잠깐 끈다.
 alter table public.trip_shares disable trigger trip_shares_guard;
 insert into public.trip_shares(event_id, token, enabled, created_by, pin) values
-  (1001, 'boothDaejeonBrief2026xKtxDemo001', true, '김지원', null),
-  (1002, 'boothSeoulEduTraining2026Demo003', true, '김지원', null),
-  (1003, 'boothTokyoBenchmark26xTripDemo02', true, '김지원', null);
+  (1001, 'boothDaejeonBrief2026xKtxDemo001', true, '김지스트', null),
+  (1002, 'boothSeoulEduTraining2026Demo003', true, '김지스트', null),
+  (1003, 'boothTokyoBenchmark26xTripDemo02', true, '김지스트', null);
 alter table public.trip_shares enable trigger trip_shares_guard;
 
 do $$ begin
@@ -1070,7 +1070,7 @@ insert into public.place_favorites(name, place_name, addr, lat, lng, created_by)
   ('도쿄 국제포럼', 'Tokyo International Forum', 'Marunouchi, Chiyoda City, Tokyo', 35.6769, 139.7639, '00000000-0000-4000-8000-00000000b007');
 
 ------------------------------------------------------------------ 출장비 예측용 직급 (개인 설정 'trip.grade')
-insert into public.user_settings(user_name, settings) values ('김지원', '{"trip.grade":"mid"}')
+insert into public.user_settings(user_name, settings) values ('김지스트', '{"trip.grade":"mid"}')
 on conflict (user_name) do update set settings = public.user_settings.settings || excluded.settings;
 `,bn=`-- 체험관 가상 데이터 — 장비관리(도입·운영·데모결과). 모든 업체·모델·금액은 지어낸 것이다.
 -- 장비 id 1~10 = 도입 단계(1 평가 · 2~3 데모 · 4~5 공고 · 6 협상 · 7 제작 · 8~9 설치 · 10 사전규격), 11~20 = 운영.
@@ -1321,9 +1321,9 @@ delete from public.work_link_log where target_type = 'equipment';
 -- ───────── 공지사항 ─────────
 insert into public.notices(num, pinned, cat, dept, dept_mgr, title, body, ref, posted_date, posted_time, start_date, end_date, target, created_at, attachments) overriding system value values
 (1, false, '일반', '연구지원팀', '이서준', '2026년 연구지원팀 업무 분장 안내',
- E'올해 팀 업무 분장을 아래와 같이 안내드립니다.\\n- 연구비 정산·집행 점검: 박하은\\n- 협약·평가 지원: 최도윤\\n- 세미나·교육, 규정 개정: 김지원\\n- 총괄: 이서준 팀장\\n\\n변경 사항이 있으면 팀장에게 말씀해 주세요.',
+ E'올해 팀 업무 분장을 아래와 같이 안내드립니다.\\n- 연구비 정산·집행 점검: 박하은\\n- 협약·평가 지원: 최도윤\\n- 세미나·교육, 규정 개정: 김지스트\\n- 총괄: 이서준 팀장\\n\\n변경 사항이 있으면 팀장에게 말씀해 주세요.',
  '', booth.d(-170), '09:10', booth.d(-170), '', '팀 전체', booth.ts(-170,'09:10'), '[]'),
-(2, false, '교육', '연구지원팀', '김지원', '연구윤리 온라인 교육 이수 안내',
+(2, false, '교육', '연구지원팀', '김지스트', '연구윤리 온라인 교육 이수 안내',
  E'연구윤리 온라인 교육을 아래 기간 내에 이수해 주세요.\\n- 대상: 팀 전체\\n- 소요 시간: 약 1시간\\n- 이수증은 PDF로 저장해 팀 공유 폴더에 올려 주세요.',
  'https://www.gist.ac.kr', booth.d(-140), '10:00', booth.d(-140), booth.d(-110), '팀 전체', booth.ts(-140,'10:00'), '[]'),
 (3, false, '안전', '연구지원팀', '최도윤', '연구실 안전 정기점검 일정 안내',
@@ -1335,10 +1335,10 @@ insert into public.notices(num, pinned, cat, dept, dept_mgr, title, body, ref, p
 (5, false, '일반', '연구지원팀', '박하은', '연구비 카드 사용 시 증빙 첨부 요령',
  E'카드 결제 후 증빙은 결제일 기준 3일 이내에 시스템에 올려 주세요.\\n- 영수증 사진은 금액·가맹점·일자가 모두 보이게 촬영\\n- 회의비는 참석자 명단 필수\\n- 10만원 이상 물품은 견적서 함께 첨부',
  '', booth.d(-80), '09:40', booth.d(-80), '', '팀 전체', booth.ts(-80,'09:40'), '[]'),
-(6, false, '보안', '연구지원팀', '김지원', '업무용 PC 보안 업데이트 및 비밀번호 변경 안내',
+(6, false, '보안', '연구지원팀', '김지스트', '업무용 PC 보안 업데이트 및 비밀번호 변경 안내',
  E'분기별 보안 점검에 따라 업무용 PC의 윈도우 업데이트와 비밀번호 변경이 필요합니다.\\n- 비밀번호는 12자 이상, 이전 3회 재사용 불가\\n- 개인 USB 사용은 지양해 주세요.',
  '', booth.d(-62), '10:15', booth.d(-62), booth.d(-45), '팀 전체', booth.ts(-62,'10:15'), '[]'),
-(7, false, '교육', '연구지원팀', '김지원', '연구과제 협약 실무 세미나 개최 (하반기)',
+(7, false, '교육', '연구지원팀', '김지스트', '연구과제 협약 실무 세미나 개최 (하반기)',
  E'협약 변경·정산 시 자주 나오는 질문을 사례 중심으로 정리해 공유합니다.\\n- 장소: 3층 공용 회의실\\n- 사전 질문은 팀 게시판에 남겨 주세요.',
  '', booth.d(-48), '15:00', booth.d(-48), booth.d(-34), '팀 전체', booth.ts(-48,'15:00'), '[]'),
 (8, false, '시설', '연구지원팀', '이서준', '연구장비 공동활용 예약 방식 변경 안내',
@@ -1357,8 +1357,8 @@ insert into public.notices(num, pinned, cat, dept, dept_mgr, title, body, ref, p
  E'회의실 LED 조명 교체 공사로 아래 기간 3층 공용 회의실을 쓸 수 없습니다. 이 기간 회의는 2층 소회의실을 이용해 주세요.\\n배치도는 첨부 파일을 참고해 주세요.',
  '', booth.d(-6), '11:00', booth.d(-6), booth.d(5), '팀 전체', booth.ts(-6,'11:00'),
  jsonb_build_array(jsonb_build_object('name','회의실 이용 안내 배치도.png','path','booth/n-room-map.png','size',48200,'type','image/png'))),
-(13, false, '교육', '연구지원팀', '김지원', '연구비 시스템 사용자 교육 신청 (선착순)',
- E'신규 연구비 시스템 사용자 교육을 진행합니다.\\n- 일시: 다음 주 목요일 14:00~16:00\\n- 장소: 2층 교육실\\n- 신청은 김지원 선생님께 메신저로 알려 주세요.',
+(13, false, '교육', '연구지원팀', '김지스트', '연구비 시스템 사용자 교육 신청 (선착순)',
+ E'신규 연구비 시스템 사용자 교육을 진행합니다.\\n- 일시: 다음 주 목요일 14:00~16:00\\n- 장소: 2층 교육실\\n- 신청은 김지스트 선생님께 메신저로 알려 주세요.',
  '', booth.d(-4), '09:20', booth.d(-4), booth.d(10), '팀 전체', booth.ts(-4,'09:20'), '[]'),
 (14, false, '일반', '연구지원팀', '박하은', '연구비 정산 실적 보고 취합 협조 요청',
  E'각 과제 담당자는 월말 정산 실적을 공유 시트에 입력해 주세요.\\n입력이 끝난 뒤 박하은 선생님께 알려 주시면 일괄 점검하겠습니다.',
@@ -1376,7 +1376,7 @@ update public.notices set author = dept_mgr;
 -- ───────── 정기알림 (매월 반복 띠) ─────────
 -- 오늘이 기간 안에 들어오도록 오늘 날짜 기준으로 잡는다(체험이 며칠에 열려도 띠가 보이게).
 -- 화면 맨 위 띠는 **하나만**(2026-11-19 사용자 '아래 것 지워서 한 개만') — 2번은 오늘과 겹치지 않는 주에 둔다(정기알림 목록에는 그대로 보임),
--- 아래에 뜨던 3번('다음 달 회의실·장비 예약 현황을 미리 점검하세요', 김지원 개인)은 뺐다
+-- 아래에 뜨던 3번('다음 달 회의실·장비 예약 현황을 미리 점검하세요', 김지스트 개인)은 뺐다
 insert into public.recurring_notices(id, message, day_from, day_to, notice_num, enabled, author, author_uid, cycle, recipient_uids, scope, owner_uid) overriding system value values
 (1, '월말 연구비 정산 증빙 제출 기한을 확인해 주세요.',
  greatest(1, extract(day from booth.day(0))::int - 3), least(31, extract(day from booth.day(0))::int + 5), 16, true,
@@ -1386,7 +1386,7 @@ insert into public.recurring_notices(id, message, day_from, day_to, notice_num, 
  case when extract(day from booth.day(0))::int <= 15 then 27 else 7 end, null, true,
  '최도윤', '00000000-0000-4000-8000-0000000000a3', 'monthly', null, 'team', null);
 
--- ───────── 할 일 (김지원) ─────────
+-- ───────── 할 일 (김지스트) ─────────
 insert into public.quick_todo_lists(id, owner_uid, name, sort_order, created_at) overriding system value values
 (1, '00000000-0000-4000-8000-00000000b007', '이번 주 업무', 1, booth.ts(-14,'09:00')),
 (2, '00000000-0000-4000-8000-00000000b007', '정산·행정', 2, booth.ts(-14,'09:05')),
@@ -1408,38 +1408,38 @@ insert into public.quick_todos(id, owner_uid, title, done_at, created_at, sort_o
 
 -- ───────── 메모 (개인 메모는 작성자와 공유받은 사람만 본다) ─────────
 insert into public.page_notes(id, path, author, author_uid, content, shared, drawing_id, created_at, updated_at, x, y) overriding system value values
-(1, '/', '김지원', '00000000-0000-4000-8000-00000000b007', E'이번 주 할 일\\n- 협약 변경 공문 검토\\n- 세미나 자료 인쇄', '{}', null, booth.ts(-1,'09:10'), booth.ts(-1,'09:10'), 120, 140),
-(2, '/', '이서준', '00000000-0000-4000-8000-0000000000a1', '다음 주 팀 회의 전에 정산 일정표 공유 부탁드립니다.', '{김지원}', null, booth.ts(-2,'17:40'), booth.ts(-2,'17:40'), 520, 180),
-(3, '/calendar', '김지원', '00000000-0000-4000-8000-00000000b007', '회의실 공사 기간에는 2층 소회의실 예약이 먼저 차니 미리 잡아 둘 것', '{박하은,최도윤}', null, booth.ts(-3,'11:20'), booth.ts(-3,'11:20'), 360, 220),
-(4, '/work', '박하은', '00000000-0000-4000-8000-0000000000a2', '월말 정산 업무는 증빙 접수가 25일이라 그 전에 담당자 확인이 필요해요.', '{김지원,이서준}', null, booth.ts(-2,'10:30'), booth.ts(-2,'10:30'), 460, 120);
+(1, '/', '김지스트', '00000000-0000-4000-8000-00000000b007', E'이번 주 할 일\\n- 협약 변경 공문 검토\\n- 세미나 자료 인쇄', '{}', null, booth.ts(-1,'09:10'), booth.ts(-1,'09:10'), 120, 140),
+(2, '/', '이서준', '00000000-0000-4000-8000-0000000000a1', '다음 주 팀 회의 전에 정산 일정표 공유 부탁드립니다.', '{김지스트}', null, booth.ts(-2,'17:40'), booth.ts(-2,'17:40'), 520, 180),
+(3, '/calendar', '김지스트', '00000000-0000-4000-8000-00000000b007', '회의실 공사 기간에는 2층 소회의실 예약이 먼저 차니 미리 잡아 둘 것', '{박하은,최도윤}', null, booth.ts(-3,'11:20'), booth.ts(-3,'11:20'), 360, 220),
+(4, '/work', '박하은', '00000000-0000-4000-8000-0000000000a2', '월말 정산 업무는 증빙 접수가 25일이라 그 전에 담당자 확인이 필요해요.', '{김지스트,이서준}', null, booth.ts(-2,'10:30'), booth.ts(-2,'10:30'), 460, 120);
 
 insert into public.page_note_replies(id, note_id, author, author_uid, content, created_at) overriding system value values
-(1, 2, '김지원', '00000000-0000-4000-8000-00000000b007', '네, 내일 오전까지 정리해서 올리겠습니다.', booth.ts(-2,'18:05')),
+(1, 2, '김지스트', '00000000-0000-4000-8000-00000000b007', '네, 내일 오전까지 정리해서 올리겠습니다.', booth.ts(-2,'18:05')),
 (2, 3, '박하은', '00000000-0000-4000-8000-0000000000a2', '확인했습니다. 저도 같은 날 회의가 있어서 미리 잡아 둘게요.', booth.ts(-3,'13:10')),
-(3, 4, '김지원', '00000000-0000-4000-8000-00000000b007', '감사합니다. 담당자별로 이번 주 안에 확인하겠습니다.', booth.ts(-2,'14:00'));
+(3, 4, '김지스트', '00000000-0000-4000-8000-00000000b007', '감사합니다. 담당자별로 이번 주 안에 확인하겠습니다.', booth.ts(-2,'14:00'));
 
 -- ───────── 자료실 ─────────
 insert into public.resources(num, cat, title, url, note, author, created_at, attachments) overriding system value values
-(1, '참고', 'GIST 공식 누리집', 'https://www.gist.ac.kr', '학교 공지·학사 일정 확인용', '김지원', booth.ts(-150,'10:00'), '[]'),
+(1, '참고', 'GIST 공식 누리집', 'https://www.gist.ac.kr', '학교 공지·학사 일정 확인용', '김지스트', booth.ts(-150,'10:00'), '[]'),
 (2, '참고', '국가과학기술지식정보서비스 (NTIS)', 'https://www.ntis.go.kr', '과제 검색, 성과 확인', '박하은', booth.ts(-140,'11:00'), '[]'),
 (3, '업무', '범부처 통합연구지원시스템 (IRIS)', 'https://www.iris.go.kr', '협약·정산 등록 시스템 바로가기', '박하은', booth.ts(-135,'11:10'), '[]'),
 (4, '업무', '연구비 집행 증빙 서식 모음', '', '카드·계좌이체 증빙, 회의비 참석자 명단 서식이 들어 있습니다.', '박하은', booth.ts(-100,'14:00'),
  jsonb_build_array(jsonb_build_object('name','연구비 집행 증빙 서식 모음.hwp','path','booth/r-expense-form.hwp','size',87500,'type','application/x-hwp'))),
 (5, '업무', '연구실 안전 점검표 및 점검 매뉴얼', '', '정기점검 시 출력해서 쓰세요.', '최도윤', booth.ts(-90,'10:30'),
  jsonb_build_array(jsonb_build_object('name','연구실 안전 점검 매뉴얼.pdf','path','booth/r-safety-manual.pdf','size',264000,'type','application/pdf'))),
-(6, '업무', '연구비 집행 규정 (내부 규정집)', '', '출장비 정산 기준 개정(안) 포함 최신본입니다.', '김지원', booth.ts(-26,'13:40'),
+(6, '업무', '연구비 집행 규정 (내부 규정집)', '', '출장비 정산 기준 개정(안) 포함 최신본입니다.', '김지스트', booth.ts(-26,'13:40'),
  jsonb_build_array(jsonb_build_object('name','연구비 집행 규정(개정안).pdf','path','booth/r-regulation.pdf','size',198400,'type','application/pdf'))),
-(7, '교육', '연구윤리 온라인 교육 바로가기', 'https://www.gist.ac.kr', '이수증은 PDF로 저장해 팀 공유 폴더에 올려 주세요.', '김지원', booth.ts(-140,'10:20'), '[]'),
+(7, '교육', '연구윤리 온라인 교육 바로가기', 'https://www.gist.ac.kr', '이수증은 PDF로 저장해 팀 공유 폴더에 올려 주세요.', '김지스트', booth.ts(-140,'10:20'), '[]'),
 (8, '기타', '자주 쓰는 연락처', '', E'시설팀 내선 1234 (가상)\\n전산팀 내선 5678 (가상)\\n회의실 예약 문의는 연구지원팀으로', '이서준', booth.ts(-70,'09:00'), '[]');
 
--- ───────── 엔젤이 예시 대화 (김지원) ─────────
+-- ───────── 엔젤이 예시 대화 (김지스트) ─────────
 insert into public.angel_chats(id, uid, who, text, lines, created_at) values
 (1, '00000000-0000-4000-8000-00000000b007', 'user', '다음 주 화요일 오후 2시 박하은이랑 협약 회의 잡아줘', null, booth.ts(-6,'10:12')),
-(2, '00000000-0000-4000-8000-00000000b007', 'bot', '일정을 등록했어요.', '["제목: 협약 회의","일시: 다음 주 화요일 14:00~15:00","참석: 김지원, 박하은","장소: 2층 소회의실"]'::jsonb, booth.ts(-6,'10:12') + interval '3 seconds'),
+(2, '00000000-0000-4000-8000-00000000b007', 'bot', '일정을 등록했어요.', '["제목: 협약 회의","일시: 다음 주 화요일 14:00~15:00","참석: 김지스트, 박하은","장소: 2층 소회의실"]'::jsonb, booth.ts(-6,'10:12') + interval '3 seconds'),
 (3, '00000000-0000-4000-8000-00000000b007', 'user', '이번 주 내 일정 알려줘', null, booth.ts(-3,'09:05')),
 (4, '00000000-0000-4000-8000-00000000b007', 'bot', '이번 주 일정이 4건 있어요.', '["월 10:00 팀 주간 회의","화 14:00 협약 회의 (박하은)","수 15:00 연구비 시스템 교육 준비","금 11:00 정산 점검"]'::jsonb, booth.ts(-3,'09:05') + interval '3 seconds'),
 (5, '00000000-0000-4000-8000-00000000b007', 'user', '연구비 정산 관련 업무 요약해줘', null, booth.ts(-2,'13:30')),
-(6, '00000000-0000-4000-8000-00000000b007', 'bot', '연구비 정산 관련 업무 요약이에요. 이번 달 증빙 제출 마감(25일)이 가장 가깝고, 카드 증빙 누락 확인이 남아 있어요.', '["진행중: 월말 정산 실적 시트 입력 (김지원)","진행중: 카드 증빙 누락 확인 (박하은)","완료: 출장비 정산서 제출"]'::jsonb, booth.ts(-2,'13:30') + interval '3 seconds'),
+(6, '00000000-0000-4000-8000-00000000b007', 'bot', '연구비 정산 관련 업무 요약이에요. 이번 달 증빙 제출 마감(25일)이 가장 가깝고, 카드 증빙 누락 확인이 남아 있어요.', '["진행중: 월말 정산 실적 시트 입력 (김지스트)","진행중: 카드 증빙 누락 확인 (박하은)","완료: 출장비 정산서 제출"]'::jsonb, booth.ts(-2,'13:30') + interval '3 seconds'),
 (7, '00000000-0000-4000-8000-00000000b007', 'user', '다음 달 출장 일정 있어?', null, booth.ts(-1,'16:20')),
 (8, '00000000-0000-4000-8000-00000000b007', 'bot', '등록된 출장 일정이 없어요. 출장이 정해지면 "OO 출장 등록해줘"라고 말씀해 주세요. 날짜와 장소를 알려 주시면 일정으로 등록해 드릴게요.', null, booth.ts(-1,'16:20') + interval '3 seconds');
 
@@ -1447,20 +1447,20 @@ insert into public.angel_chats(id, uid, who, text, lines, created_at) values
 insert into public.improvements(num, urgent, type, loc, title, content, author, mgr, proposed_date, status, end_date, reason, created_at) overriding system value values
 (1, false, '개선', '공지', '공지 목록에 분류별 필터가 있으면 좋겠어요', '공지가 많아지니 안전·교육 같은 분류만 따로 보고 싶습니다.', '박하은', '이서준', booth.d(-40), '완료', booth.d(-30), '분류 칩으로 필터를 추가했습니다.', booth.ts(-40,'10:00')),
 (2, false, '개선', '캘린더', '회의실 일정이 겹칠 때 알려 주세요', '같은 시간에 같은 회의실을 잡으면 경고가 떴으면 합니다.', '최도윤', '이서준', booth.d(-28), '검토중', '', '', booth.ts(-28,'14:00')),
-(3, true, '오류', '업무', '월말 업무가 마감일 지나도 진행중으로 남아요', '완료 처리 알림이 없어서 마감 지난 업무가 계속 보입니다.', '김지원', '이서준', booth.d(-15), '접수', '', '', booth.ts(-15,'09:30')),
+(3, true, '오류', '업무', '월말 업무가 마감일 지나도 진행중으로 남아요', '완료 처리 알림이 없어서 마감 지난 업무가 계속 보입니다.', '김지스트', '이서준', booth.d(-15), '접수', '', '', booth.ts(-15,'09:30')),
 (4, false, '개선', '자료실', '자료실 서식을 한 번에 내려받고 싶어요', '여러 서식을 묶어서 받을 수 있으면 편하겠습니다.', '박하은', '이서준', booth.d(-9), '보류', '', '우선순위 낮음, 다음 개편에 검토', booth.ts(-9,'11:00')),
-(5, false, '개선', '할 일', '할 일에 반복 기능이 있으면 좋겠어요', '매월 같은 날 해야 하는 일을 자동으로 만들어 주세요.', '김지원', '이서준', booth.d(-3), '접수', '', '', booth.ts(-3,'16:00'));
+(5, false, '개선', '할 일', '할 일에 반복 기능이 있으면 좋겠어요', '매월 같은 날 해야 하는 일을 자동으로 만들어 주세요.', '김지스트', '이서준', booth.d(-3), '접수', '', '', booth.ts(-3,'16:00'));
 
 `,wn=`-- 행사안내 — 행사 자체는 코드 상수(booth/content.tsx 의 BOOTH_EVENTS, id 'booth-…')이고 DB 에는 참석자 · 신청 목록만 있다.
 -- 참석자: 다가오는 행사에 '누가 가는지', 지난 행사에 '누가 다녀왔는지'가 보이게.
 insert into public.event_attendees(event_id, name, member_uid, created_by, created_at) values
-  ('booth-ethics', '김지원', '00000000-0000-4000-8000-00000000b007', '김지원', booth.ts(-3, '10:00')),
+  ('booth-ethics', '김지스트', '00000000-0000-4000-8000-00000000b007', '김지스트', booth.ts(-3, '10:00')),
   ('booth-ethics', '박하은', '00000000-0000-4000-8000-0000000000a2', '박하은', booth.ts(-2, '14:20')),
   ('booth-forum', '이서준', '00000000-0000-4000-8000-0000000000a1', '이서준', booth.ts(-5, '09:40')),
-  ('booth-forum', '김지원', '00000000-0000-4000-8000-00000000b007', '이서준', booth.ts(-5, '09:41')),
+  ('booth-forum', '김지스트', '00000000-0000-4000-8000-00000000b007', '이서준', booth.ts(-5, '09:41')),
   ('booth-digital', '최도윤', '00000000-0000-4000-8000-0000000000a3', '최도윤', booth.ts(-1, '16:05')),
   ('booth-safety', '최도윤', '00000000-0000-4000-8000-0000000000a3', '최도윤', booth.ts(-4, '11:00')),
-  ('booth-past', '김지원', '00000000-0000-4000-8000-00000000b007', '김지원', booth.ts(-50, '10:00')),
+  ('booth-past', '김지스트', '00000000-0000-4000-8000-00000000b007', '김지스트', booth.ts(-50, '10:00')),
   ('booth-past', '이서준', '00000000-0000-4000-8000-0000000000a1', '이서준', booth.ts(-50, '10:01')),
   ('booth-past', '박하은', '00000000-0000-4000-8000-0000000000a2', '박하은', booth.ts(-49, '09:00')),
   ('booth-past2', '최도윤', '00000000-0000-4000-8000-0000000000a3', '최도윤', booth.ts(-80, '13:00')),
@@ -4884,7 +4884,7 @@ CREATE TRIGGER works_sync_links AFTER INSERT OR UPDATE OF mgr, cat ON public.wor
 `,B=Object.assign({"./seed/00-people.sql":un,"./seed/01-helpers.sql":cn,"./seed/10-work.sql":pn,"./seed/20-calendar.sql":mn,"./seed/30-equipment.sql":bn,"./seed/35-equipment-links.sql":hn,"./seed/40-misc.sql":fn,"./seed/50-events.sql":wn,"./seed/99-finish.sql":gn}),rn=Object.keys(B).sort().map(n=>`-- ${n}
 ${B[n]}`).join(`
 
-`),J=`v1:${ln.length}:${sn.length}:${rn.length}`,dn="angels-booth";let Tn=null;function U(n){return Tn??(Tn=Cn(n))}async function V(){const[{PGlite:n},{pgcrypto:e},{uuid_ossp:t}]=await Promise.all([P(()=>import("./index-DjrzuzDu.js").then(l=>l.i),__vite__mapDeps([0,1,2,3])),P(()=>import("./pgcrypto-DvQ-zBrc.js"),__vite__mapDeps([4,1])),P(()=>import("./uuid_ossp-B-isMaqZ.js"),__vite__mapDeps([5,1]))]);return n.create(`idb://${dn}`,{extensions:{pgcrypto:e,uuid_ossp:t}})}async function Cn(n){var o,a,s,d;n==null||n("체험 공간 여는 중");let e=await V();const t=await e.query("select to_regclass('booth.meta')::text as t");if(((o=t.rows[0])!=null&&o.t?(a=(await e.query("select version from booth.meta limit 1")).rows[0])==null?void 0:a.version:void 0)!==J){const r=(s=(await e.query("select to_regclass('public.works')::text as t")).rows[0])==null?void 0:s.t;((d=t.rows[0])!=null&&d.t||r)&&(await e.close(),await new Promise(_=>{const u=indexedDB.deleteDatabase(`/pglite/${dn}`);u.onsuccess=u.onerror=u.onblocked=()=>_()}),e=await V()),n==null||n("가상 부서 만드는 중");try{await e.exec(`begin;
+`),J=`v1:${ln.length}:${sn.length}:${rn.length}`,dn="angels-booth";let Tn=null;function U(n){return Tn??(Tn=Cn(n))}async function V(){const[{PGlite:n},{pgcrypto:e},{uuid_ossp:t}]=await Promise.all([P(()=>import("./index-B_EP2HS0.js").then(l=>l.i),__vite__mapDeps([0,1,2,3])),P(()=>import("./pgcrypto-DvQ-zBrc.js"),__vite__mapDeps([4,1])),P(()=>import("./uuid_ossp-B-isMaqZ.js"),__vite__mapDeps([5,1]))]);return n.create(`idb://${dn}`,{extensions:{pgcrypto:e,uuid_ossp:t}})}async function Cn(n){var o,a,s,d;n==null||n("체험 공간 여는 중");let e=await V();const t=await e.query("select to_regclass('booth.meta')::text as t");if(((o=t.rows[0])!=null&&o.t?(a=(await e.query("select version from booth.meta limit 1")).rows[0])==null?void 0:a.version:void 0)!==J){const r=(s=(await e.query("select to_regclass('public.works')::text as t")).rows[0])==null?void 0:s.t;((d=t.rows[0])!=null&&d.t||r)&&(await e.close(),await new Promise(_=>{const u=indexedDB.deleteDatabase(`/pglite/${dn}`);u.onsuccess=u.onerror=u.onblocked=()=>_()}),e=await V()),n==null||n("가상 부서 만드는 중");try{await e.exec(`begin;
 ${ln}
 ${sn}
 ${rn}
