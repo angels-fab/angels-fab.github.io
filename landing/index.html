@@ -39,7 +39,7 @@
   .slot { width: var(--lw); aspect-ratio: 720 / 132; }
   .bslot { width: var(--bw); aspect-ratio: 1274 / 372; }
   /* '통합업무포털' — 두 버튼의 머리글(조감도 아래, 조감도 폭). 메인으로 돌아올 때는 알갱이가 거의 다 모인 뒤에 뜬다 */
-  .portal { display: flex; align-items: center; gap: 16px; width: var(--bw); margin: 0 0 -10px; font-size: 13px; font-weight: 500; letter-spacing: .5em; color: rgba(236,240,255,.66); transition: opacity .3s .5s; }
+  .portal { display: flex; align-items: center; gap: 16px; width: var(--bw); margin: 0 0 -10px; font-size: 13px; font-weight: 500; letter-spacing: .5em; color: rgba(236,240,255,.66); transition: opacity .3s .38s; }
   .portal::before, .portal::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.17); opacity: 0; }
   body.in .portal::before, body.in .portal::after { animation: rise .5s 1.35s forwards; }
   body.done .portal::before, body.done .portal::after { opacity: 1; animation: none; }
@@ -55,7 +55,7 @@
   .fork { display: flex; gap: 10px; width: var(--bw); margin-top: 2px; }
   .enter { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: clamp(44px, calc(var(--bw) * .081), 56px); border-radius: 10px; border: 1px solid rgba(255,255,255,.34); background: rgba(255,255,255,.05);
     color: var(--ink); font-size: clamp(15px, calc(var(--bw) * .027), 18px); font-weight: 600; letter-spacing: .08em; font-family: inherit; white-space: nowrap; cursor: pointer; pointer-events: auto; opacity: 0;
-    transition: opacity .3s .5s, background .2s, border-color .2s, color .2s, scale .12s; }
+    transition: opacity .3s .38s, background .2s, border-color .2s, color .2s, scale .12s; }
   .enter:active { scale: .98; background: rgba(255,255,255,.18); }
   .enter.try:active { background: rgba(110,168,255,.26); }
   .enter svg { flex: none; width: 20px; height: 20px; fill: currentColor; }
@@ -66,8 +66,8 @@
   .enter.try:hover { background: rgba(110,168,255,.18); border-color: rgba(110,168,255,.85); }
 
   /* 로그인 창 — 테두리 · 입력 칸 · 버튼 틀은 알갱이가 그리고, 글자와 입력만 여기 얹는다(칸 자리는 알갱이 그림과 같은 숫자) */
-  .card { position: fixed; left: 50%; top: 46%; width: 380px; height: 304px; translate: -50% -50%; z-index: 30; opacity: 0; pointer-events: none; transition: opacity .35s; }
-  body.dlg .card { opacity: 1; pointer-events: auto; transition: opacity .35s .4s; }
+  .card { position: fixed; left: 50%; top: 46%; width: 380px; height: 304px; translate: -50% -50%; z-index: 30; opacity: 0; pointer-events: none; transition: opacity .26s; }
+  body.dlg .card { opacity: 1; pointer-events: auto; transition: opacity .28s .3s; }
   body:not(.lite) .card { text-shadow: 0 0 6px #000, 0 0 2px #000; }
   .card > * { position: absolute; margin: 0; }
   .card h2 { left: 24px; top: 18px; display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; }
@@ -173,8 +173,11 @@
   /* ── 포털에 끼운 판(src/pages/Landing 이 iframe 으로 띄운다) ── */
   body:not(.lab) .bar { display: none; }   /* 조작 줄은 ?lab 으로 따로 열었을 때만 */
   body.host .next { display: none; }   /* 다음 화면 임시 그림 — 포털이 뒤에서 뜨므로 안 쓴다 */
-  .card { visibility: hidden; transition: opacity .35s, visibility 0s .35s; }   /* 닫힌 로그인 창의 칸에 탭으로 들어가지 않게 */
-  body.dlg .card { visibility: visible; transition: opacity .35s .4s, visibility 0s; }
+  .leave { position: fixed; inset: 0; z-index: 34; pointer-events: none; opacity: 0; background: #0a0a0a; transition: opacity .32s cubic-bezier(.3,0,.2,1); }   /* 진입 장면 끝 — 다음 화면(포털 · 체험관)의 바탕색으로 덮은 뒤에 넘긴다(다음 화면을 그리는 동안 장면이 한가운데서 멈춘 채 보이지 않게). 시안의 임시 그림(.next)은 이 위에 뜬다 */
+  body.leaving .leave { opacity: 1; }
+  body.rm .leave { transition-duration: .25s; }
+  .card { visibility: hidden; transition: opacity .26s, visibility 0s .26s; }   /* 닫힌 로그인 창의 칸에 탭으로 들어가지 않게 */
+  body.dlg .card { visibility: visible; transition: opacity .28s .3s, visibility 0s; }
   body.gone .card { transition: opacity .2s, visibility 0s .2s; }
   .err { width: 332px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
@@ -219,8 +222,9 @@
   <div class="nx-cap" id="nxcap">포털 화면 (임시 그림)</div>
 </section>
 <div class="flash" id="flash"></div>
+<div class="leave" id="leave"></div>
 
-<div class="bar" id="bar"><span class="tag">시안 조작</span><span class="grp">로그인 결과<div class="seg" id="mockres"><button data-v="1" aria-pressed="true">성공</button><button data-v="0">틀림</button></div></span><span class="grp">창 바탕<div class="seg" id="plseg"><button data-v="0">없음</button><button data-v="0.36" aria-pressed="true">옅게</button><button data-v="0.5">진하게</button></div></span><span class="grp">움직임 줄이기<div class="seg" id="mockrm"><button data-v="0" aria-pressed="true">끔</button><button data-v="1">켬</button></div></span><span class="grp">햇무리<div class="seg" id="haloseg"><button data-v="0" aria-pressed="true">가끔</button><button data-v="1">켬</button><button data-v="2">끔</button></div></span><span class="grp">계절<div class="seg" id="seaseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="0">봄</button><button data-v="1">여름</button><button data-v="2">가을</button><button data-v="3">겨울</button></div></span><span class="grp">크리스마스<div class="seg" id="xmseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="1">켬</button></div></span><span class="grp">날씨<div class="seg" id="wxseg"><button data-v="0" aria-pressed="true">맑음</button><button data-v="1">흐림</button><button data-v="2">비</button><button data-v="3">눈</button><button data-v="7">진눈깨비</button><button data-v="4">바람</button><button data-v="5">천둥번개</button><button data-v="6">실제</button></div></span><span class="grp">미세먼지<div class="seg" id="hzseg"><button data-v="0" aria-pressed="true">좋음</button><button data-v="1">나쁨</button><button data-v="2">매우 나쁨</button></div></span><span class="wxlive" id="wxlive"></span><span class="grp">시간<input type="range" id="tod" min="0" max="24" step="0.25" value="12" aria-label="시간"><span class="todv" id="todv">--:--</span><button class="again" id="todnow" type="button">지금</button><button class="again" id="todplay" type="button">하루 돌려 보기</button></span><button class="again" id="again" type="button">처음부터 다시</button></div>
+<div class="bar" id="bar"><span class="tag">시안 조작</span><span class="grp">로그인 결과<div class="seg" id="mockres"><button data-v="1" aria-pressed="true">성공</button><button data-v="0">틀림</button></div></span><span class="grp">창 바탕<div class="seg" id="plseg"><button data-v="0">없음</button><button data-v="0.36" aria-pressed="true">옅게</button><button data-v="0.5">진하게</button></div></span><span class="grp">움직임 줄이기<div class="seg" id="mockrm"><button data-v="0" aria-pressed="true">끔</button><button data-v="1">켬</button></div></span><span class="grp">달 모양<input type="range" id="mph" min="2" max="27.5" step="0.5" value="15" aria-label="달 모양(삭에서 지난 날)"><span class="todv" id="mphv">오늘</span><button class="again" id="mphnow" type="button">오늘</button></span><span class="grp">달 크기<div class="seg" id="mszseg"><button data-v="14">예전</button><button data-v="22">크게</button><button data-v="28" aria-pressed="true">더 크게</button></div></span><span class="grp">달빛<div class="seg" id="mglseg"><button data-v="0">없음</button><button data-v="1">은은하게</button><button data-v="1.7" aria-pressed="true">조금 더</button></div></span><span class="grp">가을 빛<div class="seg" id="hovseg"><button data-v="0" aria-pressed="true">단풍</button><button data-v="1">더 붉게</button><button data-v="2">갈색</button><button data-v="3">예전</button></div></span><span class="grp">햇무리<div class="seg" id="haloseg"><button data-v="0" aria-pressed="true">가끔</button><button data-v="1">켬</button><button data-v="2">끔</button></div></span><span class="grp">계절<div class="seg" id="seaseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="0">봄</button><button data-v="1">여름</button><button data-v="2">가을</button><button data-v="3">겨울</button></div></span><span class="grp">크리스마스<div class="seg" id="xmseg"><button data-v="-1" aria-pressed="true">자동</button><button data-v="1">켬</button></div></span><span class="grp">날씨<div class="seg" id="wxseg"><button data-v="0" aria-pressed="true">맑음</button><button data-v="1">흐림</button><button data-v="2">비</button><button data-v="3">눈</button><button data-v="7">진눈깨비</button><button data-v="4">바람</button><button data-v="5">천둥번개</button><button data-v="6">실제</button></div></span><span class="grp">미세먼지<div class="seg" id="hzseg"><button data-v="0" aria-pressed="true">좋음</button><button data-v="1">나쁨</button><button data-v="2">매우 나쁨</button></div></span><span class="wxlive" id="wxlive"></span><span class="grp">시간<input type="range" id="tod" min="0" max="24" step="0.25" value="12" aria-label="시간"><span class="todv" id="todv">--:--</span><button class="again" id="todnow" type="button">지금</button><button class="again" id="todplay" type="button">하루 돌려 보기</button></span><button class="again" id="again" type="button">처음부터 다시</button></div>
 
 <script>
 (function () {
@@ -511,8 +515,15 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   var SXp = 0, SYp = 0, PX = 0, PY = 0, PVX = 0, PVY = 0, pw = 0, lastMove = -1e9;
   var rx = 0, ry = 0, freeUntil = 0, introEnd = 0, morphUntil = 0, doneTimer = 0, rings = [], accent = false, focusBox = 0;
   var gate = 0, gateTimer = 0, garr = false, gcx = 0, gcy = 0, gw = CARD_W, gh = CARD_H, gtg = 0, gcam = 0, gzk = 0, gspd = 0, gtr = 0, gfk = 0.5, garrT = 0;
-  var viewEl = document.querySelector('.view'), skyStar = 1, skyG = 1, skyS = 0, skyCx = 0, skyCy = 0, skyIw = 0, skyUx = 0, skyUy = 0, skyK = 0, todH = -1, todPlay = 0, skyMode = 3, skyc = $('sky'), sgl = null, sprog = null, sloc = {}, haloMode = 0, SKO = {}, skyLast = null;   // 하늘 그리는 판 · (시안) 햇무리 0 가끔 / 1 켬 / 2 끔   // 시간대 하늘 — 별이 보이는 정도 · 알갱이 밝기 · 해가 있는 쪽(- 왼쪽 ~ + 오른쪽) · (시안) 막대로 고른 시각
+  var viewEl = document.querySelector('.view'), skyStar = 1, skyG = 1, skyS = 0, skyCx = 0, skyCy = 0, skyIw = 0, skyUx = 0, skyUy = 0, skyK = 0, todH = -1, todPlay = 0, skyMode = 3, skyc = $('sky'), sgl = null, sprog = null, sloc = {}, haloMode = 0, SKO = {}, skyLast = null, skyTn = 12.5;   // 하늘 그리는 판 · (시안) 햇무리 0 가끔 / 1 켬 / 2 끔   // 시간대 하늘 — 별이 보이는 정도 · 알갱이 밝기 · 해가 있는 쪽(- 왼쪽 ~ + 오른쪽) · (시안) 막대로 고른 시각
   var POL = [0, 1, 0, 1, 1, 1, 1], C1B = [0.76, 0.74, 1.0], CLR1 = C1, shOn = false, shPos = 0;   // 다듬기 여섯(1~6 켬 · 끔) · 5 옅은 보라 · 3 지나가는 빛
+  var HOV = [   // 마우스에 닿은 알갱이 — 계절마다 한 빛깔(물든 색 · 달아오른 흰빛 · 커서 둘레 빛). 평소엔 흰빛 그대로, 닿을 때만 계절색이 스민다(2026-11-23 사용자 — 예전엔 사철 옅은 보라)
+    [[1.0, 0.78, 0.88], [1.0, 0.94, 0.97], '255,200,224'],   // 봄 — 연분홍
+    [[0.66, 0.95, 0.93], [0.9, 1.0, 0.99], '176,240,232'],   // 여름 — 청록
+    [[1.0, 0.6, 0.47], [1.0, 0.88, 0.8], '246,156,126'],   // 가을 — 단풍(옅은 붉은빛 · 2026-11-23 사용자 '좀 더 붉으스름한 단풍색' → 후보 넷 중 이것으로 확정, 처음엔 호박색)
+    [[0.72, 0.86, 1.0], [0.9, 0.96, 1.0], '190,220,255']     // 겨울 — 얼음빛 파랑
+  ], CLR2 = C2, HOVG = '198,202,255';
+  var HOVA = [HOV[2], [[1.0, 0.47, 0.38], [1.0, 0.82, 0.74], '238,122,100'], [[0.94, 0.63, 0.43], [1.0, 0.89, 0.78], '216,150,106'], [[1.0, 0.82, 0.58], [1.0, 0.95, 0.86], '255,214,160']];   // (시안) 가을 빛 후보 — 단풍 · 더 붉게 · 갈색 · 예전 호박색
   var KCS = 1, QSL = 1, NDV = ND, cardEl = $('card'), waiting = false, waitT0 = 0, waitTimer = 0, shk = 0, shkPrev = 0, shakeT0 = 0, hotBtn = false, focBtn = false, btnGlow = 0, snapT = 0, snapBox = 0, mockOk = true, loginRes = null, okAt = 0, gdone = false, calm = 0, plate = 0.36, plk = 0, plateAt = 0;   // calm = 로그인 창으로 가라앉은 정도(0 날아오는 중 ~ 1 다 가라앉음) · plate = 창 안 옅은 어두운 바탕의 짙기(사용자가 고름 — 시안 0.5 보다 조금 옅게)   // 로그인 확인을 기다리는 중 · 틀렸을 때 흔들림 · 버튼에 올린 마우스 · (시안) 결과
   var RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches), forceLite = false, QS = 1, ft = 4, fcount = 0;   // 움직임 줄이기 · 느린 PC(알갱이 절반 → 정지 그림)   // 진입 장면 — 1 로그인 · 2 체험하기 / 지난 시간 · 시점이 들어간 깊이 · 먼 별이 스치는 빠르기   // 색 포인트 없음 — 알갱이는 모두 무채색(사용자 확정)
   function fwd(x, y) {   // 무대 좌표 → 화면 좌표(기울기 반영)
@@ -539,7 +550,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   function step(now) {
     var active = now - lastMove < 3000, j, q, u;
     pw += ((active ? 1 : 0) - pw) * 0.08;
-    var tl = mode === 1 ? 0 : 1;   // 로그인 창이 떠 있을 땐 기울이지 않는다 — 알갱이 틀과 글자 · 입력 칸이 어긋나지 않게
+    var tl = mode === 1 || gate ? 0 : 1;   // 로그인 창이 떠 있을 땐 기울이지 않는다 — 알갱이 틀과 글자 · 입력 칸이 어긋나지 않게 · 진입 중에도(곧게 들어가게)
     var nx = active ? (SXp / VW - 0.5) * 2 : Math.sin(now * 0.00023) * 0.55, ny = active ? (SYp / VH - 0.5) * 2 : Math.cos(now * 0.00031) * 0.45;
     rx += (-ny * 2.4 * tl - rx) * 0.05; ry += (nx * 3.2 * tl - ry) * 0.05;
     var p = toScene(SXp, SYp), ox = PX, oy = PY;
@@ -572,7 +583,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
       var tsh = now - shakeT0; if (tsh > 460) { shk = 0; shakeT0 = 0; } else shk = -11 * Math.sin(tsh * 0.041) * (1 - tsh / 460);
       dsh = shk - shkPrev; shkPrev = shk; cardEl.style.transform = shk ? 'translateX(' + shk.toFixed(2) + 'px)' : '';
     }
-    if (waiting && loginRes && now - waitT0 > 850 && (loginRes !== 'ok' || now - okAt > 250)) resolveLogin();   // 답이 와도 0.85초는 기다리는 장면을 보여 준다 · 성공이면 포털이 뒤에서 뜰 틈(0.25초)을 준다
+    if (waiting && loginRes && now - waitT0 > 500 && (loginRes !== 'ok' || now - okAt > 150)) resolveLogin();   // 답이 와도 0.5초는 기다리는 장면을 보여 준다(처음엔 0.85초 — 사용자 '좀 더 빠르게') · 성공이면 포털이 뒤에서 뜰 틈(0.25초)을 준다
     var w1 = now * 0.0011, w2 = now * 0.0009, tn = now * 0.001, x0 = -OX - 30, x1 = VW + OX + 30, y0 = -OY - 30, y1 = VH + OY + 30;
     for (j = 0; j < N; j += QS) {
       var x = X[j], y = Y[j], vx = VX[j], vy = VY[j], e = E[j], gg = GT[j], gp = GV[j], fr = 0.885, rem;
@@ -581,8 +592,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
         rem = 1 + QJ[j] * u - gcam;   // 시점에서 본 깊이(1 = 처음 놓여 있던 면) — 가까워질수록 크게 · 빠르게 스쳐 지나간다
         rem = rem < 0.03 ? 34 : 1 / rem; EG[j] = rem;
         var gdt = gtg - QL[j]; gdt = gdt < 0 ? 0 : gdt * u;   // 옆으로는 별처럼 느리게 떠돈다
-        var gbx = QX[j] + QNX[j] * gdt, gby = QY[j] + QNY[j] * gdt, gph = 0.24 * (1 - 1 / rem), gsn = gph - gph * gph * gph / 6, gcs = 1 - gph * gph / 2;   // 가까워질수록 조금 더 돈다(최대 14도쯤)
-        HX[j] = gcx + (gbx * gcs - gby * gsn) * rem; HY[j] = gcy + (gbx * gsn + gby * gcs) * rem;
+        HX[j] = gcx + (QX[j] + QNX[j] * gdt) * rem; HY[j] = gcy + (QY[j] + QNY[j] * gdt) * rem;   // 돌지 않고 제자리에서 곧장 다가온다(2026-11-23 사용자: 회전하지 말고 차분하게 — 예전엔 가까워질수록 최대 14도 휘돌았다)
       }
       if (G0[j] !== 0) {
         u = (now - G0[j]) / GD[j];
@@ -663,13 +673,13 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     if (plate && plk > 0.01) { rr(c, cardL + shk + 3, cardT + 3, CARD_W * KCS - 6, CARD_H * KCS - 6, 11 * KCS); c.fillStyle = 'rgba(8,10,17,' + (plate * plk).toFixed(3) + ')'; c.fill(); }   // 창 안 옅은 어두운 바탕 — 알갱이 아래에 깔린다(창이 가벼워 보이지 않게)
     if (pw > 0.02) {   // 마우스 빛
       g = c.createRadialGradient(PX, PY, 0, PX, PY, gr);
-      var gpc = POL[5] ? '198,202,255' : '126,120,255';
+      var gpc = POL[5] ? HOVG : '126,120,255';
       g.addColorStop(0, 'rgba(' + gpc + ',' + ((POL[5] ? 0.042 : 0.15) * pw).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + gpc + ',0)');
       c.fillStyle = g; c.fillRect(PX - gr, PY - gr, gr * 2, gr * 2);
     }
     if (gate && gcam > 0.4) {   // 진입 — 다가가는 곳에서 빛이 번져 나오고, 다음 화면이 그 빛 속에서 떠오르며 빛은 잦아든다
       var bk = (gcam - 0.4) / 0.6, bf = garr ? 1 - (T() - garrT) / 520 : 1, bc = gate === 2 ? '120,170,255' : '210,218,255', br2, ba;
-      if (bk > 1) bk = 1; bk = bk * bk * (3 - 2 * bk); if (bf < 0) bf = 0; br2 = 110 + 430 * bk; ba = 0.3 * bk * bf;
+      if (bk > 1) bk = 1; bk = bk * bk * (3 - 2 * bk); if (bf < 0) bf = 0; br2 = 110 + 430 * bk; ba = 0.12 * bk * bf;
       if (ba > 0.004) { g = c.createRadialGradient(gcx, gcy, 0, gcx, gcy, br2); g.addColorStop(0, 'rgba(' + bc + ',' + ba.toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + bc + ',0)'); c.fillStyle = g; c.fillRect(gcx - br2, gcy - br2, br2 * 2, br2 * 2); }
     }
   }
@@ -677,7 +687,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     scene.style.transform = 'rotateX(' + rx.toFixed(3) + 'deg) rotateY(' + ry.toFixed(3) + 'deg)';
     drawFx();
     var j, o, tw = now * 0.003, card = mode === 1, ak;
-    gfk = gate ? 0.56 + 0.24 * gtr : 0.5; ak = Math.pow((1 - gfk) * 2, 0.35);   // 빛 꼬리가 길어지는 만큼 한 점의 밝기는 낮춘다(가만히 있는 별이 번쩍 밝아지지 않게)
+    gfk = gate ? 0.52 + 0.1 * gtr : 0.5; ak =Math.pow((1 - gfk) * 2, 0.35);   // 빛 꼬리가 길어지는 만큼 한 점의 밝기는 낮춘다(가만히 있는 별이 번쩍 밝아지지 않게)
     for (j = 0; j < N; j += QS) {
       o = j * 8;
       var e = E[j], t = TN[j] + (1 - TN[j]) * calm, z = Z[j], gg = GV[j], g2 = gg * gg, ek = 0, hot = 1, u = SPK[j] * 0.6, r = 0.84 * t, g = 0.89 * t, b = t, a, sz;
@@ -688,12 +698,11 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
       }
       if (ek === 0 && e > 0.01) {
         if (e < 0.5) { u = e * 2; r += (CLR1[0] - r) * u; g += (CLR1[1] - g) * u; b += (CLR1[2] - b) * u; }
-        else { u = (e - 0.5) * 2; r = CLR1[0] + (C2[0] - CLR1[0]) * u; g = CLR1[1] + (C2[1] - CLR1[1]) * u; b = CLR1[2] + (C2[2] - CLR1[2]) * u; }
+        else { u = (e - 0.5) * 2; r = CLR1[0] + (CLR2[0] - CLR1[0]) * u; g = CLR1[1] + (CLR2[1] - CLR1[1]) * u; b = CLR1[2] + (CLR2[2] - CLR1[2]) * u; }
       }
-      var gk = gate ? MP[j] : 0, eg = gate ? EG[j] : 1, gz2 = eg < 1 ? 1 : eg > 14.3 ? 7 : 1 + (eg - 1) * 0.45, ga2 = eg < 1 ? 1 : (eg > 30 ? 0 : eg > 16 ? (30 - eg) / 14 : 1) * (eg > 2 ? 1.5 : 1 + (eg - 1) * 0.5) / (1 + (gz2 - 1) * 0.25);   // 제자리를 떠난 정도 · 가까워진 배율 · 알 크기(가까울수록 크게) · 밝기(커진 만큼 옅게 — 초점이 나간 빛망울)
+      var gk = gate ? MP[j] : 0, eg = gate ? EG[j] : 1, gz2 = eg < 1 ? 1 : eg > 5.8 ? 2.2 : 1 + (eg - 1) * 0.25, ga2 =eg < 1 ? 1 : (eg > 30 ? 0 : eg > 16 ? (30 - eg) / 14 : 1) * (eg > 2 ? 1.2 : 1 + (eg - 1) * 0.2) / (1 + (gz2 - 1) * 0.25);   // 제자리를 떠난 정도 · 가까워진 배율 · 알 크기(가까울수록 조금 크게 — 최대 2.2배, 예전 7배 빛망울은 화려하고 휴대폰에서 버벅여서 줄임) · 밝기
       if (gate === 2 && gk > 0) { r += (0.45 * t - r) * gk; g += (0.68 * t - g) * gk; b += (1.02 * t - b) * gk; }   // 체험하기 — 떠나는 알갱이부터 푸르게 물든다
       a = (BA[j] * AS[j] * (1 - calm) + CAF[j] * calm) * ga2 * (1 + e * 0.36) * hot * (1 + SPK[j] * 1.3) * g2;   // 로그인 창에 가라앉은 만큼 — 제각각이던 밝기 · 굵기 · 빛깔이 맡은 자리의 값 하나로 모인다
-      if (gk > 0) a *= 1 - gk * (0.16 - 0.16 * Math.sin(tw * FQ[j] * 2 + PH[j]));   // 떠난 알갱이는 별처럼 깜빡인다
       if (g2 < 1) a += SA[j] * (0.55 + 0.45 * Math.sin(tw * FQ[j] + PH[j])) * (1 - g2);   // 별일 때 — 저마다 다른 박자로 깜빡인다
       sz = (S0[j] * GS[j] * (1 - calm) + CZ[j] * (QS === 2 ? 1.2 : 1) * calm) * gz2 * (0.85 + 0.15 * g2) * (1 + e * 0.2) * (1 + z * 0.012) * (1 + ek * 0.35 + SPK[j] * 0.3); if (sz > 48) sz = 48;
       var yo = 0;
@@ -727,7 +736,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   }
   function intro() {   // 등장 — 처음부터 모든 별이 저마다 떠돌고, 하나둘 서서히 이끌려 로고 · 센터명 · 조감도로 모인다
     var now = T(), j;
-    mode = 0; body.classList.remove('dlg', 'arrived', 'wait', 'bad'); clearTimeout(gateTimer); clearTimeout(waitTimer); gate = 0; garr = false; gzk = 0; waiting = false; shk = 0; shakeT0 = 0; cardEl.style.transform = '';
+    mode = 0; body.classList.remove('dlg', 'arrived', 'wait', 'bad', 'leaving'); gleave = false; clearTimeout(gateTimer); clearTimeout(waitTimer); gate = 0; garr = false; gzk = 0; waiting = false; shk = 0; shakeT0 = 0; cardEl.style.transform = '';
     for (j = 0; j < N; j++) {
       X[j] = -OX + Math.random() * CW; Y[j] = -OY + Math.random() * CH; VX[j] = Math.cos(TH[j]) * SP[j]; VY[j] = Math.sin(TH[j]) * SP[j];
       Z[j] = Math.random() < 0.28 ? Math.random() * 70 : Math.random() * 10; VZ[j] = 0; E[j] = 0; SPK[j] = 0; GV[j] = 0; M0[j] = 0; home(j);
@@ -741,16 +750,16 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     var now = T(), j;
     waiting = false; clearTimeout(waitTimer); shk = 0; shkPrev = 0; shakeT0 = 0; cardEl.style.transform = ''; body.classList.remove('wait', 'bad');
     if (m === 0 && cardEl.contains(document.activeElement)) $('enter').focus({ preventScroll: true });   // 닫으면 초점을 로그인 버튼으로 돌려준다
-    mode = m; body.classList.toggle('dlg', m === 1); if (m === 0) focusBox = 0; else plateAt = now + 550;   // 창 바탕은 선이 모일 즈음(0.55초 뒤)부터
+    mode = m; body.classList.toggle('dlg', m === 1); if (m === 0) focusBox = 0; else plateAt = now + 420;   // 창 바탕은 선이 모일 즈음(0.42초 뒤)부터
     if (lite) return;
     for (j = 0; j < N; j++) {   // 자리만 바꾼다 — 알갱이는 밝은 채로 새 자리까지 날아간다
       home(j);
-      if (G0[j] !== 0 || GV[j] < 1) ramp(j, GV[j], 1, now, 450);
-      else { M0[j] = now + 1 + Math.random() * 90; MD[j] = 560 + Math.random() * 170; MP[j] = 0; }
-      TS[j] = m === 0 ? now + 700 : 0;
+      if (G0[j] !== 0 || GV[j] < 1) ramp(j, GV[j], 1, now, 350);
+      else { M0[j] = now + 1 + Math.random() * 70; MD[j] = 430 + Math.random() * 130; MP[j] = 0; }   // 날아가는 시간(처음엔 560~730 — 사용자 '좀 더 빠르게')
+      TS[j] = m === 0 ? now + 540 : 0;
     }
     gEase = EMV;
-    morphUntil = now + 900; introEnd = now + 1000;
+    morphUntil = now + 700; introEnd = now + 780;
   }
   /* 진입 장면 — 알갱이가 넓어지는 네모 띠로 흘러 들어가(화면이 창 속으로 들어가듯), 끝에 다음 화면이 페이드로 뜬다 */
   function perim(u, j) {   // 둥근 네모 둘레 위의 한 점(왼쪽 가운데에서 시계 방향으로 u = 0~1) — 가운데 기준 자리와 바깥쪽 방향
@@ -769,10 +778,10 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   function gateStep(now) {   // 시점이 안으로 들어간 깊이 — 느리게 출발해 끝까지 점점 빠르게
     var TT = gate === 1 ? 1300 : 1450, u, c0 = gcam;
     u = gtg / TT; if (u > 1.25) u = 1.25;   // gtg(장면이 흐른 시간)는 frame() 이 올린다
-    gcam = 1.06 * Math.pow(u, 2.2) - (u < 0.24 ? 0.03 * Math.sin(u / 0.24 * 3.14159) : 0);   // 출발 직전에 아주 살짝 물러났다가(움츠림) 들어간다
+    gcam = 1.06 * Math.pow(u, 2.2);   // 출발 직전 움츠림은 뺐다(차분하게)
     gspd = gcam - c0; gtr += ((gspd > 0.0222 ? 1 : gspd < 0 ? 0 : gspd * 45) - gtr) * 0.25;   // 들어가는 빠르기 → 빛 꼬리 길이
     gzk = (gcam - c0) / (3.2 - gcam); if (gzk < 0) gzk = 0;   // 먼 배경 별은 천천히 스친다(가운데서 뭉쳐 터지지 않게)
-    if (!garr && u > 0.76) { garr = true; garrT = now; body.classList.add('arrived'); if (HOSTED) hostCall('reveal', gate); }   // 알갱이가 거의 다 스쳐 지나갈 즈음 다음 화면이 떠오르기 시작한다
+    if (!garr && u > 0.76) { garr = true; garrT = now; coverOut(gate); }   // 알갱이가 거의 다 스쳐 지나갈 즈음 — 다음 화면의 바탕색으로 덮고, 다 덮이면 다음 화면이 떠오른다
     if (gtg > TT + 2000) leaveGate();
   }
   function enterGate(kind) {   // 1 로그인(포털로) · 2 체험하기(체험관으로)
@@ -781,12 +790,12 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     body.classList.toggle('booth', kind === 2); body.classList.add('gone'); focusBox = 0; clearTimeout(gateTimer);
     $('nxcap').textContent = kind === 2 ? '체험관 화면 (임시 그림)' : '포털 화면 (임시 그림)';
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-    if (lite) { body.classList.add('arrived'); if (HOSTED) { hostCall('reveal', kind); hostCall('done', kind); return; } gateTimer = setTimeout(leaveGate, 2300); return; }   // 휴대폰 — 알갱이 없이 바로 페이드
+    if (HOSTED && kind === 2) hostCall('prepare', 2);   // 체험관 앱을 지금부터 받아 둔다(4MB 남짓 — 장면이 끝나고서야 받기 시작하면 휴대폰에서 한참 멈춘 화면이 남았다)
+    if (lite) { if (HOSTED) { coverOut(kind); return; } body.classList.add('arrived'); gateTimer = setTimeout(leaveGate, 2300); return; }   // 정지 그림 — 알갱이 없이 바로 페이드
     gcx = VW / 2; gcy = VH * 0.46; gw = CARD_W; gh = kind === 1 ? CARD_H : Math.round(CARD_W * VH / VW);
     var gbr = $(kind === 1 ? 'go' : 'try').getBoundingClientRect(), go = toScene(gbr.left + gbr.width / 2, gbr.top + gbr.height / 2), gdd;   // 누른 버튼 자리 — 풀림이 여기서 시작된다
-    rings.push({ x: go[0], y: go[1], r: 6, life: 0.8 });
-    for (j = 0; j < N; j++) {
-      var ga = Math.random() * 6.2832, gv = 0.012 + Math.random() * 0.06;   // 옆으로 떠도는 방향 · 빠르기(px/ms) — 저마다 다르게
+    for (j = 0; j < N; j++) {   // (누른 버튼에서 퍼지던 물결은 뺐다 — 차분하게)
+      var ga = Math.random() * 6.2832, gv = 0.004 + Math.random() * 0.016;   // 옆으로 떠도는 방향 · 빠르기(px/ms) — 아주 조금만(제자리에서 다가오게, 예전의 1/4)
       QX[j] = X[j] - gcx; QY[j] = Y[j] - gcy; QNX[j] = Math.cos(ga) * gv; QNY[j] = Math.sin(ga) * gv * 0.8;
       QJ[j] = -0.72 * Math.pow(Math.random(), 0.85);   // 얼마나 앞으로 나오나 — 가까이 나온 것부터 먼저 스쳐 지나간다
       gdd = Math.sqrt((X[j] - go[0]) * (X[j] - go[0]) + (Y[j] - go[1]) * (Y[j] - go[1])); QL[j] = (gdd > 520 ? 520 : gdd) * 0.72 + Math.random() * 90; MD[j] = 420 + Math.random() * 380;   // 버튼에서 가까운 것부터 차례로 풀린다 MP[j] = 0; EG[j] = 1; M0[j] = 0;   // 저마다 다른 때에, 다른 빠르기로 제자리를 떠난다
@@ -795,6 +804,19 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     }
     gcam = 0; gzk = 0; gspd = 0; gtr = 0;
     gEase = EMV; gate = kind; gtg = 0; garr = false; morphUntil = now + 4000; introEnd = now + 1e7;
+  }
+  var gleave = false, gfrozen = false;
+  function coverOut(kind) {   // 진입 장면 끝 — 다음 화면(1 포털 · 2 체험관)의 바탕색으로 천천히 덮고, 다 덮인 뒤에 넘긴다.
+    // 포털은 이때부터 그린다(장면 도중에 뒤에서 그리면 같은 일꾼을 나눠 써 장면이 버벅였다 — 2026-11-23 사용자 '로그인으로 빨려 들어가기가 버벅인다').
+    // 체험관은 옮기는 동안 브라우저가 붙잡아 두는 마지막 장면이 이 바탕색이라, 같은 색 위에 그대로 떠오른다
+    if (gleave) return; gleave = true;
+    var th = 'dark'; try { th = localStorage.getItem('angels-theme') || 'dark'; if (th === 'system') th = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e3) {}   // 포털 · 체험관(같은 주소 아래)의 테마 — index.html 과 같은 규칙
+    $('leave').style.background = th === 'light' ? '#ffffff' : '#0a0a0a';
+    body.classList.add('leaving');
+    setTimeout(function () {
+      if (!HOSTED) { body.classList.add('arrived'); return; }   // 시안 — 임시 그림이 그 바탕 위로 뜬다
+      gfrozen = true; hostCall('reveal', kind); hostCall('done', kind);   // 다 덮였으니 그리기를 멈추고(포털 그리기 · 체험관 받기와 힘을 다투지 않게) 넘긴다
+    }, RM || lite ? 280 : 320);
   }
   function leaveGate() {   // 시안(?lab)에서는 다음 화면을 잠깐 보여 주고 처음으로 돌아온다. 포털에서는 끝났다고만 알린다(포털이 이 화면을 걷는다)
     if (HOSTED) { if (!gdone) { gdone = true; hostCall('done', gate); } return; }
@@ -811,12 +833,13 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     if (h) {   // 포털의 로그인 — 'ok' · 'fail' · 'pending' · 'inactive' · 'network' · 'error'
       var settle = function (r) {
         r = r === 'ok' || ERRS[r] ? r : 'error';
+        if (r === 'ok') { try { localStorage.setItem('angels-emp', emp); } catch (e7) {} }   // 사번만 기억한다
         if (!waiting) { if (r === 'ok') { hostCall('reveal', 1); hostCall('done', 1); } return; }   // 기다리다 창을 닫았는데 로그인이 됐다 — 장면 없이 포털로
         loginRes = r; okAt = T();
-        if (lite) { clearTimeout(waitTimer); waitTimer = setTimeout(resolveLogin, Math.max(0, 850 - (T() - waitT0))); }
+        if (lite) { clearTimeout(waitTimer); waitTimer = setTimeout(resolveLogin, Math.max(0, 500 - (T() - waitT0))); }
       };
       try { h.login(emp, pwv).then(settle, function () { settle('error'); }); } catch (e2) { settle('error'); }
-    } else if (lite) waitTimer = setTimeout(resolveLogin, 850);
+    } else if (lite) waitTimer = setTimeout(resolveLogin, 500);
   }
   function resolveLogin() {   // 답을 받은 때 — 시안(?lab)에서는 조작 줄의 '로그인 결과'대로
     if (!waiting || !loginRes) return;
@@ -857,7 +880,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     'precision highp float;',
     'uniform vec2 uRes, uSun;',
     'uniform vec3 uTop, uMid, uBot, uCore, uLimb, uGlareCol, uInCol, uOutCol, uHzCol;',
-    'uniform float uR, uVis, uLow, uEve, uAurIn, uAurOut, uGlare, uGw, uGp, uVeil, uHz, uSoft, uMist, uWarm, uBand, uHalo, uHaloR, uSeed, uDayHaze, uDayDeep, uFar, uMoonR, uMoonPh, uMoonVis; uniform vec2 uMoon;',
+    'uniform float uR, uVis, uLow, uEve, uAurIn, uAurOut, uGlare, uGw, uGp, uVeil, uHz, uSoft, uMist, uWarm, uBand, uHalo, uHaloR, uSeed, uDayHaze, uDayDeep, uFar, uMoonR, uMoonPh, uMoonVis, uMoonGlow, uMoonLow; uniform vec2 uMoon, uMoonRot; uniform sampler2D uMoonTex;',
     'float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }',
     'float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
     '  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }',
@@ -892,14 +915,29 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     '  float disc = (1.0 - smoothstep(1.0 - uSoft, 1.0 + uSoft * 0.5, rn)) * uVis;',
     '  vec3 dcol = mix(uCore, uLimb, pow(clamp(rn, 0.0, 1.0), 2.4));',
     '  col = mix(col, max(col, dcol), disc);',
-    '  vec2 md = (p - uMoon) / uMoonR; float mr = length(md), mh = sqrt(max(0.0, 1.0 - md.y * md.y));',
-    '  float mt = uMoonPh < 3.14159 ? smoothstep(-0.07, 0.07, md.x - cos(uMoonPh) * mh) : smoothstep(-0.07, 0.07, -md.x - cos(6.28318 - uMoonPh) * mh);',
-    '  col += vec3(0.62, 0.68, 0.82) * exp(-mr * 0.55) * 0.07 * uMoonVis;',
-    '  col = mix(col, max(col, vec3(0.93, 0.94, 0.9) * (0.84 + 0.16 * vnoise(md * 1.7 + 9.0))), (1.0 - smoothstep(0.9, 1.0, mr)) * mt * uMoonVis);',
+    '  vec2 md = (p - uMoon) / uMoonR; float mr = length(md);',
+    '  vec2 mq = vec2(uMoonRot.x * md.x + uMoonRot.y * md.y, uMoonRot.x * md.y - uMoonRot.y * md.x);',   // 하늘을 건너며 달 얼굴이 천천히 돈다 — 뜰 때는 오른쪽으로, 질 때는 왼쪽으로 기운다(밝은 쪽이 늘 해 쪽)
+    '  vec2 m = vec2(-mq.x, mq.y);',   // 거울에 비춘 달 — 해 길처럼 동쪽이 오른쪽인 화면이라, 차오르는 달은 왼쪽이 밝다
+    '  float tx = texture2D(uMoonTex, m * 0.5 + 0.5).r;',   // 달 표면 — 실제 달 사진(가지 밖에서 읽는다: 작게 줄인 그림을 고르는 셈이 가지 안에서는 틀어진다)
+    '  if (uMoonVis > 0.0) {',   // 달(2026-11-23) — 실제 달 표면 · 공처럼 빛을 받는 면 · 울퉁불퉁한 명암 경계 · 초승달일 땐 어두운 쪽이 지구빛으로 희미하게 · 둘레에 은은한 달빛
+    '    float kf = 0.5 - 0.5 * cos(uMoonPh), lw = uMoonLow * uMoonLow;',   // 밝은 면의 몫(0 삭 ~ 1 보름) · 지평선에 가까운 정도
+    '    vec3 G = mix(vec3(0.86, 0.9, 1.0), vec3(1.0, 0.86, 0.68), lw * 0.7) * exp(-mr * mix(0.9, 0.62, lw)) * 0.22;',   // 달빛 — 달 바로 둘레의 은백색 빛(지평선 가까이에서는 더 넓고 따뜻하게)
+    '    G += mix(vec3(0.6, 0.72, 1.0), vec3(0.9, 0.78, 0.7), lw * 0.6) * exp(-mr * 0.22) * 0.035;',   // 그 바깥으로 아주 옅은 청백색 번짐 — 테두리 없이 사라진다
+    '    col = 1.0 - (1.0 - col) * exp(-G * kf * sqrt(kf) * uMoonVis * uMoonGlow);',   // 보름달에서 가장 세고 초승달에서는 거의 없다 · 밤하늘 전체를 밝히지는 않는다
+    '    float mz = sqrt(max(0.0, 1.0 - dot(m, m)));',
+    '    float mu0 = dot(vec3(m, mz), vec3(sin(uMoonPh), 0.0, -cos(uMoonPh))) + (vnoise(m * 8.0 + 4.0) - 0.5) * 0.07 + (vnoise(m * 19.0 + 1.0) - 0.5) * 0.02;',
+    '    float ls = mu0 > 0.0 ? mix(clamp(2.0 * mu0 / (mu0 + mz + 0.02), 0.0, 1.0), smoothstep(0.0, 0.16, mu0), 0.35) : 0.0;',   // 달 표면처럼 — 보름달은 가장자리까지 고르게 밝고, 명암 경계 쪽으로 서서히 어두워진다
+    '    float alb = 0.6 + 0.4 * smoothstep(0.0, 0.92, tx);',   // 바다는 어둡게 · 고지대는 밝게 — 밝은 구덩이와 빛줄기는 튀지 않게 누른다
+    '    vec3 mc = vec3(0.95, 0.93, 0.88) * alb * mix(vec3(0.95, 0.975, 1.02), vec3(1.0), tx) * mix(vec3(1.0), vec3(1.0, 0.9, 0.74), lw * 0.8);',   // 아이보리 톤 · 지평선 가까이에서는 누르스름하게
+    '    vec3 lit = mc * ls * 0.98 + vec3(0.5, 0.56, 0.68) * alb * 0.2 * pow(1.0 - kf, 3.0) * (1.0 - ls);',   // 초승달 · 그믐달 — 어두운 쪽이 지구빛으로 희미하게 보인다
+    '    float aa = 1.3 / uMoonR, disc = 1.0 - smoothstep(1.0 - aa, 1.0 + aa * 0.4, mr);',
+    '    col = mix(col, max(col, lit), disc * uMoonVis);',
+    '  }',
     '  col += (hash(gl_FragCoord.xy + uSeed) - 0.5) / 255.0 * 1.6;',
     '  gl_FragColor = vec4(col, 1.0);',
     '}'
   ].join('\n');
+  var MOONTX = 'data:image/jpeg;base64,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';   // 달 표면 — NASA 'CGI Moon Kit'(svs.gsfc.nasa.gov/4720, 공개 자료)의 달 지도 lroc_color_poles_1k.jpg 를 지구에서 보는 앞면 원판(북쪽 위 · 흑백 128px)으로 구운 것
   function initSky() {   // 하늘 그리는 판을 준비한다 — 안 되면 시안 29 방식(색 번짐)으로 간다
     try {
       sgl = skyc.getContext('webgl', { alpha: false, antialias: false, depth: false });
@@ -909,7 +947,22 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
       if (!sgl.getProgramParameter(sprog, sgl.LINK_STATUS)) throw new Error(sgl.getProgramInfoLog(sprog));
       var qb = sgl.createBuffer(), aq = sgl.getAttribLocation(sprog, 'aQ'); sgl.bindBuffer(sgl.ARRAY_BUFFER, qb); sgl.bufferData(sgl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), sgl.STATIC_DRAW);
       sgl.enableVertexAttribArray(aq); sgl.vertexAttribPointer(aq, 2, sgl.FLOAT, false, 0, 0);
+      var mtx = sgl.createTexture(), mim = new Image();   // 달 사진 — 다 읽힐 때까지는 고른 회색
+      sgl.activeTexture(sgl.TEXTURE0); sgl.bindTexture(sgl.TEXTURE_2D, mtx); sgl.texImage2D(sgl.TEXTURE_2D, 0, sgl.LUMINANCE, 1, 1, 0, sgl.LUMINANCE, sgl.UNSIGNED_BYTE, new Uint8Array([190]));
+      sgl.texParameteri(sgl.TEXTURE_2D, sgl.TEXTURE_MIN_FILTER, sgl.LINEAR); sgl.texParameteri(sgl.TEXTURE_2D, sgl.TEXTURE_WRAP_S, sgl.CLAMP_TO_EDGE); sgl.texParameteri(sgl.TEXTURE_2D, sgl.TEXTURE_WRAP_T, sgl.CLAMP_TO_EDGE);
+      sgl.useProgram(sprog); sgl.uniform1i(sgl.getUniformLocation(sprog, 'uMoonTex'), 0);
+      mim.onload = function () { try { sgl.bindTexture(sgl.TEXTURE_2D, mtx); sgl.texImage2D(sgl.TEXTURE_2D, 0, sgl.LUMINANCE, sgl.LUMINANCE, sgl.UNSIGNED_BYTE, mim); sgl.generateMipmap(sgl.TEXTURE_2D); sgl.texParameteri(sgl.TEXTURE_2D, sgl.TEXTURE_MIN_FILTER, sgl.LINEAR_MIPMAP_LINEAR); moonTxOk = true; if (skyMode === 3) applySky(); } catch (e5) {} };
+      mim.src = MOONTX;
     } catch (err) { sgl = null; skyMode = 2; window.__skyErr = String(err); }
+  }
+  var seaTint = 1, moonPhO = -1, moonSz = 28, moonGlow = 1.7, moonTxOk = false;   // (시안) 고른 달 모양(-1 = 그날 날짜대로) · 달 반지름(1440 폭 기준 px — 처음 14, 사용자가 '더 크게' 28 을 고름) · 달빛 세기(사용자가 '조금 더' 1.7 을 고름)
+  function moonAt(h, d, tn) {   // 그 날 그 시각의 달 — 모양(0 삭 · 1.57 상현 · 3.14 보름 · 4.71 하현) · 하늘 길 위 자리(3.14 뜰 때 → 1.57 가장 높을 때 → 0 질 때) · 떠 있나
+    var rd = 0.0174533, dj = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5 + h / 24 - 10957.5, eD = (297.8502 + 12.19074912 * dj) * rd, eM = (357.5291 + 0.98560028 * dj) * rd, eK = (134.9634 + 13.06499295 * dj) * rd;
+    var ph = eD + (6.289 * Math.sin(eK) + 1.274 * Math.sin(2 * eD - eK) + 0.658 * Math.sin(2 * eD) + 0.214 * Math.sin(2 * eK) - 2.1 * Math.sin(eM)) * rd; ph -= 6.2832 * Math.floor(ph / 6.2832);   // 해와 달이 벌어진 각 — 달 궤도가 찌그러진 만큼 고쳐서 날짜마다 실제 모양과 맞는다(보름 · 삭이 한 시간 안쪽)
+    if (moonPhO >= 0) ph = moonPhO;   // (시안) 달 모양을 골랐으면 그 모양으로 — 뜨고 지는 때도 그 모양의 달처럼
+    var doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), dec = 23.44 * rd * Math.sin(6.2832 * (doy - 81) / 365 + ph), hs = Math.acos(-Math.tan(35.23 * rd) * Math.tan(dec)) * 57.2958 / 15;   // 달이 떠 있는 시간의 절반 — 겨울 보름달은 높고 길게(7시간 남짓), 여름 보름달은 낮고 짧게(5시간 남짓)
+    var dh = h - (tn + ph / 6.2832 * 24); dh -= 24 * Math.round(dh / 24); var th = 1.5708 * (1 - dh / hs);   // 달은 삭일 때 한낮에, 보름일 때 한밤에 가장 높다 — 하루에 50분쯤씩 늦게 뜬다
+    return { ph: ph, th: th, up: th > 0.03 && th < 3.11 };
   }
   var SKY3 = [   // 해의 높이(도)에 따른 하늘 — 위 · 가운데 · 아래. 해 진 뒤에도 푸른빛 · 보랏빛이 오래 남는다(땅거미)
     [-18, [8, 9, 13],    [9, 10, 16],    [12, 13, 21]],
@@ -920,6 +973,28 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     [6,   [21, 38, 72],  [58, 82, 122],  [142, 134, 134]],
     [15,  [22, 50, 92],  [52, 94, 142],  [104, 144, 180]],
     [30,  [24, 58, 104], [50, 100, 154], [98, 146, 192]]
+  ];
+  var SEAT = [   // 계절의 새벽 · 아침 / 저녁 / 밤 하늘빛(2026-11-23 사용자 — 낮만 계절을 타던 것을 하루 내내로). 줄마다 [위 · 가운데 · 아래 색 곱, 채도 낮춤(−는 짙게), 지평선 빛 색 곱, 아침 안개 곱, 해 반대쪽 보랏빛 곱] · 밤은 색 곱 셋만
+    [   // 봄 — 뿌옇고 포근하다(황사 · 옅은 안개): 살구빛 도는 우윳빛 아침, 파스텔 분홍 저녁, 살짝 뿌연 밤
+      [[1.03, 1.0, 1.0], [1.06, 1.01, 1.0], [1.0, 1.0, 1.04], 0.14, [1, 1.05, 1.2], 1.3, 1],
+      [[1.04, 1.0, 1.02], [1.06, 1.0, 1.04], [1.0, 1.06, 1.3], 0.16, [1, 1.25, 2.2], 1.6, 0.9],
+      [[1.25, 1.1, 1.15], [1.3, 1.2, 1.2], [1.4, 1.25, 1.15]]
+    ],
+    [   // 여름 — 습하다: 금빛 도는 뽀얀 아침, 붉고 보랏빛 짙은 저녁놀, 푸른 기가 남는 밤
+      [[0.98, 1.02, 1.04], [1.02, 1.03, 1.0], [1.04, 1.02, 0.94], 0.04, [1, 1.0, 0.85], 1.0, 1],
+      [[1.03, 0.95, 1.08], [1.1, 0.94, 1.08], [1.04, 0.92, 1.06], -0.04, [1, 0.85, 1.7], 1.0, 1.3],
+      [[0.9, 1.1, 1.3], [1.0, 1.3, 1.45], [1.1, 1.4, 1.45]]
+    ],
+    [   // 가을 — 맑고 건조하다: 안개 낀 금빛 아침, 선명한 주황 노을과 깊은 푸른빛, 맑고 깊은 남색 밤
+      [[0.92, 0.97, 1.06], [0.98, 1.0, 1.04], [1.06, 0.99, 0.9], -0.1, [1, 0.95, 0.8], 1.4, 1],
+      [[0.9, 0.95, 1.06], [1.02, 0.97, 0.98], [1.06, 1.0, 0.82], -0.14, [1, 1.05, 0.7], 1.0, 1],
+      [[0.75, 0.9, 1.15], [0.8, 1.0, 1.2], [0.85, 1.0, 1.15]]
+    ],
+    [   // 겨울 — 차고 맑다: 창백한 분홍 · 푸른빛 아침, 황금빛 띠 위로 차가운 청록 저녁, 검푸른 밤
+      [[0.9, 0.98, 1.08], [0.96, 1.0, 1.08], [1.0, 0.98, 1.04], 0.08, [1, 0.95, 1.15], 0.7, 1.2],
+      [[0.86, 0.98, 1.1], [0.9, 1.02, 1.1], [1.04, 1.1, 1.0], 0.04, [1, 1.45, 1.3], 1.0, 0.8],
+      [[0.75, 0.8, 0.95], [0.8, 0.9, 1.0], [0.75, 0.92, 1.05]]
+    ]
   ];
   function sky3(el) {
     var q = 0, last = SKY3.length - 1, a, b, t, o, m;
@@ -933,7 +1008,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     if (!sgl) { skyMode = 2; applySky(); return; }
     var d = seaDate(), h = (todH >= 0 ? todH : d.getHours() + d.getMinutes() / 60) % 24, sp = sunPos(h, d), el = sp[0], eve = sp[1] > 180 ? 1 : 0, k = sky3(el), key, val, loc;
     var W = window.innerWidth, H = window.innerHeight, pr = Math.min(window.devicePixelRatio || 1, todPlay ? 1 : 1.5), cw = Math.max(2, Math.round(W * pr)), ch = Math.max(2, Math.round(H * pr));
-    var doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), bq = 6.2832 * (doy - 81) / 364, dcl = -23.44 * Math.cos(6.2832 * (doy + 10) / 365) * 0.0174533, tn = 12 + (135 - 126.84) * 4 / 60 - (9.87 * Math.sin(2 * bq) - 7.53 * Math.cos(bq) - 1.5 * Math.sin(bq)) / 60, hs = Math.acos(-Math.tan(35.23 * 0.0174533) * Math.tan(dcl)) * 57.2958 / 15, th = 1.5708 * (1 - (h - tn) / hs); if (th > 4.4) th = 4.4; if (th < -1.26) th = -1.26;   /* 해 뜬 때 = 3.14 · 한낮 = 1.57 · 해 진 때 = 0 — 시간에 따라 한결같이 줄어든다 */ var sx = 50 + 38 * Math.cos(th), sy = 100 - 88 * Math.sin(th);   // 뜰 때는 왼쪽 아래, 한낮에는 로고 위쪽, 질 때는 오른쪽 아래
+    var doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), bq = 6.2832 * (doy - 81) / 364, dcl = -23.44 * Math.cos(6.2832 * (doy + 10) / 365) * 0.0174533, tn = 12 + (135 - 126.84) * 4 / 60 - (9.87 * Math.sin(2 * bq) - 7.53 * Math.cos(bq) - 1.5 * Math.sin(bq)) / 60, hs = Math.acos(-Math.tan(35.23 * 0.0174533) * Math.tan(dcl)) * 57.2958 / 15, th = 1.5708 * (1 - (h - tn) / hs); if (th > 4.4) th = 4.4; if (th < -1.26) th = -1.26;   /* 해 뜬 때 = 3.14 · 한낮 = 1.57 · 해 진 때 = 0 — 시간에 따라 한결같이 줄어든다 */ var sx = 50 - 38 * Math.cos(th), sy = 100 - 88 * Math.sin(th);   // 뜰 때는 오른쪽 아래, 한낮에는 로고 위쪽, 질 때는 왼쪽 아래 — 조감도는 남쪽에서 북쪽을 바라본 그림이라 동쪽이 오른쪽(2026-11-23 사용자, 전에는 반대)
     var lo = el < 0 ? 1 : el > 16 ? 0 : 1 - el / 16, t1 = el < 0 ? 0 : el > 6 ? 1 : el / 6, t2 = el < 6 ? 0 : el > 16 ? 1 : (el - 6) / 10;   // lo = 해가 낮은 정도
     var hz = el < -11 ? 0 : el < -2 ? (el + 11) / 9 : el < 8 ? 1 - (el + 2) / 10 * 0.75 : el < 16 ? 0.25 * (16 - el) / 8 : 0, tw = el < -10 ? 0 : el < 0 ? 1 + el / 10 : 1, dayF = el < 4 ? 0 : el > 16 ? 1 : (el - 4) / 12;
     var mx = function (a, b, t) { var o = [], i; for (i = 0; i < a.length; i++) o.push(a[i] + (b[i] - a[i]) * t); return o; };
@@ -942,23 +1017,25 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     var HI = [6, 1.0, 1.7, 0.12, 0.16, 0.13, 0.3, 8.5];
     var S = eve ? kf([0.15, 1.8, 2.2, 0.06, 0.42, 0.95, 0.07, 17], [0.35, 1.8, 2.2, 0.1, 0.62, 0.8, 0.09, 15], HI) : kf([0.9, 2.8, 1.9, 0.14, 0.3, 0.4, 0.55, 13], [1.7, 2.4, 1.9, 0.16, 0.26, 0.3, 0.5, 12], HI);
     var top = mx(k[1], eve ? [28, 26, 62] : [42, 59, 114], 0.6 * hz), midc = mx(k[2], eve ? [108, 66, 110] : [111, 132, 178], 0.6 * hz * (el >= 0 ? 1 : el < -4 ? 0.5 : 1 + el / 8)), bot = mx(k[3], eve ? [236, 104, 44] : [255, 206, 166], (eve ? 0.8 : 0.7) * hz); var sea = seaNow(), SEA = [[[1.06, 1.05, 1], [1.08, 1.06, 1], [1.03, 1.02, 1], 0], [[0.8, 0.94, 1.1], [0.84, 0.98, 1.1], [0.92, 1, 1.06], 0], [[0.9, 0.97, 1.06], [0.97, 1, 1.03], [1.1, 1.02, 0.9], 0], [[0.98, 0.99, 0.97], [1.04, 1.02, 0.97], [1.02, 1.01, 0.98], 0.16]][sea.i]; [top, midc, bot].forEach(function (c, q) { var m = SEA[q], l, i2; for (i2 = 0; i2 < 3; i2++) c[i2] *= 1 + (m[i2] - 1) * dayF; l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; for (i2 = 0; i2 < 3; i2++) c[i2] += (l - c[i2]) * SEA[3] * dayF; });   /* 계절의 낮 하늘빛 — 봄 옅게 · 여름 짙푸르게 · 가을 높고 맑게(아래는 황금빛) · 겨울 창백하게 */   // 저녁 = 보랏빛 위 · 짙은 주황 아래 / 아침 = 맑은 푸른빛 위 · 옅은 살구빛 아래
+    var wT = seaTint ? (el < -14 ? 0 : el < -6 ? (el + 14) / 8 : el < 4 ? 1 : el < 14 ? (14 - el) / 10 : 0) : 0, wN = seaTint ? (el < -14 ? 1 : el < -6 ? (-6 - el) / 8 : 0) : 0, ST = SEAT[sea.i][eve], SN = SEAT[sea.i][2];   // 해가 지평선 언저리인 때(새벽 · 아침 · 저녁)의 몫 · 밤의 몫 — 낮의 몫(dayF)과 겹치며 넘어간다
+    [top, midc, bot].forEach(function (c, q) { var a = ST[q], n = SN[q], l, i2; for (i2 = 0; i2 < 3; i2++) c[i2] *= (1 + (a[i2] - 1) * wT) * (1 + (n[i2] - 1) * wN); l = 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]; for (i2 = 0; i2 < 3; i2++) { c[i2] += (l - c[i2]) * ST[3] * wT; if (c[i2] < 0) c[i2] = 0; } });
+    var hzc = eve ? [1, 0.3, 0.08] : [1, 0.72, 0.58]; hzc = [1, Math.min(1, hzc[1] * (1 + (ST[4][1] - 1) * wT)), Math.min(1, hzc[2] * (1 + (ST[4][2] - 1) * wT))];   // 지평선에 깔리는 빛의 색도 계절을 탄다
     var halo = haloMode === 1 || (haloMode === 0 && (doy * 7 + 3) % 9 === 0) ? (el < 16 ? 0 : el > 26 ? 1 : (el - 16) / 10) : 0;   // 햇무리는 해가 높을 때만
     var sc = Math.min(W, H * 1.7) / 1440; if (sc < 0.5) sc = 0.5;
-    var mph = (d.getTime() / 864e5 + 2440587.5 - 2451550.26) / 29.530588853; mph = (mph - Math.floor(mph)) * 6.2832;   // 달의 모양 — 0 삭 · 1.57 상현 · 3.14 보름 · 4.71 하현
-    var mdh = h - (tn + mph / 6.2832 * 24); mdh -= 24 * Math.round(mdh / 24); var mth = 1.5708 * (1 - mdh / 6.2), mup = mth > 0.03 && mth < 3.11 ? 1 : 0;   // 달은 삭일 때 한낮에, 보름일 때 한밤에 가장 높다
-    var mvis = (el > -1 ? 0 : el < -8 ? 1 : (-1 - el) / 7) * mup * ((1 - Math.cos(mph)) / 2 < 0.03 ? 0 : 1);
+    skyTn = tn; var mo = moonAt(h, d, tn), mph = mo.ph, mth = mo.th, mrot = (mth - 1.5708) * 0.61;   // 달 — 시간에 따라 오른쪽에서 떠 왼쪽으로 진다(해와 같은 길). 얼굴은 뜰 때 오른쪽으로 55도, 질 때 왼쪽으로 55도 기운다(광주 위도)
+    var mvis = (el > -1 ? 0 : el < -8 ? 1 : (-1 - el) / 7) * (mo.up ? 1 : 0) * ((1 - Math.cos(mph)) / 2 < 0.03 ? 0 : 1);
     var U = {
-      uMoon: [(50 + 38 * Math.cos(mth)) / 100 * cw, (100 - 88 * Math.sin(mth)) / 100 * ch], uMoonR: 14 * sc * pr, uMoonPh: mph, uMoonVis: mvis,
+      uMoon: [(50 - 38 * Math.cos(mth)) / 100 * cw,(100 - 88 * Math.sin(mth)) / 100 * ch], uMoonR: moonSz * sc * pr, uMoonPh: mph, uMoonVis: mvis, uMoonRot: [Math.cos(mrot), Math.sin(mrot)], uMoonGlow: moonGlow, uMoonLow: Math.max(0, 1 - Math.sin(mth) / 0.5),
       uRes: [cw, ch], uSun: [sx / 100 * cw, sy / 100 * ch], uTop: [top[0] / 255, top[1] / 255, top[2] / 255], uMid: [midc[0] / 255, midc[1] / 255, midc[2] / 255], uBot: [bot[0] / 255, bot[1] / 255, bot[2] / 255],
       uCore: eve ? kf([1, 0.84, 0.44], [1, 0.95, 0.7], [1, 1, 0.98]) : kf([1, 0.92, 0.74], [1, 0.98, 0.9], [1, 1, 0.98]),   // 해 가운데 — 저녁은 노란빛, 아침은 옅은 살구빛, 높이 뜨면 흰빛
       uLimb: eve ? kf([1, 0.76, 0.34], [1, 0.9, 0.56], [1, 0.99, 0.95]) : kf([1, 0.8, 0.6], [1, 0.95, 0.82], [1, 0.99, 0.95]),
       uGlareCol: eve ? kf([1, 0.6, 0.2], [1, 0.78, 0.32], [1, 0.98, 0.94]) : kf([1, 0.84, 0.7], [1, 0.93, 0.82], [1, 0.98, 0.94]),
       uInCol: eve ? kf([1, 0.62, 0.18], [1, 0.78, 0.3], [1, 0.98, 0.95]) : kf([1, 0.8, 0.64], [1, 0.91, 0.78], [1, 0.98, 0.95]),
       uOutCol: eve ? kf([1, 0.28, 0.05], [1, 0.42, 0.1], [0.94, 0.96, 1]) : kf([1, 0.66, 0.56], [1, 0.76, 0.64], [0.94, 0.96, 1]),
-      uHzCol: eve ? [1, 0.3, 0.08] : [1, 0.72, 0.58],
+      uHzCol: hzc,
       uR: S[7] * sc * pr, uVis: el < -1.2 ? 0 : el > 0.4 ? 1 : (el + 1.2) / 1.6, uLow: lo, uEve: eve, uGlare: S[0], uGw: S[1], uGp: S[2], uVeil: S[3], uAurIn: S[4] * tw, uAurOut: S[5] * tw, uSoft: S[6],
-      uHz: hz * (eve ? 1.05 : 1.1), uMist: (el < -5 ? 0 : el < -2 ? (el + 5) / 3 : 1) * lo * (eve ? 0.05 : 0.21), uWarm: (eve ? 0.9 : 0.3) * lo * (el < -6 ? 0 : el < 0 ? (el + 6) / 6 : 1), uBand: lo * (eve ? 0.8 : 0.55),
-      uDayHaze: dayF * (0.38 + [0.14, -0.04, -0.14, 0.04][sea.i]), uDayDeep: dayF * 0.16, uFar: hz * (eve ? 0.8 : 0.35),
+      uHz: hz * (eve ? 1.05 : 1.1), uMist: (el < -5 ? 0 : el < -2 ? (el + 5) / 3 : 1) * lo * (eve ? 0.05 : 0.21) * (1 + (ST[5] - 1) * wT), uWarm: (eve ? 0.9 : 0.3) * lo * (el < -6 ? 0 : el < 0 ? (el + 6) / 6 : 1), uBand: lo * (eve ? 0.8 : 0.55),
+      uDayHaze: dayF * (0.38 + [0.14, -0.04, -0.14, 0.04][sea.i]), uDayDeep: dayF * 0.16, uFar: hz * (eve ? 0.8 : 0.35) * (1 + (ST[6] - 1) * wT),
       uHalo: halo, uHaloR: 0.21 * Math.min(ch, cw * 1.25), uSeed: doy * 0.37
     };
     for (key in SKO) U[key] = SKO[key];   // (시안 다듬기용) 값 덮어쓰기
@@ -1008,7 +1085,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     if (skyMode === 1) { applySkyOld(); return; }
     var d = new Date(), h = (todH >= 0 ? todH : d.getHours() + d.getMinutes() / 60) % 24, sp = sunPos(h, d), el = sp[0], k = sky2(el), L = [];
     var rgb = function (c) { return Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]); };
-    var sx = 50 + (sp[1] - 180) / 130 * 50, sy = 100 - el / 32 * 100;   // 화면 = 남쪽 하늘의 낮은 부분. 해는 낮을 때만 화면 안에 있고, 높이 뜨면 위로 나간다
+    var sx = 50 - (sp[1] - 180) / 130 * 50, sy = 100 - el / 32 * 100;   // (그래픽 칩이 없을 때의 하늘) 동쪽이 오른쪽 — 새 해와 같게. 해는 낮을 때만 화면 안에 있고, 높이 뜨면 위로 나간다
     var sc = Math.min(window.innerWidth, window.innerHeight * 1.7) / 1440, lo = el < 0 ? 0 : el > 20 ? 1 : el / 20, r = (16 - 4 * lo) * (sc < 0.5 ? 0.5 : sc);   // 작고 단정한 해 — 낮을수록 조금 크다
     var core = [255, 150 + 96 * lo, 96 + 130 * lo], warm = [255, 170 + 68 * lo, 122 + 106 * lo];   // 지평선 가까이 주황 → 높이 뜨면 흰빛
     var hz = el < -9 ? 0 : el < -2 ? (el + 9) / 7 : el < 8 ? 1 - (el + 2) / 10 * 0.75 : el < 16 ? 0.25 * (16 - el) / 8 : 0, hx = sx < 18 ? 18 : sx > 82 ? 82 : sx;   // 지평선 빛 — 해가 지평선 언저리일 때 가장 짙다
@@ -1134,6 +1211,32 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
     wxHzT = [0, 0.55, 1][+b.getAttribute('data-v')]; wxDirty = true;
   });
+  function moonBestH() {   // (시안) 그 모양의 달이 밤하늘에 가장 높이 뜬 시각 — 초승달은 해 진 직후, 보름달은 한밤, 그믐달은 새벽
+    var d = seaDate(), q, best = 21, bv = -9, mo, v;
+    for (q = 0; q < 96; q++) { if (sunPos(q / 4, d)[0] > -8) continue; mo = moonAt(q / 4, d, skyTn); v = mo.up ? Math.sin(mo.th) : -1; if (v > bv) { bv = v; best = q / 4; } }
+    return best;
+  }
+  $('mph').addEventListener('input', function () {   // (시안) 달 모양 — 삭에서 지난 날(2~27.5일)로 고른다. 실제로는 날짜마다 저절로 바뀐다
+    var v = +this.value; moonPhO = v / 29.53 * 6.2832; clearInterval(todPlay); todPlay = 0;
+    $('mphv').textContent = (v % 1 ? v.toFixed(1) : v) + '일 ' + (v < 4.5 ? '초승달' : v < 6.5 ? '차는 달' : v < 8.5 ? '상현달' : v < 13.5 ? '차는 달' : v < 16 ? '보름달' : v < 21 ? '기우는 달' : v < 23 ? '하현달' : v < 25 ? '기우는 달' : '그믐달');
+    todH = moonBestH(); $('tod').value = todH; applySky();   // 그 달이 잘 보이는 밤 시각으로 옮긴다 — 시간 막대를 움직이면 달이 떠서 지는 길을 볼 수 있다
+  });
+  $('mphnow').addEventListener('click', function () { moonPhO = -1; $('mphv').textContent = '오늘'; applySky(); });
+  $('mszseg').addEventListener('click', function (ev) {   // (시안) 달 크기 — 예전 28 / 크게 44 / 더 크게 56(1440 폭에서 지름 px)
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    moonSz = +b.getAttribute('data-v'); applySky();
+  });
+  $('mglseg').addEventListener('click', function (ev) {   // (시안) 달빛(달 둘레 빛) — 없음 / 은은하게 / 조금 더
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    moonGlow = +b.getAttribute('data-v'); applySky();
+  });
+  $('hovseg').addEventListener('click', function (ev) {   // (시안) 가을 마우스 빛 후보
+    var b = ev.target.closest('button'); if (!b) return;
+    Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+    HOV[2] = HOVA[+b.getAttribute('data-v')]; wxDirty = true;
+  });
   $('haloseg').addEventListener('click', function (ev) {   // (시안) 햇무리 — 가끔(날짜로 정함) / 늘 켬 / 끔
     var b = ev.target.closest('button'); if (!b) return;
     Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
@@ -1171,7 +1274,11 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     Array.prototype.forEach.call(this.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
     RM = b.getAttribute('data-v') === '1'; resize(); if (!lite) intro();
   });
-  $('enter').addEventListener('click', function () { setMode(1); setTimeout(function () { if (mode === 1) $('f1').focus(); }, 650); });
+  $('enter').addEventListener('click', function () {   // 로그인 창을 연다 — 지난번에 로그인한 사번이 있으면 채워 두고 비밀번호 칸으로(2026-11-23 사용자 '아이디 기억하기')
+    var se = ''; try { se = localStorage.getItem('angels-emp') || ''; } catch (e6) {}
+    if (se && !$('f1').value) $('f1').value = se;
+    setMode(1); setTimeout(function () { if (mode === 1) $($('f1').value ? 'f2' : 'f1').focus(); }, 500);
+  });
   $('cancel').addEventListener('click', function () { setMode(0); });
   $('join').addEventListener('click', function () { hostCall('signup'); });   // 가입 신청 — 포털의 가입 신청 창을 연다
   $('try').addEventListener('click', function () { enterGate(2); });
@@ -1278,8 +1385,8 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   function seaDate() {   // (시안) 계절을 고르면 그 계절의 대표 날짜로 본다 — 해 뜨고 지는 때 · 달 모양도 그날 것
     var nw = new Date(); return wxSea < 0 ? nw : new Date(nw.getFullYear(), [3, 6, 10, 0][wxSea], [5, 15, 5, 15][wxSea], nw.getHours(), nw.getMinutes());
   }
-  var wxPetal = [], wxPetalS = null, wxLeaf = [];
-  (function () {   // 벚꽃잎 · 단풍잎을 미리 그려 둔다(그릴 때마다 모양을 다시 만들지 않게)
+  var wxPetal = [], wxPetalS = null;
+  (function () {   // 벚꽃잎을 미리 그려 둔다(그릴 때마다 모양을 다시 만들지 않게). 가을 단풍잎은 걷었다(2026-11-23 사용자 — 가을은 마우스 빛 색으로만)
     function mk(sz, draw) { var c3 = document.createElement('canvas'), x3 = c3.getContext('2d'); c3.width = c3.height = sz; x3.translate(sz / 2, sz / 2); x3.scale(sz / 2.3, sz / 2.3); draw(x3); return c3; }
     function petal(x3, c1, c2, soft) {   // 끝이 갈라진 벚꽃잎 — 밑동은 분홍, 가장자리로 갈수록 흰빛
       var g3 = x3.createRadialGradient(0, 0.6, 0.05, 0, 0, 1.2); g3.addColorStop(0, c1); g3.addColorStop(1, c2); x3.fillStyle = g3;
@@ -1288,19 +1395,11 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     wxPetal.push(mk(48, function (x3) { petal(x3, 'rgba(255,206,224,1)', 'rgba(255,244,248,0.96)'); }));
     wxPetal.push(mk(48, function (x3) { petal(x3, 'rgba(255,184,208,1)', 'rgba(255,230,240,0.96)'); }));
     wxPetalS = mk(64, function (x3) { x3.scale(0.7, 0.7); x3.shadowColor = 'rgba(255,224,236,0.9)'; x3.shadowBlur = 9; petal(x3, 'rgba(255,210,226,0.85)', 'rgba(255,240,246,0.8)', true); });   // 가까이 지나가는 꽃잎 — 초점이 나가 흐리다
-    var LP = [[0, -1], [0.14, -0.7], [0.3, -0.78], [0.24, -0.36], [0.52, -0.6], [0.58, -0.44], [0.9, -0.48], [0.8, -0.2], [0.94, -0.08], [0.52, 0.22], [0.6, 0.44], [0.1, 0.36], [0.05, 0.62]];
-    function leaf(x3, c1, c2) {   // 단풍나무 잎 — 다섯 갈래 + 잎자루
-      var g3 = x3.createLinearGradient(0, -1, 0, 0.7), q; g3.addColorStop(0, c1); g3.addColorStop(1, c2); x3.fillStyle = g3;
-      x3.beginPath(); x3.moveTo(0, -1); for (q = 1; q < LP.length; q++) x3.lineTo(LP[q][0], LP[q][1]); x3.lineTo(0.035, 1); x3.lineTo(-0.035, 1); for (q = LP.length - 1; q > 0; q--) x3.lineTo(-LP[q][0], LP[q][1]); x3.closePath(); x3.fill();
-    }
-    wxLeaf.push(mk(64, function (x3) { leaf(x3, 'rgb(208,68,48)', 'rgb(176,48,40)'); }));
-    wxLeaf.push(mk(64, function (x3) { leaf(x3, 'rgb(234,130,56)', 'rgb(206,92,44)'); }));
-    wxLeaf.push(mk(64, function (x3) { leaf(x3, 'rgb(238,178,80)', 'rgb(214,136,58)'); }));
   })();
-  function seaNow() {   // 지금 계절(0 봄 · 1 여름 · 2 가을 · 3 겨울) · 꽃잎과 낙엽이 날리는 절정 때인지 · 크리스마스 무렵인지
+  function seaNow() {   // 지금 계절(0 봄 · 1 여름 · 2 가을 · 3 겨울) · 벚꽃 철(3/27~4/9)인지 · 크리스마스 무렵인지
     var nw = new Date(), m = nw.getMonth() + 1, md = m * 100 + nw.getDate(), xm = md >= 1220 && md <= 1225;
-    if (wxSea >= 0) return { i: wxSea, peak: wxSea === 0 || wxSea === 2, xm: xm };
-    return { i: m >= 3 && m <= 5 ? 0 : m >= 6 && m <= 8 ? 1 : m >= 9 && m <= 11 ? 2 : 3, peak: (md >= 327 && md <= 409) || (md >= 1030 && md <= 1125), xm: xm };
+    if (wxSea >= 0) return { i: wxSea, peak: wxSea === 0, xm: xm };   // (시안) 봄을 고르면 벚꽃을 늘 보여 준다
+    return { i: m >= 3 && m <= 5 ? 0 : m >= 6 && m <= 8 ? 1 : m >= 9 && m <= 11 ? 2 : 3, peak: md >= 327 && md <= 409, xm: xm };
   }
   function setWx(m) { wxMode = m; wxDirty = true; if (WXP[m].st > 0) { wxNext = T() + 1600; wxFirst = true; } }   // 천둥번개로 바꾸면 1.6초 뒤 첫 번개
   function wxResize() {
@@ -1351,7 +1450,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     cgl.clear(cgl.COLOR_BUFFER_BIT); cgl.drawArrays(cgl.TRIANGLE_STRIP, 0, 4);
   }
   function wxDraw(dt, still, now) {   // 비 · 눈 · 바람 먼지 · 번개 줄기 — 뒤 판(#wx)에 그리고, 가까운 빗줄기 · 눈송이 열에 하나만 알갱이 앞 판(#wxf)에
-    var c = wxx, cf = wxfx, W = VW, H = VH, rn = wxP.rn, sn = wxP.sn, dw = wxP.wd > 0.35 ? (wxP.wd - 0.35) / 0.65 : 0, st = wxStrike, bolt = !!(st && st.bolt && wxFl > 0.03 && now - st.t0 < 260), pk = wxSeaPeak && (wxSeaI === 0 || wxSeaI === 2), ff = wxSeaI === 1 && wxLight < 0.25 && rn < 0.05;
+    var c = wxx, cf = wxfx, W = VW, H = VH, rn = wxP.rn, sn = wxP.sn, dw = wxP.wd > 0.35 ? (wxP.wd - 0.35) / 0.65 : 0, st = wxStrike, bolt = !!(st && st.bolt && wxFl > 0.03 && now - st.t0 < 260), pk = wxSeaPeak && wxSeaI === 0, ff =wxSeaI === 1 && wxLight < 0.25 && rn < 0.05;
     if (wxXmOn && rn < 0.05 && sn < 0.45) sn = 0.45;   // 크리스마스 — 눈이 안 와도 성긴 눈이 내린다
     if (rn < 0.01 && sn < 0.01 && dw < 0.01 && !bolt && !pk && !ff && !wxXmOn) { if (!wxClean) { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, wxc.width, wxc.height); cf.setTransform(1, 0, 0, 1, 0, 0); cf.clearRect(0, 0, wxfc.width, wxfc.height); wxClean = true; } return; }
     wxClean = false; c.setTransform(wxPR, 0, 0, wxPR, 0, 0); c.clearRect(0, 0, W, H); cf.setTransform(wxPR, 0, 0, wxPR, 0, 0); cf.clearRect(0, 0, W, H);
@@ -1391,19 +1490,19 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
       }
       c.stroke();
     }
-    if (pk) {   // 봄 벚꽃 — 흐드러지게(46~80장, 먼 것은 작고 많게 · 가까운 것 몇 장은 크고 흐리게) / 가을 단풍잎 — 9~14장. 바람결을 따라 물결치듯 흘러가고, 다섯에 하나는 알갱이 앞
-      var spr = wxSeaI === 0, wk2 = Math.min(1, wxP.wd * 1.6), ln = spr ? Math.round(100 + 50 * wk2) : Math.round(9 + 5 * wk2), la = (0.5 + 0.5 * lt) * (1 - 0.5 * Math.min(1, rn)), sp2, nr;
+    if (pk) {   // 봄 벚꽃(벚꽃 철에만) — 흐드러지게(먼 것은 작고 많게 · 가까운 것 몇 장은 크고 흐리게). 바람결을 따라 물결치듯 흘러가고, 다섯에 하나는 알갱이 앞
+      var wk2 = Math.min(1, wxP.wd * 1.6), ln = Math.round(100 + 50 * wk2), la = (0.5 + 0.5 * lt) * (1 - 0.5 * Math.min(1, rn)), sp2, nr;
       for (i = 0; i < ln; i++) {
-        z = wLZ[i]; nr = spr && z > 0.8;
+        z = wLZ[i]; nr = z > 0.8;
         if (!still) {
-          wLS[i] += (spr ? 2.6 : 1.7) * (0.6 + z) * dt;
-          wLX[i] += ((spr ? 22 : 14) + 34 * z + wxP.wd * g * (90 + 130 * z) + Math.sin(ts * 0.5 + wLY[i] * 0.008 + z * 5) * (spr ? 30 : 16) + Math.sin(wLS[i] * 0.7) * 16) * dt;
-          wLY[i] += ((spr ? 22 : 30) + 26 * z + Math.cos(wLS[i]) * (spr ? 16 : 10) + Math.sin(ts * 0.37 + wLX[i] * 0.006) * (spr ? 12 : 6) + rn * 50) * dt;
+          wLS[i] += 2.6 * (0.6 + z) * dt;
+          wLX[i] += (22 + 34 * z + wxP.wd * g * (90 + 130 * z) + Math.sin(ts * 0.5 + wLY[i] * 0.008 + z * 5) * 30 + Math.sin(wLS[i] * 0.7) * 16) * dt;
+          wLY[i] += (22 + 26 * z + Math.cos(wLS[i]) * 16 + Math.sin(ts * 0.37 + wLX[i] * 0.006) * 12 + rn * 50) * dt;
           if (wLY[i] > H + 24 || wLX[i] > W + 34) { if (Math.random() < 0.45) { wLX[i] = -24; wLY[i] = Math.random() * H * 0.8; } else { wLX[i] = Math.random() * W * 0.9; wLY[i] = -24; } }
         }
-        cc = i % 5 === 0 ? cf : c; L = spr ? (nr ? 10 + 8 * z : 4.2 + 5.4 * z) : 8 + 7 * z; sp2 = spr ? (nr ? wxPetalS : wxPetal[i % 2]) : wxLeaf[i % 3];
+        cc = i % 5 === 0 ? cf : c; L = nr ? 10 + 8 * z : 4.2 + 5.4 * z; sp2 = nr ? wxPetalS : wxPetal[i % 2];
         cc.save(); cc.translate(wLX[i], wLY[i]); cc.rotate(wLS[i] * 0.6 + i); cc.scale(1, 0.3 + 0.7 * Math.abs(Math.cos(wLS[i] * 1.3)));   // 팔랑이며 뒤집힌다
-        cc.globalAlpha = (spr ? (nr ? 0.5 : 0.62 + 0.36 * z) : 0.62 + 0.3 * z) * la; cc.drawImage(sp2, -L, -L, L * 2, L * 2); cc.restore();
+        cc.globalAlpha = (nr ? 0.5 : 0.62 + 0.36 * z) * la; cc.drawImage(sp2, -L, -L, L * 2, L * 2); cc.restore();
       }
       c.globalAlpha = 1; cf.globalAlpha = 1;
     }
@@ -1472,7 +1571,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   function wxFrame(now) {   // 화면을 그릴 때마다 — 날씨를 바꾸면 3초쯤에 걸쳐 서서히 바뀐다
     if (!VW) return;
     wxGateFx();
-    var sea0 = seaNow(); wxSeaI = sea0.i; wxSeaPeak = sea0.peak; wxXmOn = wxXm === 1 || (wxXm < 0 && sea0.xm); wxSeaFl = [0.24, 0.16, 0.2, 0.12][wxSeaI]; wxSeaUp = [-0.03, 0.025, -0.05, 0][wxSeaI]; wxSeaSp = wxSeaI === 2 ? 0.1 : 0;   // 바람에 날린 알갱이 — 봄엔 팔랑이며 내려앉고, 가을엔 빙글 돌며 떨어진다
+    var sea0 = seaNow(); wxSeaI = sea0.i; wxSeaPeak = sea0.peak; if (POL[5]) { CLR1 = HOV[wxSeaI][0]; CLR2 = HOV[wxSeaI][1]; HOVG = HOV[wxSeaI][2]; }   // 마우스 빛 — 오늘 계절의 빛깔 wxXmOn = wxXm === 1 || (wxXm < 0 && sea0.xm); wxSeaFl = [0.24, 0.16, 0.2, 0.12][wxSeaI]; wxSeaUp = [-0.03, 0.025, -0.05, 0][wxSeaI]; wxSeaSp = 0;   // 바람에 날린 알갱이 — 봄엔 팔랑이며 내려앉는다(가을에 빙글 돌며 떨어지던 것은 낙엽과 함께 걷었다 — 2026-11-23)
     var c0 = performance.now(), dt = wxLast ? (now - wxLast) / 1000 : 0, tg = WXP[wxMode], key, kk, ts = now * 0.001, c1, bw;
     wxLast = now; if (dt > 0.1) dt = 0.1; else if (dt < 0) dt = 0;
     kk = lite ? 1 : 1 - Math.exp(-dt / 0.9);
@@ -1501,11 +1600,11 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
   function start() { if (!started && VW > 0 && LW > 0) { started = true; seedStars(); intro(); } }
   function frame(now) {
     requestAnimationFrame(frame); now = T();
-    if (document.hidden) { last = now; return; }
+    if (document.hidden || gfrozen) { last = now; return; }   // 체험관으로 옮기는 중 — 바탕색으로 덮였으니 더 그리지 않는다
     if (window.innerWidth !== VW || window.innerHeight !== VH) { resize(); start(); }
     wxFrame(now);
     if (!started || lite) { last = now; return; }   // 휴대폰은 한 번 그린 그림 그대로 — 움직임 계산을 하지 않는다
-    if (gate) gtg += Math.min(now - last, 100);   // 진입 장면의 시계 — 그린 장 사이의 시간을 쌓는다(한 번에 0.1초까지). 화면이 길게 멈췄다 풀려도(휴대폰 · 뒤에서 포털이 뜰 때) 장면을 건너뛰지 않고 이어 가고, 음수가 될 일이 없다(전에는 '지금 - 시작 시각'이라 느린 장에서 음수 → pow 가 NaN → 알갱이 밝기 · 빛 꼬리가 통째로 깨졌다)
+    if (gate) gtg += Math.min(now - last, 100) * 1.3;   /* 1.3배 빠르게(2026-11-23 사용자 '전환 속도 좀 더 빠르게') — 로그인은 1초, 체험하기는 1.1초 남짓 */   // 진입 장면의 시계 — 그린 장 사이의 시간을 쌓는다(한 번에 0.1초까지). 화면이 길게 멈췄다 풀려도(휴대폰 · 뒤에서 포털이 뜰 때) 장면을 건너뛰지 않고 이어 가고, 음수가 될 일이 없다(전에는 '지금 - 시작 시각'이라 느린 장에서 음수 → pow 가 NaN → 알갱이 밝기 · 빛 꼬리가 통째로 깨졌다)
     acc += Math.min(now - last, 60); last = now;
     var n = 0, c0 = performance.now();
     while (acc >= 15.5 && n < 3) { step(now); acc -= 16.667; n++; }
@@ -1518,7 +1617,7 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
       }
     }
   }
-  window.__grain = { xmas: function (v) { if (v !== undefined) { wxXm = v; wxDirty = true; } return wxXm; }, season: function (v) { if (v !== undefined) { wxSea = v; wxDirty = true; applySky(); } return seaNow(); }, dust: function (v) { if (v !== undefined) { wxHzT = v; wxDirty = true; } return { hz: Math.round(wxHz * 100) / 100, bg: dustEl.style.background.slice(0, 70), op: dustEl.style.opacity, txt: wxDustTxt, err: window.__wxErr2 || '' }; }, gateFx: function () { return { on: wxGate, sky: skyc.style.transform, cld: cldc.style.transform, wx: wxc.style.transform, wxf: wxfc.style.transform, op: wxc.style.opacity, cam: Math.round(gcam * 100) / 100, gate: gate }; }, live: function (o) { if (o) wxLiveSet(o); return { last: wxLiveLast, row: WXP[6], err: window.__wxErr || '' }; }, fx: function (v) { if (v) wxFx = v; return wxFx; }, cldTune: function (o) { CLO = o || {}; }, wxSet: function (o) { for (var k9 in o) WXP[wxMode][k9] = o[k9]; }, wx: function (m) { setWx(m); return wxMode; }, strike: function () { wxNext = 0; }, hold: function (v) { wxHold = v ? 1 : 0; if (!v) wxStrike = null; }, wxInfo: function () { var r2 = function (v) { return Math.round(v * 100) / 100; }; return { mode: wxMode, cv: r2(wxP.cv), rn: r2(wxP.rn), sn: r2(wxP.sn), wd: r2(wxP.wd), fl: r2(wxFl), cloud: !!cgl, err: window.__cldErr || '', cld: cldc.width + 'x' + cldc.height + ':' + cldc.style.display, wxc: wxc.width + 'x' + wxc.height, light: r2(wxLight), blow: r2(wxBlow), ms: r2(wxMs), starK: r2(wxStarK), dirK: r2(wxDirK), day: r2(wxDayNow), rmax: wxRMax, smax: wxSMax, edge: (function () { var a = 0, b = 0, q; for (q = 0; q < N; q++) { if (EDG[q] & 1) a++; if (EDG[q] & 2) b++; } return [a, b]; })(), blown: (function () { var a = 0, q, t = T(); for (q = 0; q < N; q++) if (t - WBL[q] < 900) a++; return a; })(), mx: r2(wxP.mx), hz: r2(wxHz), sea: wxSeaI, peak: wxSeaPeak, xm: wxXmOn, top4: (function () { var a = 0, q; for (q = 0; q < N; q++) if (EDG[q] & 4) a++; return a; })(), cap: r2(wxCap), moon: skyLast ? { ph: r2(skyLast.uMoonPh), vis: r2(skyLast.uMoonVis), x: Math.round(skyLast.uMoon[0] / skyLast.uRes[0] * 100), y: Math.round(skyLast.uMoon[1] / skyLast.uRes[1] * 100) } : null, drip: (function () { var a = 0, q, t = T(); for (q = 0; q < N; q++) if (t - DRP[q] < 900) a++; return a; })(), wob: r2(wxWob), spk: r2(wxSpkN) }; }, halo: function (m) { haloMode = m; applySky(); }, skyTune: function (o) { SKO = o || {}; applySky(); return skyLast; }, skyInfo: function () { return { mode: skyMode, gl: !!sgl, err: window.__skyErr || '', w: skyc.width, h: skyc.height }; }, sky: function (m) { skyMode = m; applySky(); }, pos: function (h) { return sunPos(h, new Date()); }, tod: function (h) { todH = h; applySky(); }, sun: function () { return sunTimes(new Date()); }, slow: function (v) { ft = v; fcount = 999; }, tick: function (k2) { if (window.innerWidth !== VW || window.innerHeight !== VH) { resize(); start(); } if (!started || lite) return 0; for (var q = 0; q < k2; q++) { skew += 16.667; if (gate) gtg += 16.667; step(T()); } draw(T()); wxFrame(T()); last = T(); return k2; }, state: function () { var st = 0, hm = 0, off = 0, gs = 0, mv = 0, egs = 0, rmax = 0, rsum = 0; for (var j = 0; j < N; j++) { egs += EG[j]; if (gate && EG[j] > 30) mv++; var rr2 = Math.max(Math.abs(X[j] - gcx) / (gw / 2), Math.abs(Y[j] - gcy) / (gh / 2)); rsum += rr2; if (rr2 > rmax) rmax = rr2; gs += GV[j]; if (M0[j] !== 0) mv++; if (GV[j] === 0) st++; else if (GV[j] === 1) { hm++; off += Math.sqrt((X[j] - HX[j]) * (X[j] - HX[j]) + (Y[j] - HY[j]) * (Y[j] - HY[j])); } }
+  window.__grain = { xmas: function (v) { if (v !== undefined) { wxXm = v; wxDirty = true; } return wxXm; }, season: function (v) { if (v !== undefined) { wxSea = v; wxDirty = true; applySky(); } return seaNow(); }, dust: function (v) { if (v !== undefined) { wxHzT = v; wxDirty = true; } return { hz: Math.round(wxHz * 100) / 100, bg: dustEl.style.background.slice(0, 70), op: dustEl.style.opacity, txt: wxDustTxt, err: window.__wxErr2 || '' }; }, gateFx: function () { return { on: wxGate, sky: skyc.style.transform, cld: cldc.style.transform, wx: wxc.style.transform, wxf: wxfc.style.transform, op: wxc.style.opacity, cam: Math.round(gcam * 100) / 100, gate: gate }; }, live: function (o) { if (o) wxLiveSet(o); return { last: wxLiveLast, row: WXP[6], err: window.__wxErr || '' }; }, fx: function (v) { if (v) wxFx = v; return wxFx; }, cldTune: function (o) { CLO = o || {}; }, wxSet: function (o) { for (var k9 in o) WXP[wxMode][k9] = o[k9]; }, wx: function (m) { setWx(m); return wxMode; }, strike: function () { wxNext = 0; }, hold: function (v) { wxHold = v ? 1 : 0; if (!v) wxStrike = null; }, wxInfo: function () { var r2 = function (v) { return Math.round(v * 100) / 100; }; return { mode: wxMode, cv: r2(wxP.cv), rn: r2(wxP.rn), sn: r2(wxP.sn), wd: r2(wxP.wd), fl: r2(wxFl), cloud: !!cgl, err: window.__cldErr || '', cld: cldc.width + 'x' + cldc.height + ':' + cldc.style.display, wxc: wxc.width + 'x' + wxc.height, light: r2(wxLight), blow: r2(wxBlow), ms: r2(wxMs), starK: r2(wxStarK), dirK: r2(wxDirK), day: r2(wxDayNow), rmax: wxRMax, smax: wxSMax, edge: (function () { var a = 0, b = 0, q; for (q = 0; q < N; q++) { if (EDG[q] & 1) a++; if (EDG[q] & 2) b++; } return [a, b]; })(), blown: (function () { var a = 0, q, t = T(); for (q = 0; q < N; q++) if (t - WBL[q] < 900) a++; return a; })(), mx: r2(wxP.mx), hz: r2(wxHz), sea: wxSeaI, peak: wxSeaPeak, xm: wxXmOn, top4: (function () { var a = 0, q; for (q = 0; q < N; q++) if (EDG[q] & 4) a++; return a; })(), cap: r2(wxCap), moon: skyLast ? { ph: r2(skyLast.uMoonPh), vis: r2(skyLast.uMoonVis), x: Math.round(skyLast.uMoon[0] / skyLast.uRes[0] * 100), y: Math.round(skyLast.uMoon[1] / skyLast.uRes[1] * 100) } : null, drip: (function () { var a = 0, q, t = T(); for (q = 0; q < N; q++) if (t - DRP[q] < 900) a++; return a; })(), wob: r2(wxWob), spk: r2(wxSpkN) }; }, halo: function (m) { haloMode = m; applySky(); }, moon: function (o) { if (o) { if (o.ph !== undefined) moonPhO = o.ph; if (o.sz) moonSz = o.sz; if (o.glow !== undefined) moonGlow = o.glow; applySky(); } return { tex: moonTxOk, best: moonBestH(), at: moonAt(todH >= 0 ? todH : 21, seaDate(), skyTn) }; }, hov: function (i, a) { HOV[i] = a; wxDirty = true; }, seaTint: function (v, t) { if (v !== undefined) seaTint = v; if (t) SEAT = t; applySky(); return SEAT; }, skyTune: function (o) { SKO = o || {}; applySky(); return skyLast; }, skyInfo: function () { return { mode: skyMode, gl: !!sgl, err: window.__skyErr || '', w: skyc.width, h: skyc.height }; }, sky: function (m) { skyMode = m; applySky(); }, pos: function (h) { return sunPos(h, seaDate()); }, tod: function (h) { todH = h; applySky(); }, sun: function () { return sunTimes(new Date()); }, slow: function (v) { ft = v; fcount = 999; }, tick: function (k2) { if (window.innerWidth !== VW || window.innerHeight !== VH) { resize(); start(); } if (!started || lite) return 0; for (var q = 0; q < k2; q++) { skew += 16.667; if (gate) gtg += 16.667; step(T()); } draw(T()); wxFrame(T()); last = T(); return k2; }, state: function () { var st = 0, hm = 0, off = 0, gs = 0, mv = 0, egs = 0, rmax = 0, rsum = 0; for (var j = 0; j < N; j++) { egs += EG[j]; if (gate && EG[j] > 30) mv++; var rr2 = Math.max(Math.abs(X[j] - gcx) / (gw / 2), Math.abs(Y[j] - gcy) / (gh / 2)); rsum += rr2; if (rr2 > rmax) rmax = rr2; gs += GV[j]; if (M0[j] !== 0) mv++; if (GV[j] === 0) st++; else if (GV[j] === 1) { hm++; off += Math.sqrt((X[j] - HX[j]) * (X[j] - HX[j]) + (Y[j] - HY[j]) * (Y[j] - HY[j])); } }
     return { skyK: Math.round(skyK * 100) / 100, skyU: [Math.round(skyUx * 100) / 100, Math.round(skyUy * 100) / 100], tod: todH, day: +getComputedStyle(body).getPropertyValue('--day'), skyStar: Math.round(skyStar * 100) / 100, skyG: Math.round(skyG * 100) / 100, skyS: Math.round(skyS * 100) / 100, pol: POL.slice(1).join(''), sheen: shOn, focBtn: focBtn, glow: Math.round(btnGlow * 100) / 100, cs: Math.round(KCS * 1000) / 1000, stars: NDV, waiting: waiting, bad: body.classList.contains('bad'), shk: Math.round(shk * 10) / 10, qs: QS, ft: Math.round(ft * 10) / 10, rm: RM, gate: gate, fk: Math.round(gfk * 100) / 100, cam: Math.round(gcam * 100) / 100, tg: Math.round(gtg), eg: Math.round(egs / N * 100) / 100, spread: Math.round(rsum / N * 100) / 100, spreadMax: Math.round(rmax * 100) / 100, arrived: body.classList.contains('arrived'), g: Math.round(gs / N * 1000) / 1000, moving: mv, off: hm ? Math.round(off / hm * 10) / 10 : -1, pw: Math.round(pw * 100) / 100, n: N, logo: NL, building: NB, card: NC, wandering: st, settled: hm, mode: mode, vw: VW, vh: VH, lite: lite, logoW: Math.round(LW), buildingW: Math.round(BW), webgl: !!gl, started: started }; } };
   applyPolish(); initSky(); initCloud(); applySky(); initGL(); resize(); start(); requestAnimationFrame(frame);
   if (HOSTED) { wxLiveFetch(); wxLiveTimer = setInterval(wxLiveFetch, 600000); }   // 포털에서는 광주의 지금 날씨 · 미세먼지로(10분마다 다시). 못 받으면 맑음 그대로
