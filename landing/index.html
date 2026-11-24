@@ -4,7 +4,7 @@
   · 포털의 src/pages/Landing 이 화면 가득 iframe 으로 띄운다. 로그인 · 가입 신청 · 다음 화면은 window.parent.__angelsLanding 으로 포털에 넘긴다.
   · 고칠 때는 /landing/index.html?lab 으로 따로 열면 시안 조작 줄(날씨 · 계절 · 시간 · 로그인 결과)이 나온다. 그냥 열면 포털로 돌려보낸다.
   · tests/visual/compare.mjs 가 이 화면으로 로그인한다 — 로그인 창의 role=dialog · 라벨 "사번" · "비밀번호" · 버튼 이름 "로그인"을 바꾸지 말 것.
-  · 날씨 · 미세먼지는 오픈메테오(열쇠 없음, 광주 좌표만 보냄). 사용자가 고른 것 · 퇴짜 놓은 것은 Claude 메모리 login-landing-particles 참조.
+  · 날씨는 오픈메테오(열쇠 없음, 광주 좌표만 보냄). 미세먼지는 에어코리아 건국동 측정소 실측값(엣지 함수 air) — 못 받으면 오픈메테오. 사용자가 고른 것 · 퇴짜 놓은 것은 Claude 메모리 login-landing-particles 참조.
 -->
 <html lang="ko">
 <head>
@@ -1376,10 +1376,18 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
         wxLiveSet({ cloud: (c.cloud_cover || 0) / 100, rain: ((c.rain || 0) + (c.showers || 0)) * hr, snow: (c.snowfall || 0) * hr, wind: c.wind_speed_10m || 0, gust: c.wind_gusts_10m || 0, code: c.weather_code || 0 });
       })
       .catch(function (err) { $('wxlive').textContent = '날씨를 못 받았습니다 — 단추로 골라 주세요'; window.__wxErr = String(err); });
-    fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=35.23&longitude=126.84&current=pm10,pm2_5&timezone=Asia%2FSeoul')
+    // 미세먼지 = 에어코리아 건국동 측정소(첨단과기로 333, GIST 옆)의 실제 잰 값 — 엣지 함수 air 가 대신 부른다(2026-11-24).
+    // 못 받으면 예전처럼 오픈메테오 예측값, 그것도 못 받으면 조작 줄에서 고른 대로 둔다
+    fetch('https://rmvutlhdcfkqubzrckqf.supabase.co/functions/v1/air')
       .then(function (r) { if (!r.ok) throw new Error('응답 ' + r.status); return r.json(); })
-      .then(function (d) { var c = d.current || {}; wxDustSet(c.pm10 || 0, c.pm2_5 || 0); })
-      .catch(function (err) { window.__wxErr2 = String(err); });   // 미세먼지를 못 받으면 조작 줄에서 고른 대로 둔다
+      .then(function (d) { if (d.pm10 == null || d.pm25 == null) throw new Error('값 없음'); window.__wxDustSrc = d.station + ' ' + d.at; wxDustSet(d.pm10, d.pm25); })
+      .catch(function (err) {
+        window.__wxErr2 = String(err);
+        return fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=35.23&longitude=126.84&current=pm10,pm2_5&timezone=Asia%2FSeoul')
+          .then(function (r) { if (!r.ok) throw new Error('응답 ' + r.status); return r.json(); })
+          .then(function (d) { var c = d.current || {}; window.__wxDustSrc = '오픈메테오'; wxDustSet(c.pm10 || 0, c.pm2_5 || 0); })
+          .catch(function (err2) { window.__wxErr2 += ' / ' + String(err2); });
+      });
   }
   var wxGlowY = (function () { var c3 = document.createElement('canvas'), x3 = c3.getContext('2d'), g3; c3.width = c3.height = 32; g3 = x3.createRadialGradient(16, 16, 0, 16, 16, 16); g3.addColorStop(0, 'rgba(232,255,176,1)'); g3.addColorStop(0.25, 'rgba(206,248,140,0.7)'); g3.addColorStop(1, 'rgba(190,240,120,0)'); x3.fillStyle = g3; x3.fillRect(0, 0, 32, 32); return c3; })();   // 반딧불 — 옅은 연둣빛 점
   function seaDate() {   // (시안) 계절을 고르면 그 계절의 대표 날짜로 본다 — 해 뜨고 지는 때 · 달 모양도 그날 것
