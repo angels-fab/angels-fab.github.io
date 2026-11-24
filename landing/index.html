@@ -4,7 +4,7 @@
   · 포털의 src/pages/Landing 이 화면 가득 iframe 으로 띄운다. 로그인 · 가입 신청 · 다음 화면은 window.parent.__angelsLanding 으로 포털에 넘긴다.
   · 고칠 때는 /landing/index.html?lab 으로 따로 열면 시안 조작 줄(날씨 · 계절 · 시간 · 로그인 결과)이 나온다. 그냥 열면 포털로 돌려보낸다.
   · tests/visual/compare.mjs 가 이 화면으로 로그인한다 — 로그인 창의 role=dialog · 라벨 "사번" · "비밀번호" · 버튼 이름 "로그인"을 바꾸지 말 것.
-  · 날씨는 오픈메테오(열쇠 없음, 광주 좌표만 보냄). 미세먼지는 에어코리아 건국동 측정소 실측값(엣지 함수 air) — 못 받으면 오픈메테오. 사용자가 고른 것 · 퇴짜 놓은 것은 Claude 메모리 login-landing-particles 참조.
+  · 날씨는 기상청 초단기실황 · 초단기예보(엣지 함수 wxnow), 미세먼지는 에어코리아 건국동 측정소 실측값(엣지 함수 air) — 둘 다 못 받으면 오픈메테오(열쇠 없음, 광주 좌표만 보냄). 사용자가 고른 것 · 퇴짜 놓은 것은 Claude 메모리 login-landing-particles 참조.
 -->
 <html lang="ko">
 <head>
@@ -1367,15 +1367,29 @@ function drawBird(x, rgb, minW) {   // rgb = '255,255,255' 같은 색 · minW = 
     $('wxlive').textContent = wxLiveTxt + wxDustTxt;
     Array.prototype.forEach.call($('hzseg').children, function (b) { b.setAttribute('aria-pressed', +b.getAttribute('data-v') === (g < 2 ? 0 : g - 1) ? 'true' : 'false'); });
   }
-  function wxLiveFetch() {   // 오픈메테오 — 광주 좌표만 보낸다(열쇠 없음). 값은 예측 계산이라 창밖과 어긋날 수 있다
+  function wxLiveFetch() {
     $('wxlive').textContent = '광주 날씨 받는 중';
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=35.23&longitude=126.84&current=weather_code,rain,showers,snowfall,cloud_cover,wind_speed_10m,wind_gusts_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul')
+    // 날씨 = 기상청 초단기실황(관측값) + 초단기예보 하늘 · 낙뢰, GIST 5km 칸 — 엣지 함수 wxnow 가 대신 부른다(2026-11-24 사용자 "기상청으로 바꿔":
+    // 오픈메테오 예측값이 창밖과 달랐다 — 그날 바람 7.2 vs 기상청 2.6m/초). 기상청엔 돌풍 값이 없어 돌풍 = 풍속.
+    // 못 받으면 예전처럼 오픈메테오(광주 좌표만 보냄, 열쇠 없음), 그것도 못 받으면 조작 줄에서 고른 대로 둔다
+    fetch('https://rmvutlhdcfkqubzrckqf.supabase.co/functions/v1/wxnow')
       .then(function (r) { if (!r.ok) throw new Error('응답 ' + r.status); return r.json(); })
       .then(function (d) {
-        var c = d.current || {}, hr = 3600 / (c.interval || 900);   // 비 · 눈은 지난 15분 동안의 양으로 온다 → 한 시간 양으로 바꾼다
-        wxLiveSet({ cloud: (c.cloud_cover || 0) / 100, rain: ((c.rain || 0) + (c.showers || 0)) * hr, snow: (c.snowfall || 0) * hr, wind: c.wind_speed_10m || 0, gust: c.wind_gusts_10m || 0, code: c.weather_code || 0 });
+        if (typeof d.wind !== 'number' || typeof d.cloud !== 'number') throw new Error('값 없음');
+        window.__wxSrc = '기상청 ' + d.at;
+        wxLiveSet({ cloud: d.cloud, rain: d.rain || 0, snow: d.snow || 0, wind: d.wind, gust: d.wind, code: d.thunder ? 95 : 0 });
       })
-      .catch(function (err) { $('wxlive').textContent = '날씨를 못 받았습니다 — 단추로 골라 주세요'; window.__wxErr = String(err); });
+      .catch(function (err) {
+        window.__wxErr = String(err);
+        return fetch('https://api.open-meteo.com/v1/forecast?latitude=35.23&longitude=126.84&current=weather_code,rain,showers,snowfall,cloud_cover,wind_speed_10m,wind_gusts_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul')
+          .then(function (r) { if (!r.ok) throw new Error('응답 ' + r.status); return r.json(); })
+          .then(function (d) {
+            var c = d.current || {}, hr = 3600 / (c.interval || 900);   // 비 · 눈은 지난 15분 동안의 양으로 온다 → 한 시간 양으로 바꾼다
+            window.__wxSrc = '오픈메테오';
+            wxLiveSet({ cloud: (c.cloud_cover || 0) / 100, rain: ((c.rain || 0) + (c.showers || 0)) * hr, snow: (c.snowfall || 0) * hr, wind: c.wind_speed_10m || 0, gust: c.wind_gusts_10m || 0, code: c.weather_code || 0 });
+          })
+          .catch(function (err2) { $('wxlive').textContent = '날씨를 못 받았습니다 — 단추로 골라 주세요'; window.__wxErr += ' / ' + String(err2); });
+      });
     // 미세먼지 = 에어코리아 건국동 측정소(첨단과기로 333, GIST 옆)의 실제 잰 값 — 엣지 함수 air 가 대신 부른다(2026-11-24).
     // 못 받으면 예전처럼 오픈메테오 예측값, 그것도 못 받으면 조작 줄에서 고른 대로 둔다
     fetch('https://rmvutlhdcfkqubzrckqf.supabase.co/functions/v1/air')
