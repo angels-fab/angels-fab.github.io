@@ -1,5 +1,5 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-DB9l7hAO.js","assets/chunk-ZSOCVAT7-CUb-ofjX.js","assets/index-FqaewLSD.js","assets/index-CtStdv_K.css","assets/pgcrypto-DvQ-zBrc.js","assets/uuid_ossp-B-isMaqZ.js"])))=>i.map(i=>d[i]);
-import{_ as P,g as z}from"./index-FqaewLSD.js";const un=`-- 체험관 가상 부서 데이터 — 실제 직원·업무와 무관한 지어낸 내용이다.
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/index-CMqj5CZy.js","assets/chunk-ZSOCVAT7-CUb-ofjX.js","assets/index-CS5ItnC_.js","assets/index-DaGLvTiL.css","assets/pgcrypto-DvQ-zBrc.js","assets/uuid_ossp-B-isMaqZ.js"])))=>i.map(i=>d[i]);
+import{_ as P,g as M}from"./index-CS5ItnC_.js";const _n=`-- 체험관 가상 부서 데이터 — 실제 직원·업무와 무관한 지어낸 내용이다.
 -- 날짜는 '채우는 날(서울 기준 오늘)'에 맞춰 상대값으로 넣는다 → 언제 열어도 이번 주 일정이 보인다.
 -- 사람 이름·uid 는 booth/people.ts 와 같아야 한다.
 
@@ -1314,7 +1314,54 @@ insert into public.event_equipments (event_id, equipment_id, created_at) values
 
 -- 연결 시 자동으로 쌓인 연결 기록('방금 연결')은 지운다
 delete from public.work_link_log where target_type = 'equipment';
-`,fn=`-- 체험관 가상 데이터 — 공지·알림·할 일·메모·자료실·엔젤이 대화 (전부 지어낸 내용)
+`,fn=`-- 체험관 가상 데이터 — 장비 ↔ 나라장터 공고(equipment_g2b). 공고 번호 · 사업명 · 금액은 모두 지어낸 것이다.
+-- 운영에서는 서버 함수 g2b 가 매시 원내 공고에서 후보를 골라 넣고, 팀원이 [연결]하면 공고 · 개찰 · 낙찰 · 계약을 따라가며
+-- 장비 히스토리에 '단계' 줄(작성자 '나라장터')을 넣는다. 체험관은 나라장터를 부르지 않는다(바깥 요청 없음) —
+-- 후보 한 줄을 미리 넣어 두고, [연결]하는 순간 아래 방아쇠(booth.g2b_follow)가 그 줄의 info.booth 에 준비해 둔
+-- '따라간 결과'(입찰공고 게시 · 마감)를 채우고 사전규격 · 구매공고 단계 줄을 넣는다 — 운영의 [연결] 직후와 같은 모습.
+-- 발표 시연(src/booth/demo/scene-equipment.ts)이 이 후보를 쓴다 — 번호(G2B_REF) · 장비(GS-26-002)를 바꾸면 거기도 맞출 것.
+
+-- 후보: 공용 3D 프린터(도입 준비 · 구매 시작 예정일 30일 전 · 예산 0.37억) ← 사전규격 공개 9일 전, 입찰공고 2일 전 게시
+insert into public.equipment_g2b (id, code, ref, status, kind, title, budget, posted_at, info, created_at) values
+  (1, 'GS-26-002', 'R26BD00990021', 'cand', '물품', '공용 3D 프린터(FDM·SLA) 구매', 37000000, booth.ts(-9, '10:00'),
+   jsonb_build_object(
+     'opinionClose', booth.ts(-3, '18:00'),
+     'booth', jsonb_build_object(
+       'bidNo', 'R26BK00990058', 'bidOrd', '000', 'bidUrl', 'https://www.g2b.go.kr/',
+       'bidAt', booth.ts(-2, '14:00'), 'bidClose', booth.ts(40, '10:00'),
+       'bids', jsonb_build_array(jsonb_build_object('no', 'R26BK00990058', 'ord', '000', 'at', booth.ts(-2, '14:00'), 'close', booth.ts(40, '10:00'))))),
+   booth.ts(-1, '09:00'));
+
+-- [연결] = status 가 linked 로 바뀌는 순간. 운영 함수 g2b 의 advance() 를 흉내 낸다: 준비해 둔 결과를 info 에 합치고,
+-- 히스토리 단계 줄(도입 준비 → 사전규격 → 구매공고)을 넣고, 옛 단계 값(equipments.stage)도 묶음 전부 구매공고로.
+-- info.booth 는 지우지 않는다 — 시연을 되돌릴 때(후보로 되놓기) 다시 쓴다.
+create or replace function booth.g2b_follow() returns trigger language plpgsql as $$
+declare
+  ans jsonb := new.info -> 'booth';
+  eq record;
+  codes text[];
+  me uuid := coalesce(auth.uid(), '00000000-0000-4000-8000-00000000b007'::uuid);
+begin
+  if new.status <> 'linked' or old.status = 'linked' or ans is null then return new; end if;
+  new.info := new.info || ans;
+  new.checked_at := now();
+  select * into eq from public.equipments where code = new.code;
+  if not found then return new; end if;
+  select array_agg(code) into codes from public.equipments where name = eq.name and mgr = eq.mgr and eq_type = eq.eq_type;
+  -- 이미 따라가 넣은 줄이 있으면(끊었다 다시 연결) 또 넣지 않는다
+  if exists (select 1 from public.equipment_notes where code = any(codes) and kind = '단계' and author = '나라장터') then return new; end if;
+  insert into public.equipment_notes (code, author, author_uid, kind, stage, body, on_date, days)
+    select new.code, '나라장터', me, '단계', 'prep', '도입 준비 시작', coalesce((eq.stage_at at time zone 'Asia/Seoul')::date, booth.day(-30)), null
+    where not exists (select 1 from public.equipment_notes where code = any(codes) and kind = '단계');
+  insert into public.equipment_notes (code, author, author_uid, kind, stage, body, on_date, days) values
+    (new.code, '나라장터', me, '단계', 'pre', '사전규격 시작 · 나라장터', (new.posted_at at time zone 'Asia/Seoul')::date, 6),
+    (new.code, '나라장터', me, '단계', 'bid', '구매공고 시작 · 나라장터', ((ans ->> 'bidAt')::timestamptz at time zone 'Asia/Seoul')::date, 42);
+  update public.equipments set stage = 'bid', stage_by = '나라장터' where code = any(codes);
+  return new;
+end $$;
+create trigger booth_g2b_follow before update of status on public.equipment_g2b
+  for each row execute function booth.g2b_follow();
+`,gn=`-- 체험관 가상 데이터 — 공지·알림·할 일·메모·자료실·엔젤이 대화 (전부 지어낸 내용)
 -- 저장소 파일(booth/ 아래): notice-files = n-settlement-schedule.pdf, n-room-map.png
 --                           resource-files = r-expense-form.hwp, r-safety-manual.pdf, r-regulation.pdf
 
@@ -1472,7 +1519,7 @@ insert into public.event_submissions(category, title, start_date, end_date, venu
    '[{"label":"대상","value":"행정 직원"},{"label":"내용","value":"피벗 · 함수로 정산 자료 정리"}]', 'pending', '박하은', '', booth.ts(-1, '15:30')),
   ('학술', '대학 연구지원 행정 심포지엄', booth.d(52), booth.d(53), '서울 aT센터', '연구행정협의회(가상)', '', '',
    '[{"label":"사전등록","value":"선착순 200명"},{"label":"주제","value":"연구비 통합관리 사례"}]', 'pending', '최도윤', '', booth.ts(-2, '10:10'));
-`,gn=`-- 마무리 — 번호를 직접 넣은 표의 자동 번호(identity · 시퀀스)를 가장 큰 번호 뒤로 옮긴다.
+`,kn=`-- 마무리 — 번호를 직접 넣은 표의 자동 번호(identity · 시퀀스)를 가장 큰 번호 뒤로 옮긴다.
 -- 그래야 체험자가 새 업무 · 일정 · 대화를 만들 때 번호가 겹치지 않는다.
 -- 두 경우를 다 본다: ① identity · serial(열이 시퀀스를 가짐) ② 기본값이 nextval('따로 만든 시퀀스')
 do $$
@@ -1498,12 +1545,12 @@ begin
     end if;
   end loop;
 end $$;
-`;async function kn(n){var d;const e=new Map,t=await n.query(`
+`;async function En(n){var d;const e=new Map,t=await n.query(`
     select c.relname as t, a.attname as n, format_type(a.atttypid, a.atttypmod) as ty, ty.typcategory as cat, ty.typname as udt
     from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace ns on ns.oid = c.relnamespace
     join pg_type ty on ty.oid = a.atttypid
     where ns.nspname = 'public' and c.relkind in ('r', 'v', 'p') and a.attnum > 0 and not a.attisdropped
-    order by c.relname, a.attnum`);for(const r of t.rows){let _=e.get(r.t);_||e.set(r.t,_={cols:new Map,pk:[]}),_.cols.set(r.n,{type:r.ty,isArray:r.cat==="A",isJson:r.udt==="json"||r.udt==="jsonb"})}const l=await n.query(`
+    order by c.relname, a.attnum`);for(const r of t.rows){let u=e.get(r.t);u||e.set(r.t,u={cols:new Map,pk:[]}),u.cols.set(r.n,{type:r.ty,isArray:r.cat==="A",isJson:r.udt==="json"||r.udt==="jsonb"})}const l=await n.query(`
     select c.relname as t, a.attname as n from pg_index i join pg_class c on c.oid = i.indrelid
     join pg_namespace ns on ns.oid = c.relnamespace join pg_attribute a on a.attrelid = c.oid and a.attnum = any(i.indkey)
     where i.indisprimary and ns.nspname = 'public' order by c.relname, a.attnum`);for(const r of l.rows)(d=e.get(r.t))==null||d.pk.push(r.n);const o=(await n.query(`
@@ -1512,12 +1559,12 @@ end $$;
       array(select a.attname::text from unnest(k.confkey) with ordinality x(n, o) join pg_attribute a on a.attrelid = k.confrelid and a.attnum = x.n order by x.o) as rcols
     from pg_constraint k join pg_class c on c.oid = k.conrelid join pg_class r on r.oid = k.confrelid
     join pg_namespace ns on ns.oid = c.relnamespace join pg_namespace rns on rns.oid = r.relnamespace
-    where k.contype = 'f' and ns.nspname = 'public' and rns.nspname = 'public'`)).rows.map(r=>({name:r.name,table:r.t,cols:r.cols,refTable:r.rt,refCols:r.rcols})),a=new Map,s=await n.query(`
+    where k.contype = 'f' and ns.nspname = 'public' and rns.nspname = 'public'`)).rows.map(r=>({name:r.name,table:r.t,cols:r.cols,refTable:r.rt,refCols:r.rcols})),i=new Map,s=await n.query(`
     select p.proname as name, p.proretset as retset, format_type(p.prorettype, null) as rettype, t.typtype, t.typname,
       p.proargnames as names, p.proargmodes::text[] as modes,
       array(select format_type(x, null) from unnest(p.proargtypes) x) as argtypes, p.pronargdefaults as ndef
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace join pg_type t on t.oid = p.prorettype
-    where n.nspname = 'public' and p.prokind = 'f'`);for(const r of s.rows){const _=r.names||[],u=r.modes?_.filter((A,k)=>["i","b","v"].includes(r.modes[k])):_.slice(0,r.argtypes.length),p=r.argtypes.map((A,k)=>({name:u[k]||`$${k+1}`,type:A})),m=r.typname==="void"?"void":r.typtype==="c"||r.rettype==="record"?"composite":"scalar",R=a.get(r.name)||[];R.push({args:p,nDefaults:r.ndef,retSet:r.retset,retType:r.rettype,retKind:m}),a.set(r.name,R)}return{tables:e,rels:o,fns:a}}const b=n=>'"'+n.replace(/"/g,'""')+'"',c=n=>"'"+n.replace(/'/g,"''")+"'";function nn(n){const e=t=>t==null?"NULL":'"'+String(typeof t=="object"?JSON.stringify(t):t).replace(/\\/g,"\\\\").replace(/"/g,'\\"')+'"';return"{"+n.map(e).join(",")+"}"}function X(n,e){return n==null?"NULL":e!=null&&e.isJson?c(JSON.stringify(n))+"::"+(e.type==="json"?"json":"jsonb"):e!=null&&e.isArray?c(Array.isArray(n)?nn(n):String(n))+"::"+e.type:c(typeof n=="object"?JSON.stringify(n):String(n))}function En(n,e){return n==null?"NULL::"+e:e==="json"||e==="jsonb"?c(JSON.stringify(n))+"::"+e:e.endsWith("[]")?c(Array.isArray(n)?nn(n):String(n))+"::"+e:typeof n=="object"?c(JSON.stringify(n))+"::"+e:c(String(n))+"::"+e}function Y(n){const e=[];let t=0,l=!1,i="";for(let o=0;o<n.length;o++){const a=n[o];if(a==='"'&&n[o-1]!=="\\"&&(l=!l),!l){if(a==="(")t++;else if(a===")")t--;else if(a===","&&t===0){e.push(i),i="";continue}}i+=a}return i.trim()!==""&&e.push(i),e.map(o=>o.trim())}function yn(n){const e=n.replace(/^\(/,"").replace(/\)$/,"");return e===""?[]:Y(e).map(t=>t.startsWith('"')&&t.endsWith('"')?t.slice(1,-1).replace(/\\"/g,'"'):t)}function F(n,e){const t=e.split(/(->>|->)/);let l=`${n}.${b(t[0].trim())}`;for(let i=1;i<t.length;i+=2){const o=t[i+1];l+=t[i]+(/^\d+$/.test(o)?o:c(o))}return l}function en(n,e){let t=!1;e.startsWith("not.")&&(t=!0,e=e.slice(4));const l=e.indexOf(".");let i=l<0?e:e.slice(0,l);const o=l<0?"":e.slice(l+1);i=i.replace(/\((any|all)\)$/,"");let a;switch(i){case"eq":a=`${n} = ${c(o)}`;break;case"neq":a=`${n} <> ${c(o)}`;break;case"gt":a=`${n} > ${c(o)}`;break;case"gte":a=`${n} >= ${c(o)}`;break;case"lt":a=`${n} < ${c(o)}`;break;case"lte":a=`${n} <= ${c(o)}`;break;case"like":a=`${n}::text like ${c(o.replace(/\*/g,"%"))}`;break;case"ilike":a=`${n}::text ilike ${c(o.replace(/\*/g,"%"))}`;break;case"match":a=`${n}::text ~ ${c(o)}`;break;case"imatch":a=`${n}::text ~* ${c(o)}`;break;case"is":{const s=o.toLowerCase();a=`${n} is ${s==="null"?"null":s==="true"?"true":s==="false"?"false":"unknown"}`;break}case"isdistinct":a=`${n} is distinct from ${c(o)}`;break;case"in":{const s=yn(o);a=s.length?`${n} in (${s.map(c).join(", ")})`:"false";break}case"cs":a=`${n} @> ${c(o)}`;break;case"cd":a=`${n} <@ ${c(o)}`;break;case"ov":a=`${n} && ${c(o.startsWith("(")?"{"+o.slice(1,-1)+"}":o)}`;break;case"fts":case"plfts":case"phfts":case"wfts":a=`to_tsvector(${n}::text) @@ plainto_tsquery(${c(o)})`;break;default:throw O(400,"PGRST100",`체험관이 모르는 필터: ${i}`)}return t?`not (${a})`:a}function tn(n,e,t,l){const i=Y(t.replace(/^\(/,"").replace(/\)$/,"")).map(a=>{const s=a.match(/^(not\.)?(and|or)(\(.*\))$/);if(s)return tn(n,s[2],s[3],!!s[1]);const d=a.indexOf(".");return en(F(n,a.slice(0,d)),a.slice(d+1))}),o=i.length?"("+i.join(e==="and"?" and ":" or ")+")":"true";return l?`not ${o}`:o}const on=new Set(["select","order","limit","offset","on_conflict","columns"]);function an(n){const e=new Map,t=l=>{let i=e.get(l);return i||e.set(l,i={filters:[]}),i};for(const[l,i]of n.searchParams){if(on.has(l)){l==="order"&&(t("").order=i),l==="limit"&&(t("").limit=i),l==="offset"&&(t("").offset=i);continue}const o=l.split("."),a=o.pop(),s=o.join(".");a==="order"?t(s).order=i:a==="limit"?t(s).limit=i:a==="offset"?t(s).offset=i:t(s).filters.push([a,i])}return e}function q(n,e){return e?e.filters.map(([l,i])=>{const o=l.startsWith("not."),a=o?l.slice(4):l;return a==="or"||a==="and"?tn(n,a,i,o):en(F(n,l),i)}).join(" and "):""}function G(n,e){if(!e)return"";const t=Y(e).map(l=>{const i=l.split("."),o=[];let a=i[0],s=1;for(;s<i.length&&!["asc","desc","nullsfirst","nullslast"].includes(i[s]);)a+="."+i[s++];for(;s<i.length;s++)i[s]==="asc"?o.push("asc"):i[s]==="desc"?o.push("desc"):i[s]==="nullsfirst"?o.push("nulls first"):i[s]==="nullslast"&&o.push("nulls last");return`${F(n,a)} ${o.join(" ")}`.trim()});return t.length?" order by "+t.join(", "):""}function xn(n,e,t,l){const i=a=>!l||a.name===l||a.cols.includes(l)||a.refCols.includes(l);if(n.tables.has(t)){const a=n.rels.find(d=>d.table===e&&d.refTable===t&&i(d));if(a)return{rel:a,many:!1,target:t};const s=n.rels.find(d=>d.table===t&&d.refTable===e&&i(d));if(s)return{rel:s,many:!0,target:t}}const o=n.rels.find(a=>a.table===e&&(a.cols[0]===t||a.name===t));if(o)return{rel:o,many:!1,target:o.refTable};throw O(400,"PGRST200",`'${e}' 와 '${t}' 사이 관계를 찾지 못함`)}function D(n,e,t,l,i){const o=Y(l||"*"),a=[];for(const s of o){if(s==="*"){a.push(`${t}.*`);continue}const d=s.match(/^(?:([\w]+):)?([\w]+)((?:![\w]+)*)\((.*)\)$/s);if(d){const[,A,k,C,j]=d,f=C.split("!").filter(Boolean).filter(I=>I!=="inner"&&I!=="left"),{rel:E,many:y,target:v}=xn(n.cat,e,k,f[0]),x=`"_${++n.n}"`,w=i?`${i}.${A||k}`:A||k,h=n.scopes.get(w),S=y?E.cols.map((I,L)=>`${x}.${b(I)} = ${t}.${b(E.refCols[L])}`):E.refCols.map((I,L)=>`${x}.${b(I)} = ${t}.${b(E.cols[L])}`),N=q(x,h),H=[...S,...N?[N]:[]].join(" and "),M=D(n,v,x,j,w),_n=y?`(select coalesce(json_agg(_x), '[]'::json) from (select ${M} from public.${b(v)} ${x} where ${H}${G(x,h==null?void 0:h.order)}${h!=null&&h.limit?" limit "+Number(h.limit):""}) _x)`:`(select row_to_json(_x) from (select ${M} from public.${b(v)} ${x} where ${H} limit 1) _x)`;a.push(`${_n} as ${b(A||k)}`);continue}const r=s.match(/^(?:([\w]+):)?([^:]+?)(?:::([\w\s[\]]+))?$/);if(!r)throw O(400,"PGRST100",`select 를 읽지 못함: ${s}`);const[,_,u,p]=r,m=u.split(/->>|->/),R=_||m[m.length-1].trim();a.push(`${F(t,u.trim())}${p?"::"+p:""} as ${b(R)}`)}return a.join(", ")}function O(n,e,t,l){return{__rest:!0,status:n,code:e,message:t,details:l}}const T={"Content-Type":"application/json; charset=utf-8"};function $(n,e,t){const l=e.headers.get("Accept")||"",i=n.length?`0-${n.length-1}/${t??"*"}`:`*/${t??"*"}`,o={...T,"Content-Range":i};return l.includes("vnd.pgrst.object")?n.length!==1?{status:406,headers:T,body:JSON.stringify({code:"PGRST116",details:`The result contains ${n.length} rows`,hint:null,message:"JSON object requested, multiple (or no) rows returned"})}:{status:200,headers:o,body:JSON.stringify(n[0])}:{status:200,headers:o,body:JSON.stringify(n)}}function vn(n){const e=n;if(e&&e.__rest)return{status:e.status,headers:T,body:JSON.stringify({code:e.code,message:e.message,details:e.details??null,hint:null})};const t=n,l=(t==null?void 0:t.code)||"XX000";return{status:l==="23505"?409:l==="42501"?403:400,headers:T,body:JSON.stringify({code:l,message:(t==null?void 0:t.message)||String(n),details:(t==null?void 0:t.detail)??null,hint:(t==null?void 0:t.hint)??null})}}const Rn=n=>(n.get("Prefer")||"").split(",").map(e=>e.trim());async function Nn(n,e,t){try{const l=t.url.pathname.replace(/^.*\/rest\/v1\//,"");if(l.startsWith("rpc/"))return await An(n,e,t,l.slice(4));const i=decodeURIComponent(l),o=e.tables.get(i);if(!o)throw O(404,"42P01",`relation "public.${i}" does not exist`);const a=an(t.url),s=a.get(""),d=Rn(t.headers),r=d.some(f=>f.startsWith("count=")),_={cat:e,scopes:a,n:0},u=t.url.searchParams.get("select")||"*",p=t.method.toUpperCase();if(p==="GET"||p==="HEAD"){const f=q('"_0"',s),E=f?" where "+f:"";let y=null;if((r||p==="HEAD")&&(y=(await n.query(`select count(*)::int as n from public.${b(i)} "_0"${E}`)).rows[0].n),p==="HEAD")return{status:200,headers:{...T,"Content-Range":`*/${y}`},body:""};const v=D(_,i,'"_0"',u,""),x=s!=null&&s.limit?" limit "+Number(s.limit):"",w=s!=null&&s.offset?" offset "+Number(s.offset):"",h=`select coalesce(json_agg(_t), '[]'::json) as j from (select ${v} from public.${b(i)} "_0"${E}${G('"_0"',s==null?void 0:s.order)}${x}${w}) _t`,S=await n.query(h);return $(S.rows[0].j,t,y)}let m;if(p==="POST"){const f=Array.isArray(t.body)?t.body:[t.body];if(!f.length)return $([],t,0);const E=t.url.searchParams.get("columns"),y=E?E.split(",").map(w=>w.trim().replace(/^"|"$/g,"")):[...new Set(f.flatMap(w=>Object.keys(w)))],v=f.map(w=>"("+y.map(h=>h in w?X(w[h],o.cols.get(h)):"DEFAULT").join(", ")+")");m=`insert into public.${b(i)} as "_0" (${y.map(b).join(", ")}) values ${v.join(", ")}`;const x=d.find(w=>w.startsWith("resolution="));if(x){const w=t.url.searchParams.get("on_conflict"),h=w?w.split(",").map(N=>N.trim()):o.pk,S=y.filter(N=>!h.includes(N));m+=` on conflict (${h.map(b).join(", ")}) `+(x==="resolution=ignore-duplicates"||!S.length?"do nothing":"do update set "+S.map(N=>`${b(N)} = excluded.${b(N)}`).join(", "))}}else if(p==="PATCH"){const f=t.body||{},E=Object.keys(f).map(v=>`${b(v)} = ${X(f[v],o.cols.get(v))}`);if(!E.length)return $([],t,0);const y=q('"_0"',s);m=`update public.${b(i)} as "_0" set ${E.join(", ")}${y?" where "+y:""}`}else if(p==="DELETE"){const f=q('"_0"',s);m=`delete from public.${b(i)} as "_0"${f?" where "+f:""}`}else throw O(405,"PGRST000",`지원하지 않는 방식: ${p}`);const R=d.includes("return=representation"),A=R?D(_,i,'"_0"',u,""):"1",C=(await n.query(`with _m as (${m} returning *) select coalesce(json_agg(_t), '[]'::json) as j from (select ${A} from _m "_0"${R?G('"_0"',s==null?void 0:s.order):""}) _t`)).rows[0].j;if(!R)return{status:p==="POST"?201:204,headers:{...T,"Content-Range":`*/${C.length}`},body:""};const j=$(C,t,r?C.length:null);return p==="POST"&&j.status===200&&(j.status=201),j}catch(l){return vn(l)}}async function An(n,e,t,l){const i=e.fns.get(l);if(!i)throw O(404,"PGRST202",`Could not find the function public.${l}`);let o={};if(t.method.toUpperCase()==="POST")o=t.body&&typeof t.body=="object"?t.body:{};else for(const[_,u]of t.url.searchParams)on.has(_)||(o[_]=u);const a=Object.keys(o),s=i.find(_=>{const u=_.args.map(m=>m.name),p=_.args.slice(0,_.args.length-_.nDefaults).map(m=>m.name);return a.every(m=>u.includes(m))&&p.every(m=>a.includes(m))})||i[0],d=`public.${b(l)}(${a.map(_=>{var u;return`${b(_)} => ${En(o[_],((u=s.args.find(p=>p.name===_))==null?void 0:u.type)||"text")}`}).join(", ")})`;if(s.retKind==="void")return await n.query(`select ${d}`),{status:204,headers:T,body:""};if(s.retSet||s.retKind==="composite"){const _=an(new URL(t.url.toString())),u=t.method.toUpperCase()==="POST"?_.get(""):void 0,p=t.url.searchParams.get("select")||"*";if(s.retKind==="scalar"){const C=await n.query(`select coalesce(json_agg(_r."v"), '[]'::json) as j from ${d} as _r("v")`);return $(C.rows[0].j,t,null)}const m=q('"_0"',u),R=p==="*"?'"_0".*':D({cat:e,scopes:_,n:0},"",'"_0"',p,""),k=(await n.query(`select coalesce(json_agg(_t), '[]'::json) as j from (select ${R} from ${d} "_0"${m?" where "+m:""}${G('"_0"',u==null?void 0:u.order)}${u!=null&&u.limit?" limit "+Number(u.limit):""}) _t`)).rows[0].j;return s.retSet?$(k,t,null):{status:200,headers:T,body:JSON.stringify(k[0]??null)}}const r=await n.query(`select to_json(${d}) as j`);return{status:200,headers:T,body:JSON.stringify(r.rows[0].j??null)}}const ln=`-- 체험관 가상 창고 — 운영 Supabase 에만 있는 바탕(auth·storage·vault 스키마, 확장)을 흉내 낸다.
+    where n.nspname = 'public' and p.prokind = 'f'`);for(const r of s.rows){const u=r.names||[],_=r.modes?u.filter((A,k)=>["i","b","v"].includes(r.modes[k])):u.slice(0,r.argtypes.length),p=r.argtypes.map((A,k)=>({name:_[k]||`$${k+1}`,type:A})),m=r.typname==="void"?"void":r.typtype==="c"||r.rettype==="record"?"composite":"scalar",R=i.get(r.name)||[];R.push({args:p,nDefaults:r.ndef,retSet:r.retset,retType:r.rettype,retKind:m}),i.set(r.name,R)}return{tables:e,rels:o,fns:i}}const b=n=>'"'+n.replace(/"/g,'""')+'"',c=n=>"'"+n.replace(/'/g,"''")+"'";function nn(n){const e=t=>t==null?"NULL":'"'+String(typeof t=="object"?JSON.stringify(t):t).replace(/\\/g,"\\\\").replace(/"/g,'\\"')+'"';return"{"+n.map(e).join(",")+"}"}function X(n,e){return n==null?"NULL":e!=null&&e.isJson?c(JSON.stringify(n))+"::"+(e.type==="json"?"json":"jsonb"):e!=null&&e.isArray?c(Array.isArray(n)?nn(n):String(n))+"::"+e.type:c(typeof n=="object"?JSON.stringify(n):String(n))}function yn(n,e){return n==null?"NULL::"+e:e==="json"||e==="jsonb"?c(JSON.stringify(n))+"::"+e:e.endsWith("[]")?c(Array.isArray(n)?nn(n):String(n))+"::"+e:typeof n=="object"?c(JSON.stringify(n))+"::"+e:c(String(n))+"::"+e}function Y(n){const e=[];let t=0,l=!1,a="";for(let o=0;o<n.length;o++){const i=n[o];if(i==='"'&&n[o-1]!=="\\"&&(l=!l),!l){if(i==="(")t++;else if(i===")")t--;else if(i===","&&t===0){e.push(a),a="";continue}}a+=i}return a.trim()!==""&&e.push(a),e.map(o=>o.trim())}function xn(n){const e=n.replace(/^\(/,"").replace(/\)$/,"");return e===""?[]:Y(e).map(t=>t.startsWith('"')&&t.endsWith('"')?t.slice(1,-1).replace(/\\"/g,'"'):t)}function F(n,e){const t=e.split(/(->>|->)/);let l=`${n}.${b(t[0].trim())}`;for(let a=1;a<t.length;a+=2){const o=t[a+1];l+=t[a]+(/^\d+$/.test(o)?o:c(o))}return l}function en(n,e){let t=!1;e.startsWith("not.")&&(t=!0,e=e.slice(4));const l=e.indexOf(".");let a=l<0?e:e.slice(0,l);const o=l<0?"":e.slice(l+1);a=a.replace(/\((any|all)\)$/,"");let i;switch(a){case"eq":i=`${n} = ${c(o)}`;break;case"neq":i=`${n} <> ${c(o)}`;break;case"gt":i=`${n} > ${c(o)}`;break;case"gte":i=`${n} >= ${c(o)}`;break;case"lt":i=`${n} < ${c(o)}`;break;case"lte":i=`${n} <= ${c(o)}`;break;case"like":i=`${n}::text like ${c(o.replace(/\*/g,"%"))}`;break;case"ilike":i=`${n}::text ilike ${c(o.replace(/\*/g,"%"))}`;break;case"match":i=`${n}::text ~ ${c(o)}`;break;case"imatch":i=`${n}::text ~* ${c(o)}`;break;case"is":{const s=o.toLowerCase();i=`${n} is ${s==="null"?"null":s==="true"?"true":s==="false"?"false":"unknown"}`;break}case"isdistinct":i=`${n} is distinct from ${c(o)}`;break;case"in":{const s=xn(o);i=s.length?`${n} in (${s.map(c).join(", ")})`:"false";break}case"cs":i=`${n} @> ${c(o)}`;break;case"cd":i=`${n} <@ ${c(o)}`;break;case"ov":i=`${n} && ${c(o.startsWith("(")?"{"+o.slice(1,-1)+"}":o)}`;break;case"fts":case"plfts":case"phfts":case"wfts":i=`to_tsvector(${n}::text) @@ plainto_tsquery(${c(o)})`;break;default:throw $(400,"PGRST100",`체험관이 모르는 필터: ${a}`)}return t?`not (${i})`:i}function tn(n,e,t,l){const a=Y(t.replace(/^\(/,"").replace(/\)$/,"")).map(i=>{const s=i.match(/^(not\.)?(and|or)(\(.*\))$/);if(s)return tn(n,s[2],s[3],!!s[1]);const d=i.indexOf(".");return en(F(n,i.slice(0,d)),i.slice(d+1))}),o=a.length?"("+a.join(e==="and"?" and ":" or ")+")":"true";return l?`not ${o}`:o}const on=new Set(["select","order","limit","offset","on_conflict","columns"]);function an(n){const e=new Map,t=l=>{let a=e.get(l);return a||e.set(l,a={filters:[]}),a};for(const[l,a]of n.searchParams){if(on.has(l)){l==="order"&&(t("").order=a),l==="limit"&&(t("").limit=a),l==="offset"&&(t("").offset=a);continue}const o=l.split("."),i=o.pop(),s=o.join(".");i==="order"?t(s).order=a:i==="limit"?t(s).limit=a:i==="offset"?t(s).offset=a:t(s).filters.push([i,a])}return e}function j(n,e){return e?e.filters.map(([l,a])=>{const o=l.startsWith("not."),i=o?l.slice(4):l;return i==="or"||i==="and"?tn(n,i,a,o):en(F(n,l),a)}).join(" and "):""}function G(n,e){if(!e)return"";const t=Y(e).map(l=>{const a=l.split("."),o=[];let i=a[0],s=1;for(;s<a.length&&!["asc","desc","nullsfirst","nullslast"].includes(a[s]);)i+="."+a[s++];for(;s<a.length;s++)a[s]==="asc"?o.push("asc"):a[s]==="desc"?o.push("desc"):a[s]==="nullsfirst"?o.push("nulls first"):a[s]==="nullslast"&&o.push("nulls last");return`${F(n,i)} ${o.join(" ")}`.trim()});return t.length?" order by "+t.join(", "):""}function vn(n,e,t,l){const a=i=>!l||i.name===l||i.cols.includes(l)||i.refCols.includes(l);if(n.tables.has(t)){const i=n.rels.find(d=>d.table===e&&d.refTable===t&&a(d));if(i)return{rel:i,many:!1,target:t};const s=n.rels.find(d=>d.table===t&&d.refTable===e&&a(d));if(s)return{rel:s,many:!0,target:t}}const o=n.rels.find(i=>i.table===e&&(i.cols[0]===t||i.name===t));if(o)return{rel:o,many:!1,target:o.refTable};throw $(400,"PGRST200",`'${e}' 와 '${t}' 사이 관계를 찾지 못함`)}function D(n,e,t,l,a){const o=Y(l||"*"),i=[];for(const s of o){if(s==="*"){i.push(`${t}.*`);continue}const d=s.match(/^(?:([\w]+):)?([\w]+)((?:![\w]+)*)\((.*)\)$/s);if(d){const[,A,k,C,O]=d,f=C.split("!").filter(Boolean).filter(q=>q!=="inner"&&q!=="left"),{rel:E,many:y,target:v}=vn(n.cat,e,k,f[0]),x=`"_${++n.n}"`,g=a?`${a}.${A||k}`:A||k,h=n.scopes.get(g),S=y?E.cols.map((q,L)=>`${x}.${b(q)} = ${t}.${b(E.refCols[L])}`):E.refCols.map((q,L)=>`${x}.${b(q)} = ${t}.${b(E.cols[L])}`),N=j(x,h),H=[...S,...N?[N]:[]].join(" and "),z=D(n,v,x,O,g),un=y?`(select coalesce(json_agg(_x), '[]'::json) from (select ${z} from public.${b(v)} ${x} where ${H}${G(x,h==null?void 0:h.order)}${h!=null&&h.limit?" limit "+Number(h.limit):""}) _x)`:`(select row_to_json(_x) from (select ${z} from public.${b(v)} ${x} where ${H} limit 1) _x)`;i.push(`${un} as ${b(A||k)}`);continue}const r=s.match(/^(?:([\w]+):)?([^:]+?)(?:::([\w\s[\]]+))?$/);if(!r)throw $(400,"PGRST100",`select 를 읽지 못함: ${s}`);const[,u,_,p]=r,m=_.split(/->>|->/),R=u||m[m.length-1].trim();i.push(`${F(t,_.trim())}${p?"::"+p:""} as ${b(R)}`)}return i.join(", ")}function $(n,e,t,l){return{__rest:!0,status:n,code:e,message:t,details:l}}const T={"Content-Type":"application/json; charset=utf-8"};function I(n,e,t){const l=e.headers.get("Accept")||"",a=n.length?`0-${n.length-1}/${t??"*"}`:`*/${t??"*"}`,o={...T,"Content-Range":a};return l.includes("vnd.pgrst.object")?n.length!==1?{status:406,headers:T,body:JSON.stringify({code:"PGRST116",details:`The result contains ${n.length} rows`,hint:null,message:"JSON object requested, multiple (or no) rows returned"})}:{status:200,headers:o,body:JSON.stringify(n[0])}:{status:200,headers:o,body:JSON.stringify(n)}}function Rn(n){const e=n;if(e&&e.__rest)return{status:e.status,headers:T,body:JSON.stringify({code:e.code,message:e.message,details:e.details??null,hint:null})};const t=n,l=(t==null?void 0:t.code)||"XX000";return{status:l==="23505"?409:l==="42501"?403:400,headers:T,body:JSON.stringify({code:l,message:(t==null?void 0:t.message)||String(n),details:(t==null?void 0:t.detail)??null,hint:(t==null?void 0:t.hint)??null})}}const Nn=n=>(n.get("Prefer")||"").split(",").map(e=>e.trim());async function An(n,e,t){try{const l=t.url.pathname.replace(/^.*\/rest\/v1\//,"");if(l.startsWith("rpc/"))return await Tn(n,e,t,l.slice(4));const a=decodeURIComponent(l),o=e.tables.get(a);if(!o)throw $(404,"42P01",`relation "public.${a}" does not exist`);const i=an(t.url),s=i.get(""),d=Nn(t.headers),r=d.some(f=>f.startsWith("count=")),u={cat:e,scopes:i,n:0},_=t.url.searchParams.get("select")||"*",p=t.method.toUpperCase();if(p==="GET"||p==="HEAD"){const f=j('"_0"',s),E=f?" where "+f:"";let y=null;if((r||p==="HEAD")&&(y=(await n.query(`select count(*)::int as n from public.${b(a)} "_0"${E}`)).rows[0].n),p==="HEAD")return{status:200,headers:{...T,"Content-Range":`*/${y}`},body:""};const v=D(u,a,'"_0"',_,""),x=s!=null&&s.limit?" limit "+Number(s.limit):"",g=s!=null&&s.offset?" offset "+Number(s.offset):"",h=`select coalesce(json_agg(_t), '[]'::json) as j from (select ${v} from public.${b(a)} "_0"${E}${G('"_0"',s==null?void 0:s.order)}${x}${g}) _t`,S=await n.query(h);return I(S.rows[0].j,t,y)}let m;if(p==="POST"){const f=Array.isArray(t.body)?t.body:[t.body];if(!f.length)return I([],t,0);const E=t.url.searchParams.get("columns"),y=E?E.split(",").map(g=>g.trim().replace(/^"|"$/g,"")):[...new Set(f.flatMap(g=>Object.keys(g)))],v=f.map(g=>"("+y.map(h=>h in g?X(g[h],o.cols.get(h)):"DEFAULT").join(", ")+")");m=`insert into public.${b(a)} as "_0" (${y.map(b).join(", ")}) values ${v.join(", ")}`;const x=d.find(g=>g.startsWith("resolution="));if(x){const g=t.url.searchParams.get("on_conflict"),h=g?g.split(",").map(N=>N.trim()):o.pk,S=y.filter(N=>!h.includes(N));m+=` on conflict (${h.map(b).join(", ")}) `+(x==="resolution=ignore-duplicates"||!S.length?"do nothing":"do update set "+S.map(N=>`${b(N)} = excluded.${b(N)}`).join(", "))}}else if(p==="PATCH"){const f=t.body||{},E=Object.keys(f).map(v=>`${b(v)} = ${X(f[v],o.cols.get(v))}`);if(!E.length)return I([],t,0);const y=j('"_0"',s);m=`update public.${b(a)} as "_0" set ${E.join(", ")}${y?" where "+y:""}`}else if(p==="DELETE"){const f=j('"_0"',s);m=`delete from public.${b(a)} as "_0"${f?" where "+f:""}`}else throw $(405,"PGRST000",`지원하지 않는 방식: ${p}`);const R=d.includes("return=representation"),A=R?D(u,a,'"_0"',_,""):"1",C=(await n.query(`with _m as (${m} returning *) select coalesce(json_agg(_t), '[]'::json) as j from (select ${A} from _m "_0"${R?G('"_0"',s==null?void 0:s.order):""}) _t`)).rows[0].j;if(!R)return{status:p==="POST"?201:204,headers:{...T,"Content-Range":`*/${C.length}`},body:""};const O=I(C,t,r?C.length:null);return p==="POST"&&O.status===200&&(O.status=201),O}catch(l){return Rn(l)}}async function Tn(n,e,t,l){const a=e.fns.get(l);if(!a)throw $(404,"PGRST202",`Could not find the function public.${l}`);let o={};if(t.method.toUpperCase()==="POST")o=t.body&&typeof t.body=="object"?t.body:{};else for(const[u,_]of t.url.searchParams)on.has(u)||(o[u]=_);const i=Object.keys(o),s=a.find(u=>{const _=u.args.map(m=>m.name),p=u.args.slice(0,u.args.length-u.nDefaults).map(m=>m.name);return i.every(m=>_.includes(m))&&p.every(m=>i.includes(m))})||a[0],d=`public.${b(l)}(${i.map(u=>{var _;return`${b(u)} => ${yn(o[u],((_=s.args.find(p=>p.name===u))==null?void 0:_.type)||"text")}`}).join(", ")})`;if(s.retKind==="void")return await n.query(`select ${d}`),{status:204,headers:T,body:""};if(s.retSet||s.retKind==="composite"){const u=an(new URL(t.url.toString())),_=t.method.toUpperCase()==="POST"?u.get(""):void 0,p=t.url.searchParams.get("select")||"*";if(s.retKind==="scalar"){const C=await n.query(`select coalesce(json_agg(_r."v"), '[]'::json) as j from ${d} as _r("v")`);return I(C.rows[0].j,t,null)}const m=j('"_0"',_),R=p==="*"?'"_0".*':D({cat:e,scopes:u,n:0},"",'"_0"',p,""),k=(await n.query(`select coalesce(json_agg(_t), '[]'::json) as j from (select ${R} from ${d} "_0"${m?" where "+m:""}${G('"_0"',_==null?void 0:_.order)}${_!=null&&_.limit?" limit "+Number(_.limit):""}) _t`)).rows[0].j;return s.retSet?I(k,t,null):{status:200,headers:T,body:JSON.stringify(k[0]??null)}}const r=await n.query(`select to_json(${d}) as j`);return{status:200,headers:T,body:JSON.stringify(r.rows[0].j??null)}}const ln=`-- 체험관 가상 창고 — 운영 Supabase 에만 있는 바탕(auth·storage·vault 스키마, 확장)을 흉내 낸다.
 -- schema.sql(운영 구조 복사본)보다 먼저 실행한다. 로그인한 사람은 늘 체험관 게스트 한 명이다.
 create schema if not exists extensions;
 create schema if not exists auth;
@@ -1561,7 +1608,7 @@ end $$;
 
 set check_function_bodies = off;
 `,sn=`-- 자동 생성 파일 — 고치지 말 것. scripts/booth/build-schema.mjs 가 운영 DB 구조(데이터 0줄)에서 만든다.
--- 생성: 2026-11-18 · 항목 369개
+-- 생성: 2026-11-28 · 항목 408개
 -- sequence: angel_chats_id_seq
 create sequence if not exists public.angel_chats_id_seq;
 
@@ -1602,6 +1649,22 @@ begin
     insert into calendar_del_log (gcal_id) values (old.gcal_id);
   end if;
   return old;
+end $function$
+;
+
+-- function: calendar_private_unsync()
+CREATE OR REPLACE FUNCTION public.calendar_private_unsync()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if new.private and new.gcal_id <> '' then
+    insert into calendar_del_log (gcal_id) values (new.gcal_id);
+    new.gcal_id := '';
+  end if;
+  return new;
 end $function$
 ;
 
@@ -1650,9 +1713,10 @@ begin
         end if;
       end if;
     else
-      -- 클레임: 같은 시각·종일 + 제목 일치/접두(빈 제목 제외, LIKE 이스케이프)인 미동기 행에 키 부여(F7)
+      -- 클레임: 같은 시각·종일 + 제목 일치/접두(빈 제목 제외, LIKE 이스케이프)인 미동기 행에 키 부여(F7).
+      -- 비공개 행은 제외(7) — 구글에 같은 일정이 따로 있어도 비공개 행에 묶지 않는다
       select * into r from calendar_events
-       where gcal_id = '' and repeat = 'none'
+       where gcal_id = '' and repeat = 'none' and not private
          and start_at = ev->>'start' and end_at = ev->>'end'
          and all_day = (ev->>'allDay')::boolean
          and (trim(title) = trim(ev->>'title')
@@ -1661,7 +1725,6 @@ begin
                    or trim(ev->>'title') like cal_like_escape(trim(title)) || '%')))
        order by id limit 1;
       if found then
-        -- updated_at=GCal updated 시딩(F2): 클레임 직후 어느 방향도 push/pull 안 함(동률) → 이후 편집한 쪽이 승자
         update calendar_events set gcal_id = ev->>'key', updated_at = (ev->>'updated')::timestamptz
          where id = r.id;
         n_claim := n_claim + 1;
@@ -1675,7 +1738,6 @@ begin
   end loop;
 
   -- (b) GCal에서 사라진 후보 — 즉시 삭제하지 않고 후보만 반환(F9/F12). 겹침 기준(진행 중 장기 일정 포함, F11).
-  --     GAS가 GCal 실존 여부를 개별 확인한 뒤 ack(appDeleteIds)로 확정. 조회 0건이면 후보도 안 냄. 상한 100.
   if n_events = 0 then
     out_appdel := '[]'::jsonb;
   else
@@ -1688,13 +1750,13 @@ begin
       ) t;
   end if;
 
-  -- (c) 앱 → GCal 반영 목록(snap=CAS용 스냅샷, F3)
+  -- (c) 앱 → GCal 반영 목록(snap=CAS용 스냅샷, F3). 비공개는 보내지 않는다(7)
   select coalesce(jsonb_agg(jsonb_build_object(
            'id', id, 'title', title, 'loc', loc, 'allDay', all_day, 'start', start_at, 'end', end_at,
            'snap', updated_at::text)), '[]')
     into out_create
     from calendar_events
-   where gcal_id = '' and repeat = 'none' and created_by not like '이관%'
+   where gcal_id = '' and repeat = 'none' and not private and created_by not like '이관%'
      and start_at >= v_from and start_at <= v_to;
 
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -2046,6 +2108,20 @@ begin
 end $function$
 ;
 
+-- function: equipments_code_follow()
+CREATE OR REPLACE FUNCTION public.equipments_code_follow()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  update public.equipment_notes set code = new.code where code = old.code;
+  update public.equipment_history set code = new.code where code = old.code;
+  return new;
+end $function$
+;
+
 -- function: equipments_stage_stamp()
 CREATE OR REPLACE FUNCTION public.equipments_stage_stamp()
  RETURNS trigger
@@ -2060,6 +2136,17 @@ begin
   end if;
   return new;
 end $function$
+;
+
+-- function: event_discover_key_ok(k text)
+CREATE OR REPLACE FUNCTION public.event_discover_key_ok(k text)
+ RETURNS boolean
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select exists (select 1 from vault.decrypted_secrets where name = 'event_discover_key' and decrypted_secret = k)
+$function$
 ;
 
 -- function: gemini_spend(p_since timestamp with time zone)
@@ -3079,6 +3166,34 @@ begin
 end $function$
 ;
 
+-- function: work_tag_ensure(p_names text[])
+CREATE OR REPLACE FUNCTION public.work_tag_ensure(p_names text[])
+ RETURNS text[]
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare v_name text; v_id bigint; v_canon text; v_out text[] := '{}';
+  v_who text := coalesce(nullif(my_name(), ''), '시스템');
+begin
+  if not is_member() then raise exception '권한이 없습니다'; end if;
+  foreach v_name in array coalesce(p_names, '{}') loop
+    v_name := btrim(regexp_replace(coalesce(v_name, ''), '^[#[:space:]]+', ''));
+    continue when v_name = '' or length(v_name) > 30;
+    v_id := work_tag_resolve(v_name);
+    if v_id is null then
+      insert into work_tags (name, sort_order, created_by)
+        values (v_name, (select coalesce(max(sort_order), 0) + 1 from work_tags), v_who) returning id into v_id;
+    else
+      update work_tags set archived_at = null where id = v_id and archived_at is not null;
+    end if;
+    select name into v_canon from work_tags where id = v_id;
+    if not v_canon = any(v_out) then v_out := v_out || v_canon; end if;
+  end loop;
+  return v_out;
+end $function$
+;
+
 -- function: work_tag_merge(p_from bigint, p_into bigint)
 CREATE OR REPLACE FUNCTION public.work_tag_merge(p_from bigint, p_into bigint)
  RETURNS void
@@ -3086,17 +3201,21 @@ CREATE OR REPLACE FUNCTION public.work_tag_merge(p_from bigint, p_into bigint)
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-declare v_from text;
+declare v_from text; v_into text;
 begin
   if not is_member() then raise exception '권한이 없습니다'; end if;
   if p_from = p_into then raise exception '같은 태그입니다'; end if;
   select name into v_from from work_tags where id = p_from;
-  if v_from is null or not exists (select 1 from work_tags where id = p_into) then raise exception '없는 태그입니다'; end if;
+  select name into v_into from work_tags where id = p_into;
+  if v_from is null or v_into is null then raise exception '없는 태그입니다'; end if;
   insert into work_tag_links (work_num, tag_id, source, created_at, created_by)
     select work_num, p_into, source, created_at, created_by from work_tag_links where tag_id = p_from
   on conflict (work_num, tag_id) do update set source = case when excluded.source = 'user' then 'user' else work_tag_links.source end;
   update work_tag_aliases set tag_id = p_into where tag_id = p_from;
   update work_class_feedback set target_id = p_into where kind = 'tag' and target_id = p_from;
+  update calendar_events
+    set tags = case when v_into = any(tags) then array_remove(tags, v_from) else array_replace(tags, v_from, v_into) end
+    where v_from = any(tags);
   delete from work_tags where id = p_from;
   insert into work_tag_aliases (alias, tag_id, created_by) values (v_from, p_into, coalesce(nullif(my_name(), ''), '시스템')) on conflict do nothing;
 end $function$
@@ -3127,6 +3246,7 @@ begin
   if v_hit is not null and v_hit <> p_id then raise exception '같은 이름(또는 별칭)의 태그가 이미 있습니다 — 합치기를 써주세요'; end if;
   delete from work_tag_aliases where tag_id = p_id and work_tag_norm(alias) = work_tag_norm(v_name);
   update work_tags set name = v_name where id = p_id;
+  update calendar_events set tags = array_replace(tags, v_old, v_name) where v_old = any(tags);
   if work_tag_norm(v_old) <> work_tag_norm(v_name) then
     insert into work_tag_aliases (alias, tag_id, created_by) values (v_old, p_id, coalesce(nullif(my_name(), ''), '시스템')) on conflict do nothing;
   end if;
@@ -3439,7 +3559,8 @@ create table public.calendar_events (
   note text default ''::text not null,
   travel jsonb,
   private boolean default false not null,
-  day_label boolean
+  day_label boolean,
+  tags text[] default '{}'::text[] not null
 );
 
 -- table: calendar_sync_config
@@ -3542,6 +3663,48 @@ create table public.demo_visits (
   updated_at timestamp with time zone default now() not null
 );
 
+-- table: equipment_files
+create table public.equipment_files (
+  id bigint generated by default as identity not null,
+  code text not null,
+  vendor text default ''::text not null,
+  kind text default '기타'::text not null,
+  name text not null,
+  path text not null,
+  size bigint default 0 not null,
+  type text default ''::text not null,
+  created_by uuid default auth.uid(),
+  created_at timestamp with time zone default now() not null,
+  folder text default ''::text not null,
+  old boolean default false not null
+);
+
+-- table: equipment_focus
+create table public.equipment_focus (
+  code text not null,
+  body text default ''::text not null,
+  author text default ''::text not null,
+  updated_by uuid default auth.uid(),
+  updated_at timestamp with time zone default now() not null
+);
+
+-- table: equipment_g2b
+create table public.equipment_g2b (
+  id bigint generated by default as identity not null,
+  code text not null,
+  ref text not null,
+  status text default 'cand'::text not null,
+  kind text default '물품'::text not null,
+  title text default ''::text not null,
+  budget bigint,
+  posted_at timestamp with time zone,
+  info jsonb default '{}'::jsonb not null,
+  decided_by text default ''::text not null,
+  decided_at timestamp with time zone,
+  checked_at timestamp with time zone,
+  created_at timestamp with time zone default now() not null
+);
+
 -- table: equipment_history
 create table public.equipment_history (
   id bigint generated by default as identity not null,
@@ -3554,6 +3717,63 @@ create table public.equipment_history (
   author text default ''::text not null,
   work_type text default ''::text not null,
   note text default ''::text not null
+);
+
+-- table: equipment_notes
+create table public.equipment_notes (
+  id bigint generated always as identity not null,
+  code text not null,
+  kind text default '기타'::text not null,
+  amount bigint,
+  body text default ''::text not null,
+  on_date date default CURRENT_DATE not null,
+  author text default ''::text not null,
+  author_uid uuid default auth.uid() not null,
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null,
+  vendor text default ''::text not null,
+  pinned boolean default false not null,
+  stage text,
+  tags text[] default '{}'::text[] not null,
+  days integer,
+  summary text,
+  src_kind text,
+  src_id bigint
+);
+
+-- table: equipment_quotes
+create table public.equipment_quotes (
+  id bigint generated by default as identity not null,
+  code text not null,
+  vendor text not null,
+  model text default ''::text not null,
+  status text default '후보'::text not null,
+  rank smallint,
+  currency text default 'KRW'::text not null,
+  amount numeric(18,2),
+  supply numeric(18,2),
+  qty integer default 1 not null,
+  amount_note text default ''::text not null,
+  quote_no text default ''::text not null,
+  quote_date date,
+  valid_until date,
+  validity_text text default ''::text not null,
+  file_name text default ''::text not null,
+  drive_id text default ''::text not null,
+  memo text default ''::text not null,
+  created_by uuid default auth.uid(),
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null
+);
+
+-- table: equipment_vendor_logos
+create table public.equipment_vendor_logos (
+  vendor text not null,
+  domain text default ''::text not null,
+  logo text not null,
+  dark boolean default false not null,
+  source text default ''::text not null,
+  updated_at timestamp with time zone default now() not null
 );
 
 -- table: equipments
@@ -3594,7 +3814,10 @@ create table public.event_attendees (
   name text not null,
   member_uid uuid,
   created_by text default ''::text,
-  created_at timestamp with time zone default now()
+  created_at timestamp with time zone default now(),
+  start_date text default ''::text not null,
+  end_date text default ''::text not null,
+  cal_event_id bigint
 );
 
 -- table: event_equipments
@@ -3603,6 +3826,18 @@ create table public.event_equipments (
   equipment_id bigint not null,
   created_by uuid default auth.uid(),
   created_at timestamp with time zone default now() not null
+);
+
+-- table: event_notes
+create table public.event_notes (
+  id bigint generated always as identity not null,
+  event_id text not null,
+  author text default ''::text not null,
+  author_uid uuid default auth.uid() not null,
+  body text default ''::text not null,
+  links jsonb default '[]'::jsonb not null,
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null
 );
 
 -- table: event_submissions
@@ -3631,6 +3866,17 @@ create table public.event_timetables (
   name text not null,
   uploaded_by text,
   created_at timestamp with time zone default now() not null
+);
+
+-- table: g2b_gist
+create table public.g2b_gist (
+  ref text not null,
+  kind text default '물품'::text not null,
+  title text default ''::text not null,
+  budget bigint,
+  posted_at timestamp with time zone,
+  info jsonb default '{}'::jsonb not null,
+  updated_at timestamp with time zone default now() not null
 );
 
 -- table: improve_locations
@@ -4241,8 +4487,53 @@ alter table public.demo_visits add constraint demo_visits_equipment_maker_round_
 -- constraint: demo_visits.demo_visits_pkey
 alter table public.demo_visits add constraint demo_visits_pkey PRIMARY KEY (id);
 
+-- constraint: equipment_files.equipment_files_path_key
+alter table public.equipment_files add constraint equipment_files_path_key UNIQUE (path);
+
+-- constraint: equipment_files.equipment_files_pkey
+alter table public.equipment_files add constraint equipment_files_pkey PRIMARY KEY (id);
+
+-- constraint: equipment_focus.equipment_focus_pkey
+alter table public.equipment_focus add constraint equipment_focus_pkey PRIMARY KEY (code);
+
+-- constraint: equipment_g2b.equipment_g2b_code_ref_key
+alter table public.equipment_g2b add constraint equipment_g2b_code_ref_key UNIQUE (code, ref);
+
+-- constraint: equipment_g2b.equipment_g2b_kind_check
+alter table public.equipment_g2b add constraint equipment_g2b_kind_check CHECK ((kind = ANY (ARRAY['물품'::text, '외자'::text])));
+
+-- constraint: equipment_g2b.equipment_g2b_pkey
+alter table public.equipment_g2b add constraint equipment_g2b_pkey PRIMARY KEY (id);
+
+-- constraint: equipment_g2b.equipment_g2b_status_check
+alter table public.equipment_g2b add constraint equipment_g2b_status_check CHECK ((status = ANY (ARRAY['cand'::text, 'linked'::text, 'no'::text])));
+
 -- constraint: equipment_history.equipment_history_pkey
 alter table public.equipment_history add constraint equipment_history_pkey PRIMARY KEY (id);
+
+-- constraint: equipment_notes.equipment_notes_kind_check
+alter table public.equipment_notes add constraint equipment_notes_kind_check CHECK ((kind = ANY (ARRAY['견적'::text, '사양'::text, '데모'::text, '회의'::text, '기타'::text, '단계'::text, '스펙'::text, '일정'::text])));
+
+-- constraint: equipment_notes.equipment_notes_pkey
+alter table public.equipment_notes add constraint equipment_notes_pkey PRIMARY KEY (id);
+
+-- constraint: equipment_notes.equipment_notes_src_chk
+alter table public.equipment_notes add constraint equipment_notes_src_chk CHECK ((((src_kind IS NULL) AND (src_id IS NULL)) OR ((src_kind = ANY (ARRAY['work'::text, 'cal'::text])) AND (src_id IS NOT NULL))));
+
+-- constraint: equipment_quotes.equipment_quotes_pkey
+alter table public.equipment_quotes add constraint equipment_quotes_pkey PRIMARY KEY (id);
+
+-- constraint: equipment_quotes.equipment_quotes_qty_check
+alter table public.equipment_quotes add constraint equipment_quotes_qty_check CHECK ((qty > 0));
+
+-- constraint: equipment_quotes.equipment_quotes_rank_check
+alter table public.equipment_quotes add constraint equipment_quotes_rank_check CHECK (((rank IS NULL) OR ((rank >= 1) AND (rank <= 9))));
+
+-- constraint: equipment_quotes.equipment_quotes_status_check
+alter table public.equipment_quotes add constraint equipment_quotes_status_check CHECK ((status = ANY (ARRAY['후보'::text, '보류'::text, '제외'::text])));
+
+-- constraint: equipment_vendor_logos.equipment_vendor_logos_pkey
+alter table public.equipment_vendor_logos add constraint equipment_vendor_logos_pkey PRIMARY KEY (vendor);
 
 -- constraint: equipments.equipments_pkey
 alter table public.equipments add constraint equipments_pkey PRIMARY KEY (id);
@@ -4259,11 +4550,20 @@ alter table public.event_attendees add constraint event_attendees_pkey PRIMARY K
 -- constraint: event_equipments.event_equipments_pkey
 alter table public.event_equipments add constraint event_equipments_pkey PRIMARY KEY (event_id, equipment_id);
 
+-- constraint: event_notes.event_notes_pkey
+alter table public.event_notes add constraint event_notes_pkey PRIMARY KEY (id);
+
 -- constraint: event_submissions.event_submissions_pkey
 alter table public.event_submissions add constraint event_submissions_pkey PRIMARY KEY (id);
 
 -- constraint: event_timetables.event_timetables_pkey
 alter table public.event_timetables add constraint event_timetables_pkey PRIMARY KEY (id);
+
+-- constraint: g2b_gist.g2b_gist_kind_check
+alter table public.g2b_gist add constraint g2b_gist_kind_check CHECK ((kind = ANY (ARRAY['물품'::text, '외자'::text])));
+
+-- constraint: g2b_gist.g2b_gist_pkey
+alter table public.g2b_gist add constraint g2b_gist_pkey PRIMARY KEY (ref);
 
 -- constraint: improve_locations.improve_locations_pkey
 alter table public.improve_locations add constraint improve_locations_pkey PRIMARY KEY (name);
@@ -4703,11 +5003,32 @@ CREATE INDEX demo_results_visit_id_idx ON public.demo_results USING btree (visit
 -- index: demo_value_history_eq_idx
 CREATE INDEX demo_value_history_eq_idx ON public.demo_value_history USING btree (equipment, changed_at DESC);
 
+-- index: equipment_files_code_idx
+CREATE INDEX equipment_files_code_idx ON public.equipment_files USING btree (code);
+
+-- index: equipment_g2b_code_idx
+CREATE INDEX equipment_g2b_code_idx ON public.equipment_g2b USING btree (code);
+
+-- index: equipment_notes_code
+CREATE INDEX equipment_notes_code ON public.equipment_notes USING btree (code);
+
+-- index: equipment_notes_src_idx
+CREATE INDEX equipment_notes_src_idx ON public.equipment_notes USING btree (src_kind, src_id) WHERE (src_kind IS NOT NULL);
+
+-- index: equipment_quotes_code_idx
+CREATE INDEX equipment_quotes_code_idx ON public.equipment_quotes USING btree (code);
+
 -- index: event_equipments_eq_idx
 CREATE INDEX event_equipments_eq_idx ON public.event_equipments USING btree (equipment_id);
 
+-- index: event_notes_event
+CREATE INDEX event_notes_event ON public.event_notes USING btree (event_id);
+
 -- index: event_timetables_event_idx
 CREATE INDEX event_timetables_event_idx ON public.event_timetables USING btree (event_id);
+
+-- index: g2b_gist_posted_idx
+CREATE INDEX g2b_gist_posted_idx ON public.g2b_gist USING btree (posted_at DESC);
 
 -- index: idx_calendar_events_series
 CREATE INDEX idx_calendar_events_series ON public.calendar_events USING btree (series_id) WHERE (series_id <> ''::text);
@@ -4820,6 +5141,9 @@ CREATE INDEX works_track_idx ON public.works USING btree (track_id);
 -- trigger: calendar_events.calendar_events_del_log
 CREATE TRIGGER calendar_events_del_log AFTER DELETE ON public.calendar_events FOR EACH ROW EXECUTE FUNCTION calendar_log_delete();
 
+-- trigger: calendar_events.calendar_events_private_unsync
+CREATE TRIGGER calendar_events_private_unsync BEFORE INSERT OR UPDATE ON public.calendar_events FOR EACH ROW EXECUTE FUNCTION calendar_private_unsync();
+
 -- trigger: calendar_events.calendar_events_touch
 CREATE TRIGGER calendar_events_touch BEFORE UPDATE ON public.calendar_events FOR EACH ROW EXECUTE FUNCTION calendar_touch_updated_at();
 
@@ -4828,6 +5152,9 @@ CREATE TRIGGER demo_results_drop_empty_visit AFTER DELETE ON public.demo_results
 
 -- trigger: demo_results.demo_results_link_visit
 CREATE TRIGGER demo_results_link_visit BEFORE INSERT ON public.demo_results FOR EACH ROW EXECUTE FUNCTION demo_results_link_visit();
+
+-- trigger: equipments.equipments_code_follow
+CREATE TRIGGER equipments_code_follow AFTER UPDATE OF code ON public.equipments FOR EACH ROW WHEN ((old.code IS DISTINCT FROM new.code)) EXECUTE FUNCTION equipments_code_follow();
 
 -- trigger: equipments.equipments_stage_stamp
 CREATE TRIGGER equipments_stage_stamp BEFORE UPDATE OF stage ON public.equipments FOR EACH ROW EXECUTE FUNCTION equipments_stage_stamp();
@@ -4882,10 +5209,10 @@ CREATE TRIGGER works_sync_derived BEFORE INSERT OR UPDATE ON public.works FOR EA
 
 -- trigger: works.works_sync_links
 CREATE TRIGGER works_sync_links AFTER INSERT OR UPDATE OF mgr, cat ON public.works FOR EACH ROW EXECUTE FUNCTION works_sync_links();
-`,B=Object.assign({"./seed/00-people.sql":un,"./seed/01-helpers.sql":cn,"./seed/10-work.sql":pn,"./seed/20-calendar.sql":mn,"./seed/30-equipment.sql":bn,"./seed/35-equipment-links.sql":hn,"./seed/40-misc.sql":fn,"./seed/50-events.sql":wn,"./seed/99-finish.sql":gn}),rn=Object.keys(B).sort().map(n=>`-- ${n}
+`,B=Object.assign({"./seed/00-people.sql":_n,"./seed/01-helpers.sql":cn,"./seed/10-work.sql":pn,"./seed/20-calendar.sql":mn,"./seed/30-equipment.sql":bn,"./seed/35-equipment-links.sql":hn,"./seed/36-equipment-g2b.sql":fn,"./seed/40-misc.sql":gn,"./seed/50-events.sql":wn,"./seed/99-finish.sql":kn}),rn=Object.keys(B).sort().map(n=>`-- ${n}
 ${B[n]}`).join(`
 
-`),J=`v1:${ln.length}:${sn.length}:${rn.length}`,dn="angels-booth";let Tn=null;function U(n){return Tn??(Tn=Cn(n))}async function V(){const[{PGlite:n},{pgcrypto:e},{uuid_ossp:t}]=await Promise.all([P(()=>import("./index-DB9l7hAO.js").then(l=>l.i),__vite__mapDeps([0,1,2,3])),P(()=>import("./pgcrypto-DvQ-zBrc.js"),__vite__mapDeps([4,1])),P(()=>import("./uuid_ossp-B-isMaqZ.js"),__vite__mapDeps([5,1]))]);return n.create(`idb://${dn}`,{extensions:{pgcrypto:e,uuid_ossp:t}})}async function Cn(n){var o,a,s,d;n==null||n("체험 공간 여는 중");let e=await V();const t=await e.query("select to_regclass('booth.meta')::text as t");if(((o=t.rows[0])!=null&&o.t?(a=(await e.query("select version from booth.meta limit 1")).rows[0])==null?void 0:a.version:void 0)!==J){const r=(s=(await e.query("select to_regclass('public.works')::text as t")).rows[0])==null?void 0:s.t;((d=t.rows[0])!=null&&d.t||r)&&(await e.close(),await new Promise(_=>{const u=indexedDB.deleteDatabase(`/pglite/${dn}`);u.onsuccess=u.onerror=u.onblocked=()=>_()}),e=await V()),n==null||n("가상 부서 만드는 중");try{await e.exec(`begin;
+`),J=`v1:${ln.length}:${sn.length}:${rn.length}`,dn="angels-booth";let Cn=null;function U(n){return Cn??(Cn=Sn(n))}async function V(){const[{PGlite:n},{pgcrypto:e},{uuid_ossp:t}]=await Promise.all([P(()=>import("./index-CMqj5CZy.js").then(l=>l.i),__vite__mapDeps([0,1,2,3])),P(()=>import("./pgcrypto-DvQ-zBrc.js"),__vite__mapDeps([4,1])),P(()=>import("./uuid_ossp-B-isMaqZ.js"),__vite__mapDeps([5,1]))]);return n.create(`idb://${dn}`,{extensions:{pgcrypto:e,uuid_ossp:t}})}async function Sn(n){var o,i,s,d;n==null||n("체험 공간 여는 중");let e=await V();const t=await e.query("select to_regclass('booth.meta')::text as t");if(((o=t.rows[0])!=null&&o.t?(i=(await e.query("select version from booth.meta limit 1")).rows[0])==null?void 0:i.version:void 0)!==J){const r=(s=(await e.query("select to_regclass('public.works')::text as t")).rows[0])==null?void 0:s.t;((d=t.rows[0])!=null&&d.t||r)&&(await e.close(),await new Promise(u=>{const _=indexedDB.deleteDatabase(`/pglite/${dn}`);_.onsuccess=_.onerror=_.onblocked=()=>u()}),e=await V()),n==null||n("가상 부서 만드는 중");try{await e.exec(`begin;
 ${ln}
 ${sn}
 ${rn}
@@ -4893,8 +5220,8 @@ ${rn}
         create table booth.meta(version text, seeded_at timestamptz default now());
         create table booth.files(bucket text, path text, mime text, data bytea, created_at timestamptz default now(), primary key(bucket, path));
         insert into booth.meta(version) values (${K(J)});
-        commit;`)}catch(_){throw await e.exec("rollback").catch(()=>{}),_}}await e.exec("set search_path to public, extensions; set time zone 'UTC';"),n==null||n("준비 끝");const i=await kn(e);return{db:e,cat:i}}const K=n=>"'"+n.replace(/'/g,"''")+"'",W=n=>btoa(unescape(encodeURIComponent(JSON.stringify(n)))).replace(/=+$/,"").replace(/\+/g,"-").replace(/\//g,"_");function Q(){const n=Math.floor(Date.now()/1e3),e=n+3600*24*365,t={id:z.uid,aud:"authenticated",role:"authenticated",email:"guest@booth.invalid",user_metadata:{name:z.name},app_metadata:{provider:"email"},created_at:"2026-01-01T00:00:00Z",updated_at:"2026-01-01T00:00:00Z"};return{access_token:`${W({alg:"HS256",typ:"JWT"})}.${W({sub:t.id,role:"authenticated",aud:"authenticated",email:t.email,exp:e,iat:n})}.booth`,token_type:"bearer",expires_in:e-n,expires_at:e,refresh_token:"booth-refresh",user:t}}const g=(n,e=200,t={})=>new Response(e===204?null:JSON.stringify(n),{status:e,headers:{"Content-Type":"application/json",...t}});function Sn(n,e){return e.startsWith("token")?g(Q()):e==="user"&&n==="GET"?g(Q().user):e==="logout"?g(null,204):g({code:422,error_code:"booth_readonly",msg:"체험관에서는 할 수 없는 일이에요."},422)}const Z="체험관에서는 엔젤이가 실제로 답하지 않아요. 위의 예시 대화를 둘러봐 주세요.";async function In(n,e,t){var l,i;if(e==="angel"&&t.mode==="qa"){if(t.stream){const o={candidates:[{content:{parts:[{text:JSON.stringify({answer:Z})}]}}]};return new Response(`data: ${JSON.stringify(o)}
+        commit;`)}catch(u){throw await e.exec("rollback").catch(()=>{}),u}}await e.exec("set search_path to public, extensions; set time zone 'UTC';"),n==null||n("준비 끝");const a=await En(e);return{db:e,cat:a}}const K=n=>"'"+n.replace(/'/g,"''")+"'",W=n=>btoa(unescape(encodeURIComponent(JSON.stringify(n)))).replace(/=+$/,"").replace(/\+/g,"-").replace(/\//g,"_");function Q(){const n=Math.floor(Date.now()/1e3),e=n+3600*24*365,t={id:M.uid,aud:"authenticated",role:"authenticated",email:"guest@booth.invalid",user_metadata:{name:M.name},app_metadata:{provider:"email"},created_at:"2026-01-01T00:00:00Z",updated_at:"2026-01-01T00:00:00Z"};return{access_token:`${W({alg:"HS256",typ:"JWT"})}.${W({sub:t.id,role:"authenticated",aud:"authenticated",email:t.email,exp:e,iat:n})}.booth`,token_type:"bearer",expires_in:e-n,expires_at:e,refresh_token:"booth-refresh",user:t}}const w=(n,e=200,t={})=>new Response(e===204?null:JSON.stringify(n),{status:e,headers:{"Content-Type":"application/json",...t}});function qn(n,e){return e.startsWith("token")?w(Q()):e==="user"&&n==="GET"?w(Q().user):e==="logout"?w(null,204):w({code:422,error_code:"booth_readonly",msg:"체험관에서는 할 수 없는 일이에요."},422)}const Z="체험관에서는 엔젤이가 실제로 답하지 않아요. 위의 예시 대화를 둘러봐 주세요.";async function In(n,e,t){var l,a;if(e==="angel"&&t.mode==="qa"){if(t.stream){const o={candidates:[{content:{parts:[{text:JSON.stringify({answer:Z})}]}}]};return new Response(`data: ${JSON.stringify(o)}
 
 data: [DONE]
 
-`,{headers:{"Content-Type":"text/event-stream"}})}return g({answer:Z})}if(e==="trip-share"&&typeof t.token=="string"){const a=(await n.db.query(`select public.trip_share_open(${K(t.token)}, ${K(String(t.pin||""))}, '', '') as r`)).rows[0].r;if(a.status==="locked")return g({ok:!1,reason:"locked",until:a.until});if(a.status==="pin")return g({ok:!1,reason:"pin",wrong:!1});if(a.status==="wrong")return g({ok:!1,reason:"pin",wrong:!0,left:a.left});if(a.status!=="ok")return g({ok:!1,reason:"off"});const d=(await n.db.query(`select title, loc, all_day, start_at, end_at, note, travel from public.calendar_events where id = ${Number(a.event_id)}`)).rows[0];return g(d?{ok:!0,trip:{title:d.title,loc:d.loc,allDay:d.all_day,start:d.start_at,end:d.end_at,...((l=d.travel)==null?void 0:l.noteShare)===!0&&((i=d.note)!=null&&i.trim())?{note:d.note}:{},travel:d.travel||{}}}:{ok:!1,reason:"off"})}if(e==="fx"){const o=new Date(Date.now()+324e5).toISOString().slice(0,10);return g({krw:1385.5,date:o})}return g(e==="angel"||e==="angel-file"?{ok:!1,reason:"error"}:{ok:!1,reason:"unsupported",error:"체험관에서는 쓸 수 없는 기능이에요."})}async function On(n,e){const t=await U(),l=((e==null?void 0:e.method)||"GET").toUpperCase(),i=n.pathname;let o;if(typeof(e==null?void 0:e.body)=="string"&&e.body!=="")try{o=JSON.parse(e.body)}catch{o=e.body}if(i.startsWith("/rest/v1/")){const a=await Nn(t.db,t.cat,{method:l,url:n,headers:new Headers(e==null?void 0:e.headers),body:o});return new Response(a.body===""||a.status===204?null:a.body,{status:a.status,headers:a.headers})}return i.startsWith("/auth/v1/")?Sn(l,i.slice(9)):i.startsWith("/functions/v1/")?In(t,i.slice(14),o||{}):g({message:"체험관에서는 쓸 수 없는 주소예요."},404)}async function jn(n,e){return(await(await U()).db.query("select mime, data from booth.files where bucket = $1 and path = $2",[n,e])).rows[0]??null}async function qn(n,e,t,l,i){const o=await U(),a="insert into booth.files(bucket, path, mime, data) values ($1, $2, $3, $4)"+(i?" on conflict (bucket, path) do update set mime = excluded.mime, data = excluded.data":" on conflict do nothing")+" returning path";return(await o.db.query(a,[n,e,t,l])).rows.length>0}async function Un(n,e){const t=await U();for(const l of e)await t.db.query("delete from booth.files where bucket = $1 and path = $2",[n,l])}async function Gn(n,e){const t=await U(),l=e?e.replace(/\/?$/,"/"):"";return(await t.db.query("select path, octet_length(data) as size, mime, created_at::text from booth.files where bucket = $1 and path like $2 order by path",[n,l+"%"])).rows.filter(o=>!o.path.slice(l.length).includes("/")).map(o=>({name:o.path.slice(l.length),size:o.size,mime:o.mime,created_at:o.created_at}))}export{U as bootBackend,jn as fileGet,Gn as fileList,qn as filePut,Un as fileRemove,On as handle};
+`,{headers:{"Content-Type":"text/event-stream"}})}return w({answer:Z})}if(e==="trip-share"&&typeof t.token=="string"){const i=(await n.db.query(`select public.trip_share_open(${K(t.token)}, ${K(String(t.pin||""))}, '', '') as r`)).rows[0].r;if(i.status==="locked")return w({ok:!1,reason:"locked",until:i.until});if(i.status==="pin")return w({ok:!1,reason:"pin",wrong:!1});if(i.status==="wrong")return w({ok:!1,reason:"pin",wrong:!0,left:i.left});if(i.status!=="ok")return w({ok:!1,reason:"off"});const d=(await n.db.query(`select title, loc, all_day, start_at, end_at, note, travel from public.calendar_events where id = ${Number(i.event_id)}`)).rows[0];return w(d?{ok:!0,trip:{title:d.title,loc:d.loc,allDay:d.all_day,start:d.start_at,end:d.end_at,...((l=d.travel)==null?void 0:l.noteShare)===!0&&((a=d.note)!=null&&a.trim())?{note:d.note}:{},travel:d.travel||{}}}:{ok:!1,reason:"off"})}if(e==="fx"){const o=new Date(Date.now()+324e5).toISOString().slice(0,10);return w({krw:1385.5,date:o})}return w(e==="angel"||e==="angel-file"?{ok:!1,reason:"error"}:{ok:!1,reason:"unsupported",error:"체험관에서는 쓸 수 없는 기능이에요."})}async function On(n,e){const t=await U(),l=((e==null?void 0:e.method)||"GET").toUpperCase(),a=n.pathname;let o;if(typeof(e==null?void 0:e.body)=="string"&&e.body!=="")try{o=JSON.parse(e.body)}catch{o=e.body}if(a.startsWith("/rest/v1/")){const i=await An(t.db,t.cat,{method:l,url:n,headers:new Headers(e==null?void 0:e.headers),body:o});return new Response(i.body===""||i.status===204?null:i.body,{status:i.status,headers:i.headers})}return a.startsWith("/auth/v1/")?qn(l,a.slice(9)):a.startsWith("/functions/v1/")?In(t,a.slice(14),o||{}):w({message:"체험관에서는 쓸 수 없는 주소예요."},404)}async function jn(n,e){return(await(await U()).db.query("select mime, data from booth.files where bucket = $1 and path = $2",[n,e])).rows[0]??null}async function Un(n,e,t,l,a){const o=await U(),i="insert into booth.files(bucket, path, mime, data) values ($1, $2, $3, $4)"+(a?" on conflict (bucket, path) do update set mime = excluded.mime, data = excluded.data":" on conflict do nothing")+" returning path";return(await o.db.query(i,[n,e,t,l])).rows.length>0}async function Gn(n,e){const t=await U();for(const l of e)await t.db.query("delete from booth.files where bucket = $1 and path = $2",[n,l])}async function Dn(n,e){const t=await U(),l=e?e.replace(/\/?$/,"/"):"";return(await t.db.query("select path, octet_length(data) as size, mime, created_at::text from booth.files where bucket = $1 and path like $2 order by path",[n,l+"%"])).rows.filter(o=>!o.path.slice(l.length).includes("/")).map(o=>({name:o.path.slice(l.length),size:o.size,mime:o.mime,created_at:o.created_at}))}export{U as bootBackend,jn as fileGet,Dn as fileList,Un as filePut,Gn as fileRemove,On as handle};
